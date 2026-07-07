@@ -117,14 +117,73 @@ export default function Topic() {
           <p className="text-green-900 text-xl font-semibold">{content.keyInsight}</p>
         </section>
 
-        {/* Template */}
-        <section>
-          <h2 className="text-2xl font-bold text-stone-800 mb-4">Universal Template</h2>
-          <p className="text-stone-500 mb-4">Every backtracking problem uses this exact structure:</p>
-          <pre className="bg-stone-900 text-green-300 rounded-xl px-6 py-5 text-sm leading-relaxed overflow-x-auto font-mono">
-            {content.template}
-          </pre>
-        </section>
+        {/* Shared vs Own Copy — the WHY behind unpick */}
+        {content.sharedVsOwnCopy && (
+          <section>
+            <h2 className="text-2xl font-bold text-stone-800 mb-2">{content.sharedVsOwnCopy.title}</h2>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-6 py-5">
+              {content.sharedVsOwnCopy.explanation.split('\n\n').map((para, i) => (
+                <p key={i} className={`leading-relaxed mb-4 last:mb-0 ${
+                  para.startsWith('SHARED') || para.startsWith('OWN') || para.startsWith('SIMPLE')
+                    ? 'font-semibold text-stone-800 text-base'
+                    : 'text-stone-700 text-sm'
+                }`}>{para}</p>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 4 Patterns */}
+        {content.patterns && (
+          <section>
+            <h2 className="text-2xl font-bold text-stone-800 mb-2">The 4 Backtracking Patterns</h2>
+            <p className="text-stone-500 mb-6">Pick the right pattern based on your problem shape.</p>
+            <div className="space-y-8">
+              {content.patterns.map((pattern, i) => (
+                <div key={i} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+                  {/* Header */}
+                  <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between flex-wrap gap-2">
+                    <h3 className="font-bold text-stone-800 text-lg">{pattern.name}</h3>
+                    <span className={`text-xs font-semibold px-3 py-1 rounded-full ${pattern.unpick ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                      {pattern.unpick ? '⚠ Unpick required' : '✓ No unpick needed'}
+                    </span>
+                  </div>
+
+                  {/* When to use */}
+                  <div className="px-6 py-3 border-b border-stone-100 bg-stone-50">
+                    <span className="text-xs font-semibold text-stone-400 uppercase tracking-widest">When to use: </span>
+                    <span className="text-stone-700 text-sm">{pattern.when}</span>
+                  </div>
+
+                  {/* Why this pattern */}
+                  <div className="px-6 py-4 border-b border-stone-100">
+                    <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-1">Why this pattern?</p>
+                    <p className="text-stone-600 text-sm leading-relaxed">{pattern.whyThisPattern}</p>
+                  </div>
+
+                  {/* Why unpick / why not */}
+                  <div className={`px-6 py-4 border-b border-stone-100 ${pattern.unpick ? 'bg-red-50' : 'bg-green-50'}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${pattern.unpick ? 'text-red-500' : 'text-green-600'}`}>
+                      {pattern.unpick ? 'Why must we unpick?' : 'Why no unpick?'}
+                    </p>
+                    <p className={`text-sm leading-relaxed ${pattern.unpick ? 'text-red-800' : 'text-green-800'}`}>{pattern.whyUnpick}</p>
+                  </div>
+
+                  {/* Examples */}
+                  <div className="px-6 py-3 border-b border-stone-100">
+                    <span className="text-xs font-semibold text-stone-400 uppercase tracking-widest">Problems: </span>
+                    <span className="text-stone-600 text-sm">{pattern.examples}</span>
+                  </div>
+
+                  {/* Code */}
+                  <pre className="bg-stone-900 text-green-300 px-6 py-5 text-sm leading-relaxed overflow-x-auto font-mono">
+                    {pattern.code}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Animations */}
         <section>

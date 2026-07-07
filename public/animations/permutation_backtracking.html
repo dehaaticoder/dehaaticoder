@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Permutation Backtracking Visualizer — [1,2,3]</title>
+<style>
+  body { font-family: monospace; padding: 12px; background: #0d1117; color: #e6edf3; }
+  h3 { color: #58a6ff; margin-bottom: 10px; font-size: 14px; }
+
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn {
+    background: #238636;
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: monospace;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.blue { background: #1f6feb; }
+  .btn.orange { background: #9e6a03; }
+  .btn.red { background: #b62324; }
+
+  .info {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    min-height: 36px;
+    line-height: 1.6;
+  }
+  .step-lbl { color: #58a6ff; font-weight: bold; }
+  .desc-txt { color: #f0883e; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .box { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; }
+  .box-title { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+
+  canvas { width: 100%; height: 220px; display: block; }
+
+  .frame {
+    background: #21262d;
+    border-left: 3px solid #30363d;
+    border-radius: 4px;
+    padding: 5px 8px;
+    margin-bottom: 4px;
+    font-size: 11px;
+    color: #79c0ff;
+  }
+  .frame.active { border-left-color: #58a6ff; background: #1c2d40; color: #58a6ff; }
+
+  .results-row { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px; margin-bottom: 10px; min-height: 32px; }
+  .chip { display: inline-block; background: #1a2e1a; border: 1px solid #3fb950; color: #3fb950; border-radius: 4px; padding: 2px 8px; margin: 2px; font-size: 12px; }
+
+  .code-area { background: #21262d; border-radius: 6px; padding: 10px; font-size: 11px; line-height: 1.9; }
+  .cl { padding: 0 4px; border-radius: 3px; border-left: 2px solid transparent; }
+  .cl.hl { background: #f0883e22; border-left-color: #f0883e; }
+  .kw { color: #ff7b72; }
+  .fn { color: #d2a8ff; }
+  .cm { color: #6e7681; }
+
+  .prog { height: 3px; background: #21262d; border-radius: 2px; margin-bottom: 10px; }
+  .prog-fill { height: 100%; background: #58a6ff; border-radius: 2px; transition: width 0.2s; width: 0%; }
+</style>
+</head>
+<body>
+
+<h3>⚡ PERMUTATION BACKTRACKING — [1, 2, 3]</h3>
+
+<div class="btn-row">
+  <button class="btn blue" onclick="prev()">◀ PREV</button>
+  <button class="btn" id="playbtn" onclick="togglePlay()">▶ PLAY</button>
+  <button class="btn blue" onclick="next()">NEXT ▶</button>
+  <button class="btn red" onclick="reset()">↺ RESET</button>
+  <button class="btn orange" onclick="setSpeed(1000)">SLOW</button>
+  <button class="btn orange" onclick="setSpeed(500)">FAST</button>
+</div>
+
+<div class="prog"><div class="prog-fill" id="pf"></div></div>
+<div class="info" id="info"><span class="step-lbl">Ready</span> — Press PLAY or NEXT to begin</div>
+
+<div class="two-col">
+  <div class="box">
+    <div class="box-title">Recursion Tree</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div class="box">
+    <div class="box-title">Call Stack (top = current call)</div>
+    <div id="stack"></div>
+  </div>
+</div>
+
+<div class="results-row">
+  <span style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:1px;">Results found: </span>
+  <span id="res"></span>
+</div>
+
+<div class="code-area">
+  <div class="cl" id="c0">ArrayList&lt;ArrayList&lt;Integer&gt;&gt; ans = <span class="kw">new</span> ArrayList&lt;&gt;(); <span class="cm">// class-level result</span></div>
+  <div class="cl" id="c1"><span class="kw">void</span> <span class="fn">Generate</span>(ArrayList&lt;Integer&gt; A, <span class="kw">int</span> index, ArrayList&lt;Integer&gt; subAns, ArrayList&lt;Boolean&gt; visited) {</div>
+  <div class="cl" id="c2">&nbsp;&nbsp;<span class="kw">if</span> (index == A.size()) {</div>
+  <div class="cl" id="c3">&nbsp;&nbsp;&nbsp;&nbsp;ans.add(<span class="kw">new</span> ArrayList&lt;&gt;(subAns)); <span class="cm">// ✅ FOUND ONE!</span></div>
+  <div class="cl" id="c4">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span>;</div>
+  <div class="cl" id="c5">&nbsp;&nbsp;}</div>
+  <div class="cl" id="c6">&nbsp;&nbsp;<span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; A.size(); i++) {</div>
+  <div class="cl" id="c7">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> (!visited.get(i)) {</div>
+  <div class="cl" id="c8">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;subAns.add(A.get(i)); &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// CHOOSE</span></div>
+  <div class="cl" id="c9">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;visited.set(i, <span class="kw">true</span>); &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// mark used</span></div>
+  <div class="cl" id="c10">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">Generate</span>(A, index + 1, subAns, visited); <span class="cm">// RECURSE</span></div>
+  <div class="cl" id="c11">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;subAns.remove(subAns.size() - 1); <span class="cm">// BACKTRACK ↩</span></div>
+  <div class="cl" id="c12">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;visited.set(i, <span class="kw">false</span>); &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// unmark</span></div>
+  <div class="cl" id="c13">&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+  <div class="cl" id="c14">&nbsp;&nbsp;}</div>
+  <div class="cl" id="c15">}</div>
+</div>
+
+<script>
+const nums = [1,2,3];
+const steps = [];
+const found = [];
+
+function build(cur, used, depth) {
+  if (cur.length === 3) {
+    found.push([...cur]);
+    steps.push({ type:'base', cur:[...cur], depth, line:2, found:[...found.map(r=>[...r])], msg:`🎉 current=[${cur}] complete! Add to results` });
+    return;
+  }
+  steps.push({ type:'enter', cur:[...cur], depth, line:5, found:[...found.map(r=>[...r])], msg:`Enter loop — current=[${cur}], try each unused number` });
+  for (let i=0;i<3;i++) {
+    if (used[i]) {
+      steps.push({ type:'skip', cur:[...cur], depth, line:6, found:[...found.map(r=>[...r])], msg:`⛔ Skip ${nums[i]} — already used in current path` });
+      continue;
+    }
+    steps.push({ type:'choose', cur:[...cur], depth, line:7, tryN:nums[i], found:[...found.map(r=>[...r])], msg:`✅ Choose ${nums[i]} → current=[${[...cur,nums[i]]}]` });
+    used[i]=true; cur.push(nums[i]);
+    build(cur, used, depth+1);
+    cur.pop(); used[i]=false;
+    steps.push({ type:'back', cur:[...cur], depth, line:9, tryN:nums[i], found:[...found.map(r=>[...r])], msg:`↩ Backtrack: undo ${nums[i]} → current=[${cur}]` });
+  }
+}
+build([], [false,false,false], 0);
+
+const nodes = [];
+function buildNodes(cur, used, depth, px, pw) {
+  const idx = nodes.length;
+  nodes.push({ cur:[...cur], depth, x: px, pi: -1 });
+  let ci = 0;
+  const kids = nums.filter((_,i) => !used[i]);
+  const cw = pw / Math.max(kids.length, 1);
+  for (let i=0;i<3;i++) {
+    if (!used[i]) {
+      const childIdx = nodes.length;
+      used[i]=true; cur.push(nums[i]);
+      buildNodes(cur, used, depth+1, px - pw/2 + cw*(ci+0.5), cw);
+      nodes[childIdx].pi = idx;
+      cur.pop(); used[i]=false; ci++;
+    }
+  }
+}
+buildNodes([], [false,false,false], 0, 0.5, 1);
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+function resizeCv() {
+  cv.width = cv.offsetWidth * (window.devicePixelRatio||1);
+  cv.height = cv.offsetHeight * (window.devicePixelRatio||1);
+  ctx.scale(window.devicePixelRatio||1, window.devicePixelRatio||1);
+}
+resizeCv();
+window.addEventListener('resize', resizeCv);
+
+function drawTree(activeCur, activeDepth) {
+  const W = cv.offsetWidth, H = cv.offsetHeight;
+  ctx.clearRect(0,0,W,H);
+  const yd = d => 16 + d * (H-20)/4;
+
+  for (let n of nodes) {
+    if (n.pi < 0) continue;
+    const p = nodes[n.pi];
+    ctx.beginPath();
+    ctx.moveTo(p.x*W, yd(p.depth));
+    ctx.lineTo(n.x*W, yd(n.depth));
+    ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  for (let n of nodes) {
+    const nx = n.x*W, ny = yd(n.depth);
+    const isActive = n.depth === activeDepth && JSON.stringify(n.cur) === JSON.stringify(activeCur);
+    ctx.beginPath();
+    ctx.arc(nx, ny, 13, 0, Math.PI*2);
+    ctx.fillStyle = isActive ? '#1c2d40' : '#21262d';
+    ctx.fill();
+    ctx.strokeStyle = isActive ? '#58a6ff' : '#30363d';
+    ctx.lineWidth = isActive ? 2.5 : 1;
+    ctx.stroke();
+    const lbl = n.cur.length===0 ? '[]' : '['+n.cur.join(',')+']';
+    ctx.fillStyle = isActive ? '#58a6ff' : '#e6edf3';
+    ctx.font = `${n.cur.length===3?7:9}px monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(lbl, nx, ny);
+  }
+}
+
+let cur = -1, timer = null, spd = 600;
+
+function hl(line) {
+  for(let i=0;i<=11;i++) document.getElementById('c'+i)?.classList.remove('hl');
+  if(line!=null) document.getElementById('c'+line)?.classList.add('hl');
+}
+
+function render(idx) {
+  if (idx<0||idx>=steps.length) return;
+  const s = steps[idx];
+  document.getElementById('info').innerHTML = `<span class="step-lbl">Step ${idx+1}/${steps.length}</span> — <span class="desc-txt">${s.msg}</span>`;
+  document.getElementById('pf').style.width = ((idx+1)/steps.length*100)+'%';
+  document.getElementById('res').innerHTML = s.found.map(r=>`<span class="chip">[${r.join(',')}]</span>`).join('');
+  hl(s.line);
+  let frames = '';
+  for (let d=0; d<=s.depth; d++) {
+    const fc = s.cur.slice(0,d);
+    frames = `<div class="frame ${d===s.depth?'active':''}">permute(current=[${fc}])</div>` + frames;
+  }
+  document.getElementById('stack').innerHTML = frames;
+  drawTree(s.cur, s.depth);
+}
+
+function next() { cur = Math.min(steps.length-1, cur+1); render(cur); }
+function prev() { cur = Math.max(0, cur-1); render(cur); }
+function reset() {
+  stopPlay(); cur=-1; hl(null);
+  document.getElementById('stack').innerHTML='';
+  document.getElementById('res').innerHTML='';
+  document.getElementById('info').innerHTML='<span class="step-lbl">Ready</span> — Press PLAY or NEXT to begin';
+  document.getElementById('pf').style.width='0%';
+  drawTree([], -1);
+}
+function setSpeed(s) { spd=s; if(timer){stopPlay();startPlay();} }
+function togglePlay() { timer ? stopPlay() : startPlay(); }
+function startPlay() {
+  document.getElementById('playbtn').textContent='⏸ PAUSE';
+  timer = setInterval(() => { if(cur>=steps.length-1){stopPlay();return;} next(); }, spd);
+}
+function stopPlay() {
+  clearInterval(timer); timer=null;
+  document.getElementById('playbtn').textContent='▶ PLAY';
+}
+
+drawTree([], -1);
+</script>
+</body>
+</html>

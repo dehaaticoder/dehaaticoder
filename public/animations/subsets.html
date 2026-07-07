@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Subsets — Pick / Not Pick Visualizer</title>
+<style>
+  body { font-family: monospace; padding: 12px; background: #0d1117; color: #e6edf3; margin: 0; }
+  h3 { color: #58a6ff; margin-bottom: 10px; font-size: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn { background: #238636; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; font-family: monospace; }
+  .btn:hover { opacity: 0.85; }
+  .btn.blue { background: #1f6feb; } .btn.orange { background: #9e6a03; } .btn.red { background: #b62324; }
+  .info { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 12px; min-height: 36px; line-height: 1.6; }
+  .step-lbl { color: #58a6ff; font-weight: bold; } .desc-txt { color: #f0883e; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .box { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; }
+  .box-title { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .frame { background: #21262d; border-left: 3px solid #30363d; border-radius: 4px; padding: 5px 8px; margin-bottom: 4px; font-size: 11px; color: #79c0ff; }
+  .frame.active { border-left-color: #58a6ff; background: #1c2d40; color: #58a6ff; }
+  .results-row { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px; margin-bottom: 10px; min-height: 32px; }
+  .chip { display: inline-block; background: #1a2e1a; border: 1px solid #3fb950; color: #3fb950; border-radius: 4px; padding: 2px 8px; margin: 2px; font-size: 12px; }
+  .pick-chip { display: inline-block; background: #1c2d40; border: 1px solid #58a6ff; color: #58a6ff; border-radius: 4px; padding: 2px 6px; margin: 1px; font-size: 10px; }
+  .nopick-chip { display: inline-block; background: #2d1f0a; border: 1px solid #f0883e; color: #f0883e; border-radius: 4px; padding: 2px 6px; margin: 1px; font-size: 10px; }
+  .code-area { background: #21262d; border-radius: 6px; padding: 10px; font-size: 11px; line-height: 1.9; }
+  .cl { padding: 0 4px; border-radius: 3px; border-left: 2px solid transparent; }
+  .cl.hl { background: #f0883e22; border-left-color: #f0883e; }
+  .kw { color: #ff7b72; } .fn { color: #d2a8ff; } .cm { color: #6e7681; } .num { color: #79c0ff; }
+  .prog { height: 3px; background: #21262d; border-radius: 2px; margin-bottom: 10px; }
+  .prog-fill { height: 100%; background: #58a6ff; border-radius: 2px; transition: width 0.2s; width: 0%; }
+  canvas { width: 100%; height: 250px; display: block; }
+  .legend { display: flex; gap: 12px; margin-bottom: 8px; font-size: 11px; }
+</style>
+</head>
+<body>
+<h3>⚡ SUBSETS — PICK / NOT PICK — nums=[1,2,3]</h3>
+
+<div class="btn-row">
+  <button class="btn blue" onclick="prev()">◀ PREV</button>
+  <button class="btn" id="playbtn" onclick="togglePlay()">▶ PLAY</button>
+  <button class="btn blue" onclick="next()">NEXT ▶</button>
+  <button class="btn red" onclick="reset()">↺ RESET</button>
+  <button class="btn orange" onclick="setSpeed(1000)">SLOW</button>
+  <button class="btn orange" onclick="setSpeed(500)">FAST</button>
+</div>
+
+<div class="legend">
+  <span class="pick-chip">✅ PICK</span> Include element
+  <span class="nopick-chip">❌ NOT PICK</span> Skip element
+</div>
+
+<div class="prog"><div class="prog-fill" id="pf"></div></div>
+<div class="info" id="info"><span class="step-lbl">Ready</span> — Press PLAY or NEXT to begin</div>
+
+<div class="two-col">
+  <div class="box">
+    <div class="box-title">Binary Recursion Tree</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div class="box">
+    <div class="box-title">Call Stack (top = current)</div>
+    <div id="stack"></div>
+  </div>
+</div>
+
+<div class="results-row">
+  <span style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:1px;">Subsets found: </span>
+  <div id="res" style="margin-top:4px;"></div>
+</div>
+
+<div class="code-area">
+  <div class="cl" id="c0"><span class="kw">void</span> <span class="fn">subsets</span>(nums, index, current, result) {</div>
+  <div class="cl" id="c1">&nbsp;&nbsp;<span class="kw">if</span> (index == nums.length) {</div>
+  <div class="cl" id="c2">&nbsp;&nbsp;&nbsp;&nbsp;result.add(<span class="kw">new</span> ArrayList(current)); <span class="cm">// ✅ base case — add subset</span></div>
+  <div class="cl" id="c3">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span>;</div>
+  <div class="cl" id="c4">&nbsp;&nbsp;}</div>
+  <div class="cl" id="c5">&nbsp;&nbsp;current.add(nums[index]); <span class="cm">// ✅ PICK</span></div>
+  <div class="cl" id="c6">&nbsp;&nbsp;<span class="fn">subsets</span>(nums, index + <span class="num">1</span>, current, result);</div>
+  <div class="cl" id="c7">&nbsp;&nbsp;current.remove(current.size() - <span class="num">1</span>); <span class="cm">// ↩ backtrack</span></div>
+  <div class="cl" id="c8">&nbsp;&nbsp;<span class="cm">// ❌ NOT PICK — just recurse without adding</span></div>
+  <div class="cl" id="c9">&nbsp;&nbsp;<span class="fn">subsets</span>(nums, index + <span class="num">1</span>, current, result);</div>
+  <div class="cl" id="c10">}</div>
+</div>
+
+<script>
+const nums = [1, 2, 3];
+const steps = [];
+const found = [];
+
+function build(index, current, depth) {
+  if (index === nums.length) {
+    const snap = [...current];
+    found.push(snap);
+    steps.push({
+      index, current: snap, depth, type: 'base', line: 2,
+      found: found.map(r => [...r]),
+      msg: `🎉 index=${index} == nums.length → Add subset [${snap}] to results`
+    });
+    return;
+  }
+
+  // PICK
+  steps.push({
+    index, current: [...current], depth, type: 'pick', line: 5,
+    found: found.map(r => [...r]),
+    msg: `✅ PICK nums[${index}]=${nums[index]} → current=[${[...current, nums[index]]}]`
+  });
+  current.push(nums[index]);
+  build(index + 1, current, depth + 1);
+
+  // backtrack
+  current.pop();
+  steps.push({
+    index, current: [...current], depth, type: 'backtrack', line: 7,
+    found: found.map(r => [...r]),
+    msg: `↩ Backtrack: remove ${nums[index]} → current=[${current}]`
+  });
+
+  // NOT PICK
+  steps.push({
+    index, current: [...current], depth, type: 'nopick', line: 9,
+    found: found.map(r => [...r]),
+    msg: `❌ NOT PICK nums[${index}]=${nums[index]} → current stays [${current}]`
+  });
+  build(index + 1, current, depth + 1);
+}
+
+build(0, [], 0);
+
+// Binary tree node positions (perfect binary tree, depth 0-3)
+// Level 0: root (index=0, current=[])
+// Level 1: pick 1 -> [1], not pick 1 -> []
+// Level 2: pick/not pick 2
+// Level 3: pick/not pick 3
+// Level 4: leaves (base cases)
+const treeData = [
+  // [label, x, y, parentIdx, edgeLabel]
+  ['[]',      0.50, 0,  -1,  ''],
+  ['[1]',     0.25, 1,   0,  '✅1'],
+  ['[]',      0.75, 1,   0,  '❌1'],
+  ['[1,2]',   0.13, 2,   1,  '✅2'],
+  ['[1]',     0.37, 2,   1,  '❌2'],
+  ['[2]',     0.63, 2,   2,  '✅2'],
+  ['[]',      0.87, 2,   2,  '❌2'],
+  ['[1,2,3]', 0.07, 3,   3,  '✅3'],
+  ['[1,2]',   0.19, 3,   3,  '❌3'],
+  ['[1,3]',   0.31, 3,   4,  '✅3'],
+  ['[1]',     0.43, 3,   4,  '❌3'],
+  ['[2,3]',   0.56, 3,   5,  '✅3'],
+  ['[2]',     0.68, 3,   5,  '❌3'],
+  ['[3]',     0.81, 3,   6,  '✅3'],
+  ['[]',      0.93, 3,   6,  '❌3'],
+];
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+function resizeCv() {
+  cv.width = cv.offsetWidth * (window.devicePixelRatio || 1);
+  cv.height = cv.offsetHeight * (window.devicePixelRatio || 1);
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+}
+resizeCv();
+
+function drawTree(activeLbl, foundSets) {
+  const W = cv.offsetWidth, H = cv.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+  const yd = d => 14 + d * (H - 20) / 3.5;
+
+  // edges
+  for (let nd of treeData) {
+    if (nd[3] < 0) continue;
+    const p = treeData[nd[3]];
+    const isPick = nd[4].startsWith('✅');
+    ctx.beginPath();
+    ctx.moveTo(p[1] * W, yd(p[2]));
+    ctx.lineTo(nd[1] * W, yd(nd[2]));
+    ctx.strokeStyle = isPick ? '#58a6ff44' : '#f0883e44';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // edge label
+    const mx = (p[1] + nd[1]) / 2 * W;
+    const my = (yd(p[2]) + yd(nd[2])) / 2;
+    ctx.fillStyle = isPick ? '#58a6ff' : '#f0883e';
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(nd[4], mx, my);
+  }
+
+  // nodes
+  for (let nd of treeData) {
+    const lbl = nd[0];
+    const isActive = lbl === activeLbl;
+    const isFound = foundSets.some(f => '[' + f.join(',') + ']' === lbl);
+    const r = lbl.length > 5 ? 14 : 12;
+    ctx.beginPath();
+    ctx.arc(nd[1] * W, yd(nd[2]), r, 0, Math.PI * 2);
+    ctx.fillStyle = isActive ? '#1c2d40' : isFound ? '#1a2e1a' : '#21262d';
+    ctx.fill();
+    ctx.strokeStyle = isActive ? '#58a6ff' : isFound ? '#3fb950' : '#30363d';
+    ctx.lineWidth = isActive ? 2.5 : 1;
+    ctx.stroke();
+    ctx.fillStyle = isActive ? '#58a6ff' : isFound ? '#3fb950' : '#8b949e';
+    ctx.font = `${lbl.length > 5 ? 6 : 8}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(lbl, nd[1] * W, yd(nd[2]));
+  }
+}
+
+let cur = -1, timer = null, spd = 700;
+
+function hl(l) {
+  for (let i = 0; i <= 10; i++) document.getElementById('c' + i)?.classList.remove('hl');
+  if (l != null) document.getElementById('c' + l)?.classList.add('hl');
+}
+
+function render(idx) {
+  if (idx < 0 || idx >= steps.length) return;
+  const s = steps[idx];
+  document.getElementById('info').innerHTML = `<span class="step-lbl">Step ${idx + 1}/${steps.length}</span> — <span class="desc-txt">${s.msg}</span>`;
+  document.getElementById('pf').style.width = ((idx + 1) / steps.length * 100) + '%';
+  hl(s.line);
+  document.getElementById('res').innerHTML = s.found.map(r => `<span class="chip">[${r.join(',')}]</span>`).join('');
+
+  let frames = '';
+  for (let d = 0; d <= s.depth; d++) {
+    frames = `<div class="frame ${d === s.depth ? 'active' : ''}">subsets(index=${s.index}, current=[${s.current.slice(0, d)}])</div>` + frames;
+  }
+  document.getElementById('stack').innerHTML = frames;
+
+  const lbl = '[' + s.current.join(',') + ']';
+  drawTree(lbl, s.found);
+}
+
+function next() { cur = Math.min(steps.length - 1, cur + 1); render(cur); }
+function prev() { cur = Math.max(0, cur - 1); render(cur); }
+function reset() {
+  stopPlay(); cur = -1; hl(null);
+  document.getElementById('stack').innerHTML = '';
+  document.getElementById('res').innerHTML = '';
+  document.getElementById('info').innerHTML = '<span class="step-lbl">Ready</span> — Press PLAY or NEXT to begin';
+  document.getElementById('pf').style.width = '0%';
+  drawTree('', []);
+}
+function setSpeed(s) { spd = s; if (timer) { stopPlay(); startPlay(); } }
+function togglePlay() { timer ? stopPlay() : startPlay(); }
+function startPlay() {
+  document.getElementById('playbtn').textContent = '⏸ PAUSE';
+  timer = setInterval(() => { if (cur >= steps.length - 1) { stopPlay(); return; } next(); }, spd);
+}
+function stopPlay() { clearInterval(timer); timer = null; document.getElementById('playbtn').textContent = '▶ PLAY'; }
+
+drawTree('', []);
+</script>
+</body>
+</html>

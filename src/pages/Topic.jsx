@@ -182,7 +182,7 @@ export default function Topic() {
             {content.animations.map(anim => (
               <a
                 key={anim.file}
-                href={`/dsa/Visualizers/animations/${anim.file}`}
+                href={`/dehaaticoder/animations/${anim.file}`}
                 target="_blank"
                 rel="noreferrer"
                 className="bg-white border border-stone-200 hover:border-green-400 hover:shadow-sm rounded-xl p-5 transition text-center group"

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Generate Parentheses Backtracking Visualizer</title>
+<style>
+  body { font-family: monospace; padding: 12px; background: #0d1117; color: #e6edf3; margin: 0; }
+  h3 { color: #58a6ff; margin-bottom: 10px; font-size: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn { background: #238636; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; font-family: monospace; }
+  .btn:hover { opacity: 0.85; }
+  .btn.blue { background: #1f6feb; } .btn.orange { background: #9e6a03; } .btn.red { background: #b62324; }
+  .info { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 12px; min-height: 36px; line-height: 1.6; }
+  .step-lbl { color: #58a6ff; font-weight: bold; } .desc-txt { color: #f0883e; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .box { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; }
+  .box-title { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .frame { background: #21262d; border-left: 3px solid #30363d; border-radius: 4px; padding: 5px 8px; margin-bottom: 4px; font-size: 11px; color: #79c0ff; }
+  .frame.active { border-left-color: #58a6ff; background: #1c2d40; color: #58a6ff; }
+  .results-row { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px; margin-bottom: 10px; min-height: 32px; }
+  .chip { display: inline-block; background: #1a2e1a; border: 1px solid #3fb950; color: #3fb950; border-radius: 4px; padding: 2px 8px; margin: 2px; font-size: 12px; }
+  .code-area { background: #21262d; border-radius: 6px; padding: 10px; font-size: 11px; line-height: 1.9; }
+  .cl { padding: 0 4px; border-radius: 3px; border-left: 2px solid transparent; }
+  .cl.hl { background: #f0883e22; border-left-color: #f0883e; }
+  .kw { color: #ff7b72; } .fn { color: #d2a8ff; } .cm { color: #6e7681; } .num { color: #79c0ff; }
+  .prog { height: 3px; background: #21262d; border-radius: 2px; margin-bottom: 10px; }
+  .prog-fill { height: 100%; background: #58a6ff; border-radius: 2px; transition: width 0.2s; width: 0%; }
+  canvas { width: 100%; height: 250px; display: block; }
+  .legend { display: flex; gap: 12px; margin-bottom: 8px; font-size: 11px; flex-wrap: wrap; }
+  .leg-item { display: flex; align-items: center; gap: 4px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<h3>⚡ GENERATE PARENTHESES BACKTRACKING — n=3</h3>
+
+<div class="btn-row">
+  <button class="btn blue" onclick="prev()">◀ PREV</button>
+  <button class="btn" id="playbtn" onclick="togglePlay()">▶ PLAY</button>
+  <button class="btn blue" onclick="next()">NEXT ▶</button>
+  <button class="btn red" onclick="reset()">↺ RESET</button>
+  <button class="btn orange" onclick="setSpeed(1000)">SLOW</button>
+  <button class="btn orange" onclick="setSpeed(500)">FAST</button>
+</div>
+
+<div class="legend">
+  <div class="leg-item"><div class="leg-dot" style="background:#58a6ff;"></div> Active node</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#3fb950;"></div> Result found</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#f0883e;border:1px solid #f0883e;"></div> Add '(' branch</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#a371f7;border:1px solid #a371f7;"></div> Add ')' branch</div>
+</div>
+
+<div class="prog"><div class="prog-fill" id="pf"></div></div>
+<div class="info" id="info"><span class="step-lbl">Ready</span> — Press PLAY or NEXT to begin</div>
+
+<div class="two-col">
+  <div class="box">
+    <div class="box-title">Recursion Tree</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div class="box">
+    <div class="box-title">Call Stack (top = current)</div>
+    <div id="stack"></div>
+  </div>
+</div>
+
+<div class="results-row">
+  <span style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:1px;">Valid combinations: </span>
+  <div id="res" style="margin-top:4px;"></div>
+</div>
+
+<div class="code-area">
+  <div class="cl" id="c0"><span class="kw">void</span> <span class="fn">generate</span>(n, open, close, current, result) {</div>
+  <div class="cl" id="c1">&nbsp;&nbsp;<span class="kw">if</span> (current.length() == <span class="num">2</span> * n) {</div>
+  <div class="cl" id="c2">&nbsp;&nbsp;&nbsp;&nbsp;result.add(current); <span class="cm">// ✅ valid combination found</span></div>
+  <div class="cl" id="c3">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span>;</div>
+  <div class="cl" id="c4">&nbsp;&nbsp;}</div>
+  <div class="cl" id="c5">&nbsp;&nbsp;<span class="kw">if</span> (open &lt; n) {</div>
+  <div class="cl" id="c6">&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">generate</span>(n, open+<span class="num">1</span>, close, current + <span class="num">"("</span>, result); <span class="cm">// add '('</span></div>
+  <div class="cl" id="c7">&nbsp;&nbsp;}</div>
+  <div class="cl" id="c8">&nbsp;&nbsp;<span class="kw">if</span> (close &lt; open) {</div>
+  <div class="cl" id="c9">&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">generate</span>(n, open, close+<span class="num">1</span>, current + <span class="num">")"</span>, result); <span class="cm">// add ')'</span></div>
+  <div class="cl" id="c10">&nbsp;&nbsp;}</div>
+  <div class="cl" id="c11">}</div>
+</div>
+
+<script>
+const N = 3;
+const steps = [];
+const found = [];
+
+// Build steps
+function build(open, close, current, depth, stack) {
+  stack = [...stack, `generate(open=${open}, close=${close}, cur="${current}")`];
+
+  steps.push({
+    open, close, current, depth,
+    stack: [...stack],
+    type: 'enter', line: 1,
+    found: found.map(r => r),
+    msg: `Enter: open=${open}, close=${close}, current="${current}"`
+  });
+
+  if (current.length === 2 * N) {
+    found.push(current);
+    steps.push({
+      open, close, current, depth,
+      stack: [...stack],
+      type: 'base', line: 2,
+      found: found.map(r => r),
+      msg: `🎉 Length = ${2*N} → Valid! Add "${current}" to results`
+    });
+    return;
+  }
+
+  if (open < N) {
+    steps.push({
+      open, close, current, depth,
+      stack: [...stack],
+      type: 'addopen', line: 6,
+      found: found.map(r => r),
+      msg: `open(${open}) < n(${N}) → Add '(' → new current="${current}("`
+    });
+    build(open + 1, close, current + '(', depth + 1, stack);
+  }
+
+  if (close < open) {
+    steps.push({
+      open, close, current, depth,
+      stack: [...stack],
+      type: 'addclose', line: 9,
+      found: found.map(r => r),
+      msg: `close(${close}) < open(${open}) → Add ')' → new current="${current})"`
+    });
+    build(open, close + 1, current + ')', depth + 1, stack);
+  }
+}
+
+build(0, 0, '', 0, []);
+
+// Build tree nodes for drawing
+const treeNodes = [];
+
+function buildTreeNodes(open, close, current, depth, parentIdx) {
+  const idx = treeNodes.length;
+  treeNodes.push({ current, open, close, depth, children: [], parentIdx, x: 0 });
+  if (parentIdx >= 0) treeNodes[parentIdx].children.push(idx);
+
+  if (current.length === 2 * N) return;
+  if (open < N) buildTreeNodes(open + 1, close, current + '(', depth + 1, idx);
+  if (close < open) buildTreeNodes(open, close + 1, current + ')', depth + 1, idx);
+}
+buildTreeNodes(0, 0, '', 0, -1);
+
+// Assign x positions using leaf-first layout
+let leafCounter = 0;
+function assignX(idx) {
+  const node = treeNodes[idx];
+  if (node.children.length === 0) {
+    node.x = leafCounter++;
+    return;
+  }
+  for (let c of node.children) assignX(c);
+  node.x = node.children.reduce((s, c) => s + treeNodes[c].x, 0) / node.children.length;
+}
+assignX(0);
+
+// Normalize x to 0..1
+const maxX = Math.max(...treeNodes.map(n => n.x));
+for (let n of treeNodes) n.x = maxX > 0 ? n.x / maxX : 0.5;
+
+const maxDepth = Math.max(...treeNodes.map(n => n.depth));
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+function resizeCv() {
+  cv.width = cv.offsetWidth * (window.devicePixelRatio || 1);
+  cv.height = cv.offsetHeight * (window.devicePixelRatio || 1);
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+}
+resizeCv();
+
+function drawTree(activeCurrent, foundSet) {
+  const W = cv.offsetWidth, H = cv.offsetHeight;
+  ctx.clearRect(0, 0, W, H);
+  const pad = 18;
+  const yd = d => pad + d * (H - pad * 2) / maxDepth;
+  const xd = n => pad + n.x * (W - pad * 2);
+
+  // edges
+  for (let nd of treeNodes) {
+    if (nd.parentIdx < 0) continue;
+    const p = treeNodes[nd.parentIdx];
+    const addedChar = nd.current.slice(-1);
+    ctx.beginPath();
+    ctx.moveTo(xd(p), yd(p.depth));
+    ctx.lineTo(xd(nd), yd(nd.depth));
+    ctx.strokeStyle = addedChar === '(' ? '#f0883e55' : '#a371f755';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // edge label
+    const mx = (xd(p) + xd(nd)) / 2;
+    const my = (yd(p.depth) + yd(nd.depth)) / 2;
+    ctx.fillStyle = addedChar === '(' ? '#f0883e' : '#a371f7';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`"${addedChar}"`, mx, my);
+  }
+
+  // nodes
+  for (let nd of treeNodes) {
+    const nx = xd(nd), ny = yd(nd.depth);
+    const isActive = nd.current === activeCurrent;
+    const isFound = foundSet.includes(nd.current) && nd.current.length === 2 * N;
+    const r = 11;
+    ctx.beginPath();
+    ctx.arc(nx, ny, r, 0, Math.PI * 2);
+    ctx.fillStyle = isActive ? '#1c2d40' : isFound ? '#1a2e1a' : '#21262d';
+    ctx.fill();
+    ctx.strokeStyle = isActive ? '#58a6ff' : isFound ? '#3fb950' : '#30363d';
+    ctx.lineWidth = isActive ? 2.5 : 1;
+    ctx.stroke();
+    ctx.fillStyle = isActive ? '#58a6ff' : isFound ? '#3fb950' : '#8b949e';
+    ctx.font = `${nd.current.length > 3 ? 6 : 8}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const lbl = nd.current === '' ? '""' : `"${nd.current}"`;
+    ctx.fillText(lbl, nx, ny);
+  }
+}
+
+let cur = -1, timer = null, spd = 700;
+
+function hl(l) {
+  for (let i = 0; i <= 11; i++) document.getElementById('c' + i)?.classList.remove('hl');
+  if (l != null) document.getElementById('c' + l)?.classList.add('hl');
+}
+
+function render(idx) {
+  if (idx < 0 || idx >= steps.length) return;
+  const s = steps[idx];
+  document.getElementById('info').innerHTML = `<span class="step-lbl">Step ${idx + 1}/${steps.length}</span> — <span class="desc-txt">${s.msg}</span>`;
+  document.getElementById('pf').style.width = ((idx + 1) / steps.length * 100) + '%';
+  hl(s.line);
+  document.getElementById('res').innerHTML = s.found.map(r => `<span class="chip">${r}</span>`).join('');
+
+  // call stack
+  let frames = '';
+  for (let i = s.stack.length - 1; i >= 0; i--) {
+    frames += `<div class="frame ${i === s.stack.length - 1 ? 'active' : ''}">${s.stack[i]}</div>`;
+  }
+  document.getElementById('stack').innerHTML = frames;
+
+  drawTree(s.current, s.found);
+}
+
+function next() { cur = Math.min(steps.length - 1, cur + 1); render(cur); }
+function prev() { cur = Math.max(0, cur - 1); render(cur); }
+function reset() {
+  stopPlay(); cur = -1; hl(null);
+  document.getElementById('stack').innerHTML = '';
+  document.getElementById('res').innerHTML = '';
+  document.getElementById('info').innerHTML = '<span class="step-lbl">Ready</span> — Press PLAY or NEXT to begin';
+  document.getElementById('pf').style.width = '0%';
+  drawTree('__none__', []);
+}
+function setSpeed(s) { spd = s; if (timer) { stopPlay(); startPlay(); } }
+function togglePlay() { timer ? stopPlay() : startPlay(); }
+function startPlay() {
+  document.getElementById('playbtn').textContent = '⏸ PAUSE';
+  timer = setInterval(() => { if (cur >= steps.length - 1) { stopPlay(); return; } next(); }, spd);
+}
+function stopPlay() { clearInterval(timer); timer = null; document.getElementById('playbtn').textContent = '▶ PLAY'; }
+
+drawTree('__none__', []);
+</script>
+</body>
+</html>

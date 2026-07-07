@@ -50,17 +50,46 @@ List<List<Integer>> subsets(int[] nums) {
         cons: ['Hard to extend for duplicate handling', 'Creates many temporary lists'],
       },
       {
-        label: 'Optimal — Pick / Not Pick (Backtracking)',
-        idea: 'At each index, either pick the element and recurse, or skip it and recurse. Collect the current state at every node (not just leaves).',
+        label: 'Your Approach — Include / Exclude (Two Explicit Calls)',
+        idea: 'At each index, make two explicit recursive calls — one including the element, one excluding it. Collect only at the leaf when index reaches the end of the array.',
+        tc: 'O(2^n × n)',
+        sc: 'O(n) recursion stack',
+        code: `ArrayList<ArrayList<Integer>> ans = new ArrayList<>();
+
+public ArrayList<ArrayList<Integer>> subsets(ArrayList<Integer> A) {
+    GenerateSubsets(A, 0, new ArrayList<Integer>());
+    return ans;
+}
+
+public void GenerateSubsets(ArrayList<Integer> A, int i, ArrayList<Integer> curr) {
+    if (i == A.size()) {
+        ans.add(new ArrayList<>(curr));  // leaf — all decisions made, collect
+        return;
+    }
+
+    // pick — include A[i]
+    curr.add(A.get(i));
+    GenerateSubsets(A, i + 1, curr);
+
+    // not pick — exclude A[i]
+    curr.remove(curr.size() - 1);       // unpick before the exclude call
+    GenerateSubsets(A, i + 1, curr);
+}`,
+        pros: ['Very clear structure — pick and not-pick are explicit', 'Easy to trace the recursion tree'],
+        cons: ['Collects only at leaf — must reach index == n for every path (no early collection)'],
+      },
+      {
+        label: 'Alternative — For Loop Backtracking',
+        idea: 'Use a for loop starting from current index. Collect at every node (not just leaf). One loop handles all pick choices.',
         tc: 'O(2^n × n)',
         sc: 'O(n) recursion stack',
         code: `List<List<Integer>> result = new ArrayList<>();
 
 void backtrack(int[] nums, int i, List<Integer> current) {
-    result.add(new ArrayList<>(current)); // add snapshot at every node
+    result.add(new ArrayList<>(current)); // collect at every level
 
     for (int j = i; j < nums.length; j++) {
-        current.add(nums[j]);       // pick
+        current.add(nums[j]);
         backtrack(nums, j + 1, current);
         current.remove(current.size() - 1); // unpick
     }
@@ -70,8 +99,8 @@ List<List<Integer>> subsets(int[] nums) {
     backtrack(nums, 0, new ArrayList<>());
     return result;
 }`,
-        pros: ['Clean and extendable', 'Same pattern works for Combination Sum, Permutations', 'Easy to add pruning'],
-        cons: ['Slightly harder to visualize at first'],
+        pros: ['Extends naturally to Combination Sum — just add a target check', 'Collects at every node so no need to reach a leaf'],
+        cons: [],
       },
     ],
     dryRun: `nums = [1, 2, 3]

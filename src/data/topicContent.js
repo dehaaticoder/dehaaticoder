@@ -139,12 +139,26 @@ SIMPLE RULE:
       { file: 'generate_parentheses.html',       title: 'Generate Parentheses' },
     ],
     problems: [
-      { slug: 'subsets',              title: 'Subsets',              difficulty: 'Medium', lcNum: 78  },
-      { slug: 'combination-sum',      title: 'Combination Sum I',    difficulty: 'Medium', lcNum: 39  },
-      { slug: 'combination-sum-2',    title: 'Combination Sum II',   difficulty: 'Medium', lcNum: 40  },
-      { slug: 'permutations',         title: 'Permutations',         difficulty: 'Medium', lcNum: 46  },
-      { slug: 'generate-parentheses', title: 'Generate Parentheses', difficulty: 'Medium', lcNum: 22  },
-      { slug: 'n-queens',             title: 'N-Queens',             difficulty: 'Hard',   lcNum: 51  },
+      // Recursion foundation
+      { slug: 'staircase-paths',        title: 'Print All Staircase Paths',            difficulty: 'Easy',   lcNum: null },
+      { slug: 'kth-symbol',             title: 'K-th Symbol in Grammar',               difficulty: 'Medium', lcNum: 779  },
+      // Pick / Not Pick
+      { slug: 'subsets',                title: 'Subsets',                              difficulty: 'Medium', lcNum: 78   },
+      { slug: 'subset-sum-k',           title: 'Subset Sum Equal to K',                difficulty: 'Medium', lcNum: null },
+      { slug: 'combination-sum',        title: 'Combination Sum I',                    difficulty: 'Medium', lcNum: 39   },
+      { slug: 'combination-sum-2',      title: 'Combination Sum II',                   difficulty: 'Medium', lcNum: 40   },
+      // Permutations / Arrangements
+      { slug: 'permutations',           title: 'Permutations',                         difficulty: 'Medium', lcNum: 46   },
+      { slug: 'letter-combinations',    title: 'Letter Combinations of Phone Number',  difficulty: 'Medium', lcNum: 17   },
+      // String backtracking
+      { slug: 'generate-parentheses',   title: 'Generate Parentheses',                 difficulty: 'Medium', lcNum: 22   },
+      // Grid backtracking
+      { slug: 'maze-paths',             title: 'Print All Maze Paths',                 difficulty: 'Medium', lcNum: null },
+      { slug: 'shortest-path-maze',     title: 'Shortest Path in Binary Maze',         difficulty: 'Medium', lcNum: 1091 },
+      { slug: 'word-search',            title: 'Word Search',                          difficulty: 'Medium', lcNum: 79   },
+      // Hard
+      { slug: 'n-queens',               title: 'N-Queens',                             difficulty: 'Hard',   lcNum: 51   },
+      { slug: 'sudoku-solver',          title: 'Sudoku Solver',                        difficulty: 'Hard',   lcNum: 37   },
     ],
   },
 }

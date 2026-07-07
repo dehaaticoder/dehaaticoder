@@ -95,6 +95,571 @@ Output: [[], [1], [1,2], [1,2,3], [1,3], [2], [2,3], [3]]`,
     revisionLevel: 1,
   },
 
+  'staircase-paths': {
+    slug: 'staircase-paths',
+    title: 'Print All Staircase Paths',
+    lcNum: null,
+    lcLink: null,
+    difficulty: 'Easy',
+    topic: 'backtracking',
+    companies: ['Scaler', 'InterviewBit'],
+    patterns: ['Two Explicit Calls', 'Backtracking'],
+    description: `Given a staircase with A steps, print all ways to climb it by taking either 1 step or 2 steps at a time.`,
+    constraints: [
+      '1 <= A <= 15',
+    ],
+    examples: [
+      { input: 'A = 3', output: '[[1,1,1],[1,2],[2,1]]' },
+      { input: 'A = 2', output: '[[1,1],[2]]' },
+    ],
+    gaonKiBaat: 'You are climbing the stairs to your rooftop. You can take 1 step or 2 steps at a time. How many different ways can you reach the top? This problem asks you to print all those ways.',
+    hints: [
+      'At each step you have two choices — take 1 step or take 2 steps. This naturally leads to two recursive calls.',
+      'Keep reducing A. Base case: A == 0 means you reached the top exactly — collect the path. A < 0 means you overshot — return.',
+      'Use a shared list to track the current path. Since it is shared, you must unpick (remove last element) after each recursive call.',
+    ],
+    intuition: `At each point you decide: 1 step or 2 steps. Make one choice, recurse, then undo and try the other. This is the classic Two Explicit Calls pattern — you are not looping over choices, you are making exactly two branches. Collect only when A reaches exactly 0.`,
+    approaches: [
+      {
+        label: 'Your Approach — Two Explicit Calls',
+        idea: 'At each call try adding 1 or 2. Recurse with A reduced by that amount. Unpick after each call since the list is shared.',
+        tc: 'O(2^n)',
+        sc: 'O(n) recursion depth',
+        code: `ArrayList<ArrayList<Integer>> ans = new ArrayList<>();
+
+public ArrayList<ArrayList<Integer>> WaysToClimb(int A) {
+    Generate(A, new ArrayList<Integer>());
+    return ans;
+}
+
+void Generate(int A, ArrayList<Integer> subAns) {
+    if (A == 0) {
+        ans.add(new ArrayList<>(subAns));  // reached top exactly — collect
+        return;
+    }
+    if (A < 0) return;  // overshot — prune
+
+    subAns.add(1);
+    Generate(A - 1, subAns);
+    subAns.remove(subAns.size() - 1);  // unpick
+
+    subAns.add(2);
+    Generate(A - 2, subAns);
+    subAns.remove(subAns.size() - 1);  // unpick
+}`,
+        pros: ['Clean two-branch pattern', 'Easy to extend to 3 steps'],
+        cons: [],
+      },
+    ],
+    dryRun: `A = 3
+
+Generate(3, [])
+  add 1 → Generate(2, [1])
+    add 1 → Generate(1, [1,1])
+      add 1 → Generate(0, [1,1,1]) → A==0 → add [1,1,1] ✅
+      add 2 → Generate(-1, [1,1,2]) → A<0 → prune ✗
+    add 2 → Generate(0, [1,2]) → A==0 → add [1,2] ✅
+  add 2 → Generate(1, [2])
+    add 1 → Generate(0, [2,1]) → add [2,1] ✅
+    add 2 → Generate(-1) → prune ✗
+
+Output: [[1,1,1],[1,2],[2,1]]`,
+    mistakes: [
+      'Checking A < 0 but not A == 0 separately — you will keep recursing forever.',
+      'Not unpicking after each call — the list is shared, both branches will see wrong state.',
+      'Collecting a reference instead of a copy — ans.add(subAns) — all stored results change when subAns changes.',
+    ],
+    relatedProblems: ['kth-symbol', 'subsets', 'maze-paths'],
+    revisionLevel: 1,
+  },
+
+  'kth-symbol': {
+    slug: 'kth-symbol',
+    title: 'K-th Symbol in Grammar',
+    lcNum: 779,
+    lcLink: 'https://leetcode.com/problems/k-th-symbol-in-grammar/',
+    difficulty: 'Medium',
+    topic: 'backtracking',
+    companies: ['Google', 'Amazon'],
+    patterns: ['Recursion', 'Math Pattern'],
+    description: `We build a table of n rows (1-indexed). In the first row, we write a 0. In each subsequent row, we look at the previous row and replace each occurrence of 0 with 01, and each occurrence of 1 with 10. Given two integer n and k, return the kth (1-indexed) symbol in the nth row.`,
+    constraints: [
+      '1 <= n <= 30',
+      '1 <= k <= 2^(n-1)',
+    ],
+    examples: [
+      { input: 'n = 1, k = 1', output: '0' },
+      { input: 'n = 2, k = 1', output: '0' },
+      { input: 'n = 2, k = 2', output: '1' },
+      { input: 'n = 4, k = 5', output: '1' },
+    ],
+    gaonKiBaat: 'Think of a family tree. The first generation has one person (0). Each person in the next generation has two children — if parent is 0, children are 0 and 1. If parent is 1, children are 1 and 0. To find a person, trace back to their parent first.',
+    hints: [
+      'Try BFS — build the entire row. It works but is O(2^n) time and space — too slow for large n.',
+      'Instead of building the whole row, think about which parent generated the kth element. The parent of element k in row n is element ceil(k/2) in row n-1.',
+      'If k is even, the element is the OPPOSITE of its parent. If k is odd, the element is the SAME as its parent. Use this to recurse directly to row 1.',
+    ],
+    intuition: `Key insight: each element at position k in row n comes from the parent at position k/2 (rounded up) in row n-1. If k is odd, child = parent. If k is even, child = 1 - parent. So we recurse upward row by row until row 1 (which is always 0), then compute our way back down. No need to build the whole table.`,
+    approaches: [
+      {
+        label: 'Brute Force — BFS (TLE for large n)',
+        idea: 'Build each row from the previous one. Return element at index k in row n. Works but 2^n space and time.',
+        tc: 'O(2^n)',
+        sc: 'O(2^n)',
+        code: `// BFS — builds entire rows (TLE for large n)
+public int solve(int A, int B) {
+    int row = 0;
+    Queue<Integer> q = new LinkedList<>();
+    q.offer(0);
+    row++;
+    while (!q.isEmpty()) {
+        int qSize = q.size();
+        for (int i = 0; i < qSize; i++) {
+            int poll = q.poll();
+            if (row == A) {
+                if (i == B) return poll;
+            }
+            if (poll == 0) { q.offer(0); q.offer(1); }
+            if (poll == 1) { q.offer(1); q.offer(0); }
+        }
+        row++;
+    }
+    return 0;
+}`,
+        pros: ['Easy to understand', 'Directly simulates the problem'],
+        cons: ['O(2^n) time and space — fails for n=30'],
+      },
+      {
+        label: 'Your Optimal — Recursive Math',
+        idea: 'Go up to the parent recursively. If k is odd, same as parent. If k is even, opposite of parent. Base: row 1 is always 0.',
+        tc: 'O(n)',
+        sc: 'O(n) call stack',
+        code: `public int solve(int A, int B) {
+    if (B == 0) return 0;        // row 1 only has one element: 0
+    // Note: B is 0-indexed in this version (B==0 means first element)
+
+    if (B % 2 == 0)
+        return solve(A - 1, B / 2);      // even index: same as parent
+
+    return 1 - solve(A - 1, B / 2);     // odd index: opposite of parent
+}`,
+        pros: ['O(n) time and space', 'Clean and elegant — no table building needed'],
+        cons: ['Requires realising the parent-child relationship'],
+      },
+    ],
+    dryRun: `n=4, k=5 (0-indexed: B=4)
+
+solve(4, 4)
+  B=4 is even → same as parent → solve(3, 2)
+    B=2 is even → same as parent → solve(2, 1)
+      B=1 is odd → opposite of parent → 1 - solve(1, 0)
+        B=0 → return 0
+      → 1 - 0 = 1
+    → 1
+  → 1
+
+Answer: 1`,
+    mistakes: [
+      'Confusing 0-indexed vs 1-indexed k — make sure your base case and parent formula match.',
+      'Trying BFS for large n — 2^30 elements do not fit in memory.',
+      'Forgetting that the child-parent relationship flips when k is odd — it is 1 - parent, not parent.',
+    ],
+    relatedProblems: ['staircase-paths', 'subsets'],
+    revisionLevel: 1,
+  },
+
+  'subset-sum-k': {
+    slug: 'subset-sum-k',
+    title: 'Subset Sum Equal to K',
+    lcNum: null,
+    lcLink: null,
+    difficulty: 'Medium',
+    topic: 'backtracking',
+    companies: ['Amazon', 'Microsoft', 'Scaler'],
+    patterns: ['Pick / Not Pick', 'Backtracking'],
+    description: `Given an array A of integers and a target B, return 1 if there exists a subset of A whose sum equals B, else return 0.`,
+    constraints: [
+      '1 <= A.length <= 20',
+      '0 <= A[i] <= 1000',
+      '0 <= B <= 10000',
+    ],
+    examples: [
+      { input: 'A = [3,1,4,2], B = 6', output: '1  (subset [3,1,2] or [4,2])' },
+      { input: 'A = [3,1,4,2], B = 10', output: '0' },
+    ],
+    gaonKiBaat: 'You have a bunch of coins. Can you pick some of them (or none, or all) so that the total is exactly the amount you need? You do not need to find which coins — just answer yes or no.',
+    hints: [
+      'For each element, you have two choices — include it in the subset or exclude it.',
+      'This is exactly the Pick / Not Pick pattern. At each index, branch into include (go to index+1 with this element added) and exclude (go to index+1 without).',
+      'Collect at the leaf (when index == A.length). Check if the sum of collected elements equals B.',
+    ],
+    intuition: `Same as Subsets — include or exclude each element. The only difference is we check the sum at the end and set a flag if it matches B. A cleaner version passes the running sum as a parameter and prunes when sum > B.`,
+    approaches: [
+      {
+        label: 'Your Approach — Include/Exclude, Check at Leaf',
+        idea: 'At each index, try including or excluding the element. At the leaf (all elements decided), check if the sum equals B.',
+        tc: 'O(2^n)',
+        sc: 'O(n)',
+        code: `boolean isExist = false;
+
+public int SubsetSum(int[] A, int B) {
+    GenerateSubset(A, B, 0, new ArrayList<>());
+    return isExist ? 1 : 0;
+}
+
+void GenerateSubset(int[] A, int B, int index, ArrayList<Integer> subAns) {
+    if (index == A.length) {
+        int sum = 0;
+        for (int x : subAns) sum += x;
+        if (sum == B) isExist = true;
+        return;
+    }
+
+    subAns.add(A[index]);          // include
+    GenerateSubset(A, B, index + 1, subAns);
+    subAns.remove(subAns.size() - 1);  // unpick
+
+    GenerateSubset(A, B, index + 1, subAns);  // exclude
+}`,
+        pros: ['Clear and matches the Subsets pattern exactly'],
+        cons: ['Sum computed at every leaf — extra O(n) per leaf'],
+      },
+      {
+        label: 'Optimised — Pass Running Sum',
+        idea: 'Pass the running sum as a parameter. At leaf check if sum == B. Prune early if sum > B (for positive numbers).',
+        tc: 'O(2^n)',
+        sc: 'O(n)',
+        code: `boolean isExist = false;
+
+void GenerateSubset(int[] A, int B, int index, int currentSum) {
+    if (index == A.length) {
+        if (currentSum == B) isExist = true;
+        return;
+    }
+    if (currentSum > B) return;  // prune (only works if all elements positive)
+
+    GenerateSubset(A, B, index + 1, currentSum + A[index]);  // include
+    GenerateSubset(A, B, index + 1, currentSum);              // exclude
+}`,
+        pros: ['No list needed — just pass the sum', 'Early pruning when sum exceeds B'],
+        cons: ['Pruning only works when all elements are non-negative'],
+      },
+    ],
+    dryRun: `A = [3,1,2], B = 3
+
+index=0, subAns=[]
+  include 3 → index=1, subAns=[3]
+    include 1 → index=2, subAns=[3,1]
+      include 2 → index=3 → sum=6 ≠ 3
+      exclude 2 → index=3 → sum=4 ≠ 3
+    exclude 1 → index=2, subAns=[3]
+      include 2 → index=3 → sum=5 ≠ 3
+      exclude 2 → index=3 → sum=3 == 3 ✅ isExist=true
+  (rest pruned after isExist=true in optimised version)`,
+    mistakes: [
+      'Computing sum by iterating the list at every leaf — passes but is O(n) extra per leaf. Better to pass running sum.',
+      'Not returning early after isExist = true — continues exploring unnecessary branches.',
+      'Forgetting to unpick — the shared list will carry stale elements into the exclude branch.',
+    ],
+    relatedProblems: ['subsets', 'combination-sum', 'staircase-paths'],
+    revisionLevel: 1,
+  },
+
+  'letter-combinations': {
+    slug: 'letter-combinations',
+    title: 'Letter Combinations of Phone Number',
+    lcNum: 17,
+    lcLink: 'https://leetcode.com/problems/letter-combinations-of-a-phone-number/',
+    difficulty: 'Medium',
+    topic: 'backtracking',
+    companies: ['Amazon', 'Google', 'Facebook', 'Apple'],
+    patterns: ['Backtracking', 'For Loop Pattern', 'String Building'],
+    description: `Given a string containing digits from 2-9 inclusive, return all possible letter combinations that the number could represent. Return the answer in any order.`,
+    constraints: [
+      '0 <= digits.length <= 4',
+      'digits[i] is a digit in the range [2, 9]',
+    ],
+    examples: [
+      { input: 'digits = "23"', output: '["ad","ae","af","bd","be","bf","cd","ce","cf"]' },
+      { input: 'digits = ""',   output: '[]' },
+      { input: 'digits = "2"',  output: '["a","b","c"]' },
+    ],
+    gaonKiBaat: 'Remember old Nokia phones? When you typed a message, pressing 2 could give a, b, or c. This problem asks: if you press a sequence of digits, what are all the words you could have typed?',
+    hints: [
+      'Each digit maps to 2-4 letters. For each digit in the input, you need to try all its letters.',
+      'This is a for-loop backtracking pattern. For each digit at position index, loop through all its letters, add one, recurse to the next digit, then remove it.',
+      'Use a HashMap to store the digit→letters mapping. Collect when sb.length() == total digits count.',
+    ],
+    intuition: `At each digit position, you have a choice of 2-4 letters. Pick one letter, move to the next digit, pick one from there, and so on. When you have picked one letter for each digit, you have a valid combination. This is the For Loop backtracking pattern — at each level you loop over multiple choices (the letters for that digit).`,
+    approaches: [
+      {
+        label: 'Your Approach — HashMap + StringBuilder + For Loop',
+        idea: 'Use a HashMap for digit→letters mapping. Use StringBuilder (shared, needs unpick). For each digit, loop through its letters, append, recurse to next digit, then deleteCharAt.',
+        tc: 'O(4^n × n) where n = number of digits',
+        sc: 'O(n)',
+        code: `ArrayList<String> ans = new ArrayList<>();
+
+public String[] letterCombinations(String A) {
+    HashMap<Character, String> hm = new HashMap<>();
+    hm.put('2', "abc"); hm.put('3', "def"); hm.put('4', "ghi");
+    hm.put('5', "jkl"); hm.put('6', "mno"); hm.put('7', "pqrs");
+    hm.put('8', "tuv"); hm.put('9', "wxyz");
+    hm.put('0', "0");   hm.put('1', "1");
+
+    if (A == null || A.length() == 0) return new String[0];
+
+    Generate(A, A.length(), new StringBuilder(), 0, hm);
+
+    String[] finalAns = new String[ans.size()];
+    for (int i = 0; i < finalAns.length; i++)
+        finalAns[i] = ans.get(i);
+    return finalAns;
+}
+
+void Generate(String A, int n, StringBuilder sb, int index,
+              HashMap<Character, String> hm) {
+    if (sb.length() == n) {
+        ans.add(sb.toString());
+        return;
+    }
+    if (index > A.length()) return;
+
+    char ch = A.charAt(index);
+    String letters = hm.get(ch);
+
+    for (int i = 0; i < letters.length(); i++) {
+        sb.append(letters.charAt(i));       // pick
+        Generate(A, n, sb, index + 1, hm);
+        sb.deleteCharAt(sb.length() - 1);   // unpick
+    }
+}`,
+        pros: ['HashMap makes the digit mapping very clear', 'StringBuilder avoids creating many String objects'],
+        cons: ['StringBuilder is shared — must remember to deleteCharAt (unpick)'],
+      },
+    ],
+    dryRun: `A = "23"
+
+Generate(index=0, sb="")
+  digit '2' → letters="abc"
+  loop i=0: sb="a"
+    Generate(index=1, sb="a")
+      digit '3' → letters="def"
+      loop i=0: sb="ad"
+        Generate(index=2) → length=2=n → add "ad" ✅
+      deleteCharAt → sb="a"
+      loop i=1: sb="ae" → add "ae" ✅
+      loop i=2: sb="af" → add "af" ✅
+  deleteCharAt → sb=""
+  loop i=1: sb="b" → adds "bd","be","bf" ✅
+  loop i=2: sb="c" → adds "cd","ce","cf" ✅
+
+Output: ["ad","ae","af","bd","be","bf","cd","ce","cf"]`,
+    mistakes: [
+      'Forgetting deleteCharAt after recursion — StringBuilder is shared, the next loop iteration will see wrong state.',
+      'Using String concatenation instead of StringBuilder — creates O(n) new strings per call (much slower).',
+      'Not handling empty input — if digits is empty, return empty array immediately.',
+      'Off-by-one in base case — check sb.length() == n (total digits), not index == n.',
+    ],
+    relatedProblems: ['generate-parentheses', 'permutations', 'subsets'],
+    revisionLevel: 1,
+  },
+
+  'maze-paths': {
+    slug: 'maze-paths',
+    title: 'Print All Maze Paths',
+    lcNum: null,
+    lcLink: null,
+    difficulty: 'Medium',
+    topic: 'backtracking',
+    companies: ['Scaler', 'InterviewBit', 'Amazon'],
+    patterns: ['Grid Backtracking', 'Two Explicit Calls'],
+    description: `Given an A×B maze (grid), print all paths from the top-left corner (0,0) to the bottom-right corner (A-1, B-1). You can only move Down (D) or Right (R) at each step.`,
+    constraints: [
+      '1 <= A, B <= 6',
+    ],
+    examples: [
+      { input: 'A = 2, B = 2', output: '["DR","RD"]' },
+      { input: 'A = 2, B = 3', output: '["DRR","RDR","RRD"]' },
+    ],
+    gaonKiBaat: 'You are in a village and need to reach the market. The market is to the south-east. You can only walk south (down) or east (right). How many different routes can you take?',
+    hints: [
+      'At each cell you have exactly two choices — move Down or move Right.',
+      'Base case: when you reach (A-1, B-1) you have found a complete path — add to result.',
+      'Prune when p > A-1 or q > B-1 — you have gone out of bounds.',
+    ],
+    intuition: `From any cell (p,q), you can go to (p+1,q) (Down) or (p,q+1) (Right). Make one move, record it in a StringBuilder, recurse, then undo (deleteCharAt). This is the Two Explicit Calls pattern applied to a grid. The StringBuilder is shared so you must unpick after each call.`,
+    approaches: [
+      {
+        label: 'Your Approach — Two Explicit Calls, StringBuilder',
+        idea: 'At each cell, try moving Down (append D, recurse with p+1,q) and Right (append R, recurse with p,q+1). Unpick after each. Collect when you reach destination.',
+        tc: 'O(2^(A+B))',
+        sc: 'O(A+B) recursion depth',
+        code: `ArrayList<String> ans = new ArrayList<>();
+
+public ArrayList<String> PrintAllPaths(int A, int B) {
+    Generate(A, B, 0, 0, new StringBuilder());
+    return ans;
+}
+
+void Generate(int A, int B, int p, int q, StringBuilder s) {
+    if (p == A - 1 && q == B - 1) {
+        ans.add(s.toString());  // reached destination
+        return;
+    }
+    if (p > A - 1 || q > B - 1) return;  // out of bounds
+
+    // move Down
+    Generate(A, B, p + 1, q, s.append("D"));
+    s.deleteCharAt(s.length() - 1);  // unpick
+
+    // move Right
+    Generate(A, B, p, q + 1, s.append("R"));
+    s.deleteCharAt(s.length() - 1);  // unpick
+}`,
+        pros: ['Clean two-branch structure', 'StringBuilder efficiently builds path string'],
+        cons: [],
+      },
+    ],
+    dryRun: `A=2, B=2 → from (0,0) to (1,1)
+
+Generate(p=0, q=0, s="")
+  Down → Generate(p=1, q=0, s="D")
+    Down → p=2 > A-1=1 → prune ✗
+    Right → Generate(p=1, q=1, s="DR")
+      reached (1,1) → add "DR" ✅
+    deleteCharAt → s="D"
+  deleteCharAt → s=""
+  Right → Generate(p=0, q=1, s="R")
+    Down → Generate(p=1, q=1, s="RD")
+      reached (1,1) → add "RD" ✅
+    Right → q=2 > B-1=1 → prune ✗
+  deleteCharAt → s=""
+
+Output: ["DR","RD"]`,
+    mistakes: [
+      'Forgetting deleteCharAt — the StringBuilder is shared, next call will see leftover characters.',
+      'Wrong base condition — check p == A-1 AND q == B-1 (both must match). Checking either alone is wrong.',
+      'Checking bounds after making the move but before appending — check after appending to avoid corrupting the string.',
+    ],
+    relatedProblems: ['shortest-path-maze', 'staircase-paths', 'word-search'],
+    revisionLevel: 1,
+  },
+
+  'shortest-path-maze': {
+    slug: 'shortest-path-maze',
+    title: 'Shortest Path in Binary Maze',
+    lcNum: 1091,
+    lcLink: 'https://leetcode.com/problems/shortest-path-in-binary-matrix/',
+    difficulty: 'Medium',
+    topic: 'backtracking',
+    companies: ['Amazon', 'Google', 'Microsoft'],
+    patterns: ['Grid Backtracking', 'DFS with Visited', 'BFS (Optimal)'],
+    description: `Given a binary matrix A, find the shortest path from cell (B,C) to cell (D,E). A cell with value 1 is passable, 0 is a wall. You can move in 4 directions. Return the minimum number of steps, or -1 if no path exists.`,
+    constraints: [
+      '1 <= A.length, A[0].length <= 50',
+      'A[i][j] is 0 or 1',
+    ],
+    examples: [
+      { input: 'A = [[1,0,0],[1,1,0],[1,1,1]], B=0,C=0,D=2,E=2', output: '4' },
+      { input: 'A = [[1,1,1],[1,0,1],[1,1,1]], B=0,C=0,D=2,E=2', output: '4' },
+    ],
+    gaonKiBaat: 'You are in a field with some blocked plots. You need to reach from one corner to another in the fewest steps. You can go up, down, left, right — but not through blocked plots.',
+    hints: [
+      'This is grid backtracking — at each cell, try all 4 directions. Use a visited[][] array to avoid revisiting cells.',
+      'Track the current path length as you recurse. At the destination, update the global minimum.',
+      'Remember to mark visited[i][j] = 1 before recursing and reset to 0 after — this is the backtrack step.',
+    ],
+    intuition: `DFS explores all paths from source to destination. At each cell, try all 4 neighbours — if valid and unvisited and not a wall, mark visited, add 1 to path length, recurse. At destination update min. Then unmark (backtrack) so other paths can use this cell. Note: BFS is actually optimal for shortest path — DFS explores all paths which is slower.`,
+    approaches: [
+      {
+        label: 'Your Approach — DFS Backtracking',
+        idea: 'DFS from source. At each step try 4 directions. Mark visited before recursing, unmark after. Track current steps. Update global min at destination.',
+        tc: 'O(4^(m×n)) worst case',
+        sc: 'O(m×n) for visited array',
+        code: `int ans = Integer.MAX_VALUE;
+
+public int FindShortestPath(int[][] A, int B, int C, int D, int E) {
+    int[][] visited = new int[A.length][A[0].length];
+    int[] rowDir = {0, -1, 0, 1};
+    int[] colDir = {-1, 0, 1, 0};
+    Generate(A, visited, rowDir, colDir, B, C, D, E, 0);
+    return ans == Integer.MAX_VALUE ? -1 : ans;
+}
+
+void Generate(int[][] A, int[][] visited, int[] rowDir, int[] colDir,
+              int currI, int currJ, int D, int E, int currAns) {
+    if (currI == D && currJ == E) {
+        ans = Math.min(ans, currAns);
+        return;
+    }
+    for (int i = 0; i < 4; i++) {
+        int ni = currI + rowDir[i];
+        int nj = currJ + colDir[i];
+        if (ni >= 0 && nj >= 0 && ni < A.length && nj < A[0].length
+                && A[ni][nj] != 0 && visited[ni][nj] != 1) {
+            visited[ni][nj] = 1;    // mark
+            Generate(A, visited, rowDir, colDir, ni, nj, D, E, currAns + 1);
+            visited[ni][nj] = 0;    // unmark (backtrack)
+        }
+    }
+}`,
+        pros: ['Explores all paths, guaranteed to find the minimum', 'Classic backtracking pattern on grid'],
+        cons: ['DFS explores all paths — much slower than BFS for shortest path'],
+      },
+      {
+        label: 'Optimal — BFS',
+        idea: 'BFS guarantees shortest path in unweighted graphs. Level by level, the first time you reach the destination is the shortest path.',
+        tc: 'O(m × n)',
+        sc: 'O(m × n)',
+        code: `public int shortestPath(int[][] A, int sr, int sc, int dr, int dc) {
+    if (A[sr][sc] == 0 || A[dr][dc] == 0) return -1;
+    int[][] dir = {{0,1},{0,-1},{1,0},{-1,0}};
+    boolean[][] visited = new boolean[A.length][A[0].length];
+    Queue<int[]> q = new LinkedList<>();
+    q.offer(new int[]{sr, sc, 1});
+    visited[sr][sc] = true;
+    while (!q.isEmpty()) {
+        int[] curr = q.poll();
+        int r = curr[0], c = curr[1], dist = curr[2];
+        if (r == dr && c == dc) return dist;
+        for (int[] d : dir) {
+            int nr = r + d[0], nc = c + d[1];
+            if (nr >= 0 && nc >= 0 && nr < A.length && nc < A[0].length
+                    && A[nr][nc] == 1 && !visited[nr][nc]) {
+                visited[nr][nc] = true;
+                q.offer(new int[]{nr, nc, dist + 1});
+            }
+        }
+    }
+    return -1;
+}`,
+        pros: ['O(m×n) — much faster', 'First reach = shortest path, no need to explore all paths'],
+        cons: ['Slightly more code than DFS'],
+      },
+    ],
+    dryRun: `A = [[1,1],[1,1]], from (0,0) to (1,1)
+
+Generate(0,0, steps=0)
+  try right (0,1) → valid
+    visited[0][1]=1
+    Generate(0,1, steps=1)
+      try down (1,1) → destination! ans=min(MAX,2)=2 ✅
+    visited[0][1]=0
+  try down (1,0) → valid
+    visited[1][0]=1
+    Generate(1,0, steps=1)
+      try right (1,1) → destination! ans=min(2,2)=2 ✅
+    visited[1][0]=0`,
+    mistakes: [
+      'Not resetting visited[ni][nj] = 0 after recursion — other paths cannot use this cell.',
+      'Not initialising ans to Integer.MAX_VALUE — wrong minimum if no path exists.',
+      'Using DFS for shortest path in a large grid — use BFS instead for efficiency.',
+      'Forgetting to check A[ni][nj] != 0 — you will walk through walls.',
+    ],
+    relatedProblems: ['maze-paths', 'word-search', 'n-queens'],
+    revisionLevel: 1,
+  },
+
   'combination-sum': {
     slug: 'combination-sum',
     title: 'Combination Sum I',

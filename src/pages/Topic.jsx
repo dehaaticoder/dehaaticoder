@@ -1,6 +1,8 @@
 import { useParams, Link } from 'react-router-dom'
 import { topics } from '../data/topics'
 import { topicContent } from '../data/topicContent'
+import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
 
 const difficultyColors = {
   Easy:   'bg-green-100 text-green-700',
@@ -35,20 +37,7 @@ export default function Topic() {
   return (
     <div className="min-h-screen">
 
-      {/* Navbar */}
-      <nav className="border-b border-stone-200 bg-white sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/dehaaticoder/" className="flex items-center gap-2 font-bold text-xl text-stone-800">
-            🌾 <span>Dehaati Coder</span>
-          </Link>
-          <div className="flex items-center gap-6 text-sm font-medium text-stone-500">
-            <Link to="/dehaaticoder/roadmap" className="hover:text-green-600 transition">Roadmap</Link>
-            <Link to="/dehaaticoder/" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition">
-              Start Learning
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Breadcrumb */}
       <div className="max-w-5xl mx-auto px-6 pt-8">
@@ -246,10 +235,7 @@ export default function Topic() {
 
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-stone-200 py-10 text-center text-stone-400 text-sm">
-        <p>🌾 Dehaati Coder — Made with ❤️ for every learner in India</p>
-      </footer>
+      <Footer />
     </div>
   )
 }

@@ -6,8 +6,21 @@
   padding: 0;
 }
 
+:root {
+  --green: #16a34a;
+  --green-light: #dcfce7;
+  --wheat: #f5f0e8;
+  --charcoal: #1c1917;
+  --body-text: #44403c;
+  --muted: #78716c;
+  --border: #e7e5e4;
+  --bg: #fafaf9;
+  --card-bg: #ffffff;
+}
+
 body {
   font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--bg);
+  color: var(--body-text);
+  line-height: 1.7;
 }

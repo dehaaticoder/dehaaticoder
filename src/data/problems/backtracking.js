@@ -177,4 +177,245 @@ backtrack(i=0, target=7, [])
     relatedProblems: ['subsets', 'combination-sum-2', 'permutations'],
     revisionLevel: 1,
   },
+
+  permutations: {
+    slug: 'permutations',
+    title: 'Permutations',
+    lcNum: 46,
+    lcLink: 'https://leetcode.com/problems/permutations/',
+    difficulty: 'Medium',
+    topic: 'backtracking',
+    companies: ['Amazon', 'Microsoft', 'Google', 'Facebook'],
+    patterns: ['Backtracking', 'Visited Array'],
+    description: `Given an array nums of distinct integers, return all the possible permutations. You can return the answer in any order.`,
+    constraints: [
+      '1 <= nums.length <= 6',
+      '-10 <= nums[i] <= 10',
+      'All the integers of nums are unique',
+    ],
+    examples: [
+      { input: 'nums = [1,2,3]', output: '[[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]' },
+      { input: 'nums = [0,1]',   output: '[[0,1],[1,0]]' },
+      { input: 'nums = [1]',     output: '[[1]]' },
+    ],
+    gaonKiBaat: 'You have 3 people — A, B, C. How many ways can you make them stand in a line? Every arrangement is different. That is a permutation.',
+    hints: [
+      'Unlike Subsets, order matters here. [1,2,3] and [2,1,3] are different answers.',
+      'You cannot use a start index because you need to go back and pick earlier elements too. Instead, track which elements are already used.',
+      'Use a bt[] array — bt[i] = -1 means element A[i] is free, bt[i] = 0 means it is already in the current path. Always loop from i=0, skip used elements.',
+    ],
+    intuition: `In Subsets and Combinations, we used a start index to avoid going back. But in Permutations, [1,2,3] and [2,1,3] are different — so we need to go back and pick earlier elements too. The solution: always loop from 0, but skip elements already used. We track this with a bt[] array (bt[i] = -1 means free, bt[i] = 0 means in use).`,
+    approaches: [
+      {
+        label: 'Your Approach — Visited Array (bt[])',
+        idea: 'Use a bt[] array to track which indices are currently in use. Loop from 0 every time. Skip if bt[i] is not -1. Mark bt[i]=0 before recursing, restore to -1 after.',
+        tc: 'O(n! × n)',
+        sc: 'O(n) for bt[] and current list',
+        code: `public int[][] permute(int[] A) {
+    int len = A.length;
+    int[] bt = new int[len];
+    Arrays.fill(bt, -1);               // -1 = free, 0 = in use
+    ArrayList<ArrayList<Integer>> ans = new ArrayList<>();
+    Generate(A, bt, 0, len, new ArrayList<>(), ans);
+
+    int[][] result = new int[ans.size()][len];
+    for (int i = 0; i < ans.size(); i++)
+        for (int j = 0; j < len; j++)
+            result[i][j] = ans.get(i).get(j);
+    return result;
+}
+
+void Generate(int[] A, int[] bt, int index, int len,
+              ArrayList<Integer> al, ArrayList<ArrayList<Integer>> ans) {
+    if (index == len) {
+        ans.add(new ArrayList<>(al));  // all n elements placed — valid permutation
+        return;
+    }
+
+    for (int i = 0; i < len; i++) {
+        if (bt[i] == -1) {             // element is free — pick it
+            al.add(A[i]);
+            bt[i] = 0;                 // mark as in use
+            Generate(A, bt, index + 1, len, al, ans);
+            al.remove(al.size() - 1); // unpick
+            bt[i] = -1;               // free again
+        }
+    }
+}`,
+        pros: ['Intuitive — bt[] clearly shows which elements are used', 'Easy to explain in interviews'],
+        cons: ['Extra O(n) space for bt[] array'],
+      },
+      {
+        label: 'Alternative — Boolean Visited Array',
+        idea: 'Same idea, cleaner with boolean[] visited instead of int[] bt. visited[i]=true means in use.',
+        tc: 'O(n! × n)',
+        sc: 'O(n)',
+        code: `List<List<Integer>> result = new ArrayList<>();
+
+void backtrack(int[] nums, boolean[] visited, List<Integer> current) {
+    if (current.size() == nums.length) {
+        result.add(new ArrayList<>(current));
+        return;
+    }
+    for (int i = 0; i < nums.length; i++) {
+        if (visited[i]) continue;      // skip used elements
+        visited[i] = true;
+        current.add(nums[i]);
+        backtrack(nums, visited, current);
+        current.remove(current.size() - 1);
+        visited[i] = false;
+    }
+}
+
+List<List<Integer>> permute(int[] nums) {
+    backtrack(nums, new boolean[nums.length], new ArrayList<>());
+    return result;
+}`,
+        pros: ['Slightly cleaner with boolean', 'Standard interview template'],
+        cons: [],
+      },
+    ],
+    dryRun: `A = [1, 2, 3]
+
+Generate(index=0, al=[])
+  i=0, bt[0]=-1 → pick 1, bt=[0,-1,-1], al=[1]
+    Generate(index=1, al=[1])
+      i=0, bt[0]=0 → skip
+      i=1, bt[1]=-1 → pick 2, bt=[0,0,-1], al=[1,2]
+        Generate(index=2, al=[1,2])
+          i=0,1 → skip (in use)
+          i=2 → pick 3, al=[1,2,3]
+            Generate(index=3) → index==len → add [1,2,3] ✅
+          unpick 3
+        unpick 2, bt=[0,-1,-1]
+      i=2 → pick 3, al=[1,3]
+        → eventually adds [1,3,2] ✅
+  unpick 1, bt=[-1,-1,-1]
+  i=1 → pick 2, al=[2] → adds [2,1,3], [2,3,1] ✅
+  i=2 → pick 3, al=[3] → adds [3,1,2], [3,2,1] ✅
+
+Total: 3! = 6 permutations`,
+    mistakes: [
+      'Using start index like Subsets — gives only ordered combinations, not all permutations.',
+      'Forgetting to reset bt[i] = -1 (or visited[i] = false) after backtracking — future calls see wrong state.',
+      'Not copying the list — ans.add(al) stores a reference, not a snapshot. All results end up same.',
+      'Confusing Permutations (order matters, loop from 0) with Combinations (order does not matter, loop from start index).',
+    ],
+    relatedProblems: ['subsets', 'combination-sum', 'generate-parentheses'],
+    revisionLevel: 1,
+  },
+
+  'generate-parentheses': {
+    slug: 'generate-parentheses',
+    title: 'Generate Parentheses',
+    lcNum: 22,
+    lcLink: 'https://leetcode.com/problems/generate-parentheses/',
+    difficulty: 'Medium',
+    topic: 'backtracking',
+    companies: ['Google', 'Amazon', 'Microsoft', 'Bloomberg'],
+    patterns: ['String Backtracking', 'Two Explicit Calls', 'Constraint Pruning'],
+    description: `Given n pairs of parentheses, write a function to generate all combinations of well-formed parentheses.`,
+    constraints: [
+      '1 <= n <= 8',
+    ],
+    examples: [
+      { input: 'n = 3', output: '["((()))","(()())","(())()","()(())","()()()"]' },
+      { input: 'n = 1', output: '["()"]' },
+    ],
+    gaonKiBaat: 'Imagine you are building a sentence with opening and closing quotes. You can open a new quote anytime, but you can only close a quote after you have opened one. And you must close all quotes by the end.',
+    hints: [
+      'At every step you have two choices — add "(" or add ")". But both choices have constraints.',
+      'You can add "(" only if you have not used all n opening brackets yet (openCnt < n). You can add ")" only if there are more opening brackets than closing ones (closeCnt < openCnt).',
+      'When openCnt + closeCnt == 2*n, you have placed all brackets — add to result.',
+    ],
+    intuition: `Key insight: a valid parentheses string is valid at every prefix too — never more closing than opening brackets at any point. So instead of generating all strings and checking validity at the end, we enforce the constraint while building. Two rules: open < n (can add "("), close < open (can add ")"). This prunes invalid paths before they happen.`,
+    approaches: [
+      {
+        label: 'Your Approach — Two Explicit Calls with Constraint Check',
+        idea: 'Use two recursive calls — one adding "(" and one adding ")". At the start of each call, prune if openCnt < closeCnt (invalid) or openCnt > n (too many opens). Collect when total length == 2*n.',
+        tc: 'O(4^n / √n) — Catalan number',
+        sc: 'O(n) recursion depth',
+        code: `ArrayList<String> ans = new ArrayList<>();
+
+public ArrayList<String> generateParenthesis(int A) {
+    Generate(A, new ArrayList<Character>(), 0, 0);
+    return ans;
+}
+
+public void Generate(int A, ArrayList<Character> subAns,
+                     int openCnt, int closeCnt) {
+    if (openCnt < closeCnt) return;  // invalid — more closing than opening
+    if (openCnt > A) return;         // too many opening brackets
+
+    if (openCnt + closeCnt == 2 * A) {
+        StringBuilder sb = new StringBuilder();
+        for (char c : subAns) sb.append(c);
+        ans.add(sb.toString());
+        return;
+    }
+
+    subAns.add('(');
+    openCnt++;
+    Generate(A, subAns, openCnt, closeCnt);
+    subAns.remove(subAns.size() - 1);  // unpick
+    openCnt--;
+
+    subAns.add(')');
+    closeCnt++;
+    Generate(A, subAns, openCnt, closeCnt);
+    subAns.remove(subAns.size() - 1);  // unpick
+    closeCnt--;
+}`,
+        pros: ['Clear two-branch structure', 'Constraint check at top makes logic easy to follow'],
+        cons: ['Uses ArrayList<Character> — needs unpick. A String approach avoids this'],
+      },
+      {
+        label: 'Cleaner Alternative — Check Before Calling',
+        idea: 'Check constraint BEFORE making the recursive call instead of at the start. Uses String (own copy) — no unpick needed.',
+        tc: 'O(4^n / √n)',
+        sc: 'O(n)',
+        code: `List<String> result = new ArrayList<>();
+
+void backtrack(String current, int open, int close, int n) {
+    if (current.length() == 2 * n) {
+        result.add(current);
+        return;
+    }
+    if (open < n)
+        backtrack(current + "(", open + 1, close, n);
+    if (close < open)
+        backtrack(current + ")", open, close + 1, n);
+}
+
+List<String> generateParenthesis(int n) {
+    backtrack("", 0, 0, n);
+    return result;
+}`,
+        pros: ['No unpick needed — String is immutable (own copy per call)', 'Cleaner and shorter'],
+        cons: [],
+      },
+    ],
+    dryRun: `n = 2 (for simplicity)
+
+Generate(open=0, close=0, subAns=[])
+  add '(' → Generate(open=1, close=0, subAns=['('])
+    add '(' → Generate(open=2, close=0, subAns=['(','('])
+      add '(' → open=3 > n=2 → prune ✗
+      add ')' → Generate(open=2, close=1, subAns=['(','(',')'])
+        add '(' → open=3 > n=2 → prune ✗
+        add ')' → Generate(open=2, close=2) → length=4=2*2 → add "(())" ✅
+    add ')' → Generate(open=1, close=1, subAns=['(', ')'])
+      add '(' → Generate(open=2, close=1, subAns=['(',')',('('])
+        add ')' → Generate(open=2, close=2) → add "()()" ✅
+
+Output: ["(())", "()()"]`,
+    mistakes: [
+      'Checking openCnt > A instead of openCnt >= A — off by one, misses valid strings.',
+      'Forgetting to unpick (remove last element) when using ArrayList — future calls see wrong state.',
+      'Not understanding why String approach needs no unpick — String is immutable, each call gets its own copy.',
+      'Adding ")" before "(" in every branch — order does not affect correctness but "()" first is more natural.',
+    ],
+    relatedProblems: ['permutations', 'letter-combinations', 'subsets'],
+    revisionLevel: 1,
+  },
 }

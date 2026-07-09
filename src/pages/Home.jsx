@@ -49,6 +49,65 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How to Use */}
+      <section className="max-w-5xl mx-auto px-6 py-20">
+        <h2 className="text-3xl font-bold text-stone-900 text-center mb-3">How to Use This Website</h2>
+        <p className="text-stone-500 text-center mb-14 text-lg">Four steps. Zero confusion. Just follow the path.</p>
+
+        <div className="relative">
+          {/* Connector line (desktop only) */}
+          <div className="hidden md:block absolute top-10 left-[12.5%] right-[12.5%] h-0.5 bg-green-100 z-0" />
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
+            {[
+              {
+                step: '01',
+                icon: '🗺️',
+                title: 'Pick a Topic',
+                desc: 'Go to the Roadmap. Pick any topic — start with Backtracking if you\'re here for interviews.',
+                color: 'bg-green-50 border-green-200',
+                num: 'bg-green-600 text-white',
+              },
+              {
+                step: '02',
+                icon: '🤔',
+                title: 'Think First',
+                desc: 'Read the problem. Spend 5 minutes thinking before touching hints. That struggle is the real learning.',
+                color: 'bg-amber-50 border-amber-200',
+                num: 'bg-amber-500 text-white',
+              },
+              {
+                step: '03',
+                icon: '🌾',
+                title: 'Use the Hints',
+                desc: 'Reveal hints one at a time. Read the Gaon Ki Baat analogy. Then look at the intuition and approach.',
+                color: 'bg-blue-50 border-blue-200',
+                num: 'bg-blue-500 text-white',
+              },
+              {
+                step: '04',
+                icon: '🎯',
+                title: 'Verify & Revise',
+                desc: 'Watch the recursion tree visualizer. Then test yourself on the cheatsheet quiz before moving on.',
+                color: 'bg-purple-50 border-purple-200',
+                num: 'bg-purple-500 text-white',
+              },
+            ].map(({ step, icon, title, desc, color, num }) => (
+              <div key={step} className={`border rounded-xl p-6 text-center flex flex-col items-center gap-3 ${color}`}>
+                <div className={`w-8 h-8 rounded-full text-sm font-bold flex items-center justify-center ${num}`}>{step}</div>
+                <div className="text-3xl">{icon}</div>
+                <h3 className="font-bold text-stone-800 text-lg">{title}</h3>
+                <p className="text-stone-500 text-sm leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-10 bg-stone-50 border border-stone-200 rounded-xl px-6 py-4 text-center text-sm text-stone-500">
+          💡 <span className="font-medium text-stone-700">Pro tip:</span> Don't skip to the solution. The hints exist for a reason — each one is a checkpoint, not a cheat.
+        </div>
+      </section>
+
       {/* Features */}
       <section className="max-w-5xl mx-auto px-6 py-24">
         <h2 className="text-3xl font-bold text-stone-900 text-center mb-4">Why Dehaati Coder?</h2>

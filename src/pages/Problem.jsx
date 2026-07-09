@@ -1,8 +1,9 @@
 import { useParams, Link } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { backtrackingProblems } from '../data/problems/backtracking'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import visualizers from '../components/visualizers/index'
 
 const allProblems = { ...backtrackingProblems }
 
@@ -19,6 +20,13 @@ export default function Problem() {
   const [showIntuition, setShowIntuition] = useState(false)
   const [showApproaches, setShowApproaches] = useState(false)
   const [showDryRun, setShowDryRun] = useState(false)
+  const [vizFullscreen, setVizFullscreen] = useState(false)
+
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') setVizFullscreen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   if (!problem) return (
     <div className="min-h-screen flex flex-col items-center justify-center text-center px-6">
@@ -220,16 +228,71 @@ export default function Problem() {
           )}
         </section>
 
+        {/* Visualizer */}
+        {visualizers[slug] && (() => {
+          const Visualizer = visualizers[slug]
+          return (
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-stone-800">Recursion Tree Visualizer</h2>
+                <button
+                  onClick={() => setVizFullscreen(true)}
+                  className="text-sm text-green-600 border border-green-300 px-4 py-1.5 rounded-lg hover:bg-green-50 transition flex items-center gap-2"
+                >
+                  ⛶ Full Screen
+                </button>
+              </div>
+              <Visualizer />
+
+              {/* Fullscreen Modal */}
+              {vizFullscreen && (
+                <div
+                  className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
+                  onClick={() => setVizFullscreen(false)}
+                >
+                  <div
+                    className="bg-white rounded-2xl w-full max-w-7xl max-h-[92vh] overflow-auto p-6 relative"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-bold text-stone-800">Recursion Tree Visualizer</h2>
+                      <button
+                        onClick={() => setVizFullscreen(false)}
+                        className="text-stone-400 hover:text-stone-700 text-2xl leading-none transition"
+                        title="Close (ESC)"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <Visualizer fullscreen />
+                  </div>
+                </div>
+              )}
+            </section>
+          )
+        })()}
+
         {/* Common Mistakes */}
         <section>
           <h2 className="text-xl font-bold text-stone-800 mb-4">Common Mistakes</h2>
           <div className="space-y-3">
-            {problem.mistakes.map((m, i) => (
-              <div key={i} className="flex items-start gap-3 bg-red-50 border border-red-100 rounded-xl px-5 py-3">
-                <span className="text-red-500 font-bold shrink-0">✗</span>
-                <p className="text-stone-700 text-sm">{m}</p>
-              </div>
-            ))}
+            {problem.mistakes.map((m, i) => {
+              const text  = typeof m === 'string' ? m : m.text
+              const quote = typeof m === 'string' ? null : m.quote
+              return (
+                <div key={i} className="bg-red-50 border border-red-100 rounded-xl px-5 py-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-red-500 font-bold shrink-0">✗</span>
+                    <p className="text-stone-700 text-sm">{text}</p>
+                  </div>
+                  {quote && (
+                    <p className="mt-2 ml-5 text-xs italic text-amber-700 border-l-2 border-amber-300 pl-3">
+                      🌾 "{quote}"
+                    </p>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </section>
 

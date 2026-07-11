@@ -1,3 +1,5 @@
+import { n } from '../../components/visualizers/treeUtils'
+
 export const backtrackingCheatsheet = {
   topic: 'backtracking',
   title: 'Backtracking',
@@ -128,6 +130,44 @@ void dfs(char[][] grid, int r, int c, String path) {
     { problem: 'Word Search',          tc: 'O(m×n × 4^L)', sc: 'O(L)',  note: 'L=word length' },
     { problem: 'N-Queens',             tc: 'O(n!)',         sc: 'O(n²)', note: 'one queen per row, heavy pruning' },
   ],
+
+  // ── TC/SC GUIDE ──────────────────────────────────────────────────────────────
+  complexityGuide: {
+    title: 'How to Calculate TC & SC in Backtracking',
+    intro: 'Every backtracking TC follows one of 3 cases. Identify which case your problem falls into, then apply the formula.',
+    cases: [
+      {
+        name: 'Case 1: Constant Branching',
+        formula: 'TC = branches ^ depth',
+        when: 'Every node has the same number of choices at every level.',
+        example: 'Subsets — 2 choices (pick/not-pick) at every level, depth = n → TC = 2ⁿ',
+        problems: ['Subsets', 'Subset Sum K', 'Staircase Paths'],
+        color: 'blue',
+      },
+      {
+        name: 'Case 2: Decreasing Branching',
+        formula: 'TC = n × (n-1) × (n-2) × ... × 1 = n!',
+        when: 'Branching factor decreases by 1 at each level — one choice gets used up.',
+        example: 'Permutations — level 0 has n choices, level 1 has n-1, level 2 has n-2 ... → n!',
+        problems: ['Permutations', 'N-Queens (approx)'],
+        color: 'green',
+      },
+      {
+        name: 'Case 3: Pruned Tree (Catalan)',
+        formula: 'TC = 4ⁿ / √n  (Catalan number)',
+        when: 'Binary branching (2 choices) but heavy pruning cuts most branches early. Raw estimate 2^(2n) = 4ⁿ, but valid leaves are only Catalan(n).',
+        example: 'Generate Parentheses — 2 choices at each step but most are pruned. Valid strings = Catalan(n) ≈ 4ⁿ/√n',
+        problems: ['Generate Parentheses'],
+        color: 'purple',
+      },
+    ],
+    scRules: [
+      { rule: 'Recursion stack depth', detail: 'SC is always at least O(depth of recursion tree). For most backtracking problems, depth = n, so SC = O(n).' },
+      { rule: 'What is stored per frame?', detail: 'If each frame stores a list of size k, SC = O(n × k). For simple index/counter tracking, SC = O(n) for just the stack.' },
+      { rule: 'Result storage is separate', detail: 'We usually report auxiliary SC (not counting the result). The result list itself can be O(2ⁿ × n) but we exclude it from SC by convention.' },
+      { rule: '2D board problems', detail: 'Word Search stores a visited matrix → SC = O(m×n) + O(L) for stack. Always add the extra space for auxiliary data structures.' },
+    ],
+  },
 
   // ── KEY RULES ────────────────────────────────────────────────────────────────
   rules: [
@@ -293,6 +333,205 @@ void dfs(char[][] grid, int r, int c, String path) {
       ],
       answer: 2,
       explanation: 'Path length being less than required is NOT a reason to prune — we continue recursing to build it up. The other three are all valid pruning conditions.',
+    },
+    {
+      q: 'What is the TC formula when branching factor is constant at every level of the recursion tree?',
+      options: ['n!', 'branches × depth', 'branches ^ depth', 'n × branches'],
+      answer: 2,
+      explanation: 'When every node has the same number of choices, total nodes = branches^depth. Example: Subsets has 2 choices at every level, depth = n → TC = 2ⁿ.',
+    },
+    {
+      q: 'Why is the TC of Permutations O(n!) and NOT O(2ⁿ)?',
+      options: [
+        'Because we use a visited array',
+        'The branching factor decreases each level: n choices at level 0, n-1 at level 1 ... → n × (n-1) × ... × 1 = n!',
+        'Because we copy the list at each leaf',
+        'Because we sort before recursing',
+      ],
+      answer: 1,
+      explanation: 'branches^depth only works when branching is constant. In Permutations, branching decreases by 1 each level (one element gets used). So we multiply: n × (n-1) × ... × 1 = n!',
+    },
+    {
+      q: 'Generate Parentheses has 2 choices at each step. Why is TC not 2^(2n)?',
+      options: [
+        'Because we use StringBuilder instead of String',
+        'Because we only generate n pairs',
+        'Heavy pruning cuts most branches — only Catalan(n) valid strings survive, giving TC = 4ⁿ/√n',
+        'Because we check open < n and close < open before recursing',
+      ],
+      answer: 2,
+      explanation: 'Without pruning: 2 choices × 2n depth = 2^(2n) = 4ⁿ nodes. But the guards (open < n, close < open) prune most branches early. Valid leaves = Catalan(n) ≈ 4ⁿ/√n — far fewer than 4ⁿ.',
+    },
+    {
+      q: 'In most backtracking problems, why is SC = O(n)?',
+      options: [
+        'Because we store n elements in the result',
+        'Because the recursion stack depth equals n — each frame waits while the next is called',
+        'Because we use a visited array of size n',
+        'Because n is always the input size',
+      ],
+      answer: 1,
+      explanation: 'SC counts the call stack. At any point, at most n frames are active simultaneously (one per level of the tree). Each frame stores O(1) local variables, so total stack space = O(n).',
+    },
+    {
+      q: 'N-Queens has TC = O(n!). Which case does this fall under?',
+      options: [
+        'Constant branching — same choices at every level',
+        'Catalan — heavily pruned binary tree',
+        'Decreasing branching — one column eliminated per row placed',
+        'Exponential — 2 choices per cell',
+      ],
+      answer: 2,
+      explanation: 'Each row has at most n columns to try, but isSafe() pruning reduces valid choices each level. In the worst case it behaves like n × (n-1) × ... = n!. Same decreasing branching pattern as Permutations.',
+    },
+    {
+      q: 'Look at this recursion tree (Subsets, n=2). What is the Time Complexity for n elements?',
+      tree: n('solve(idx=0)', 'curr=[]', 'normal', null, null, [
+        n('solve(idx=1)', 'curr=[1]', 'normal', 'pick 1', 'pick', [
+          n('[1,2] ✅', 'LEAF', 'leaf', 'pick 2', 'pick', []),
+          n('[1] ✅',   'LEAF', 'leaf', 'skip 2', 'skip', []),
+        ]),
+        n('solve(idx=1)', 'curr=[]', 'normal', 'skip 1', 'skip', [
+          n('[2] ✅', 'LEAF', 'leaf', 'pick 2', 'pick', []),
+          n('[] ✅',  'LEAF', 'leaf', 'skip 2', 'skip', []),
+        ]),
+      ]),
+      options: ['O(n²)', 'O(n!)', 'O(2ⁿ)', 'O(n log n)'],
+      answer: 2,
+      explanation: 'Branching factor is constant = 2 (pick or skip) at every level. Depth = n. TC = branches^depth = 2^n. Here n=2 gives 4 leaves = 2². This is the Subsets / Pick-Not-Pick pattern.',
+    },
+    {
+      q: 'Look at this recursion tree (Permutations, n=3). What is the Time Complexity?',
+      tree: n('solve([])', 'used={}', 'normal', null, null, [
+        n('solve([1])', 'used={1}', 'normal', 'pick 1', 'pick', [
+          n('solve([1,2])', 'used={1,2}', 'normal', 'pick 2', 'pick', [
+            n('[1,2,3] ✅', 'LEAF', 'leaf', 'pick 3', 'pick', []),
+          ]),
+          n('solve([1,3])', 'used={1,3}', 'normal', 'pick 3', 'pick', [
+            n('[1,3,2] ✅', 'LEAF', 'leaf', 'pick 2', 'pick', []),
+          ]),
+        ]),
+        n('solve([2])', 'used={2}', 'normal', 'pick 2', 'pick', [
+          n('solve([2,1])', 'used={2,1}', 'normal', 'pick 1', 'pick', [
+            n('[2,1,3] ✅', 'LEAF', 'leaf', 'pick 3', 'pick', []),
+          ]),
+          n('solve([2,3])', 'used={2,3}', 'normal', 'pick 3', 'pick', [
+            n('[2,3,1] ✅', 'LEAF', 'leaf', 'pick 1', 'pick', []),
+          ]),
+        ]),
+        n('solve([3])', 'used={3}', 'normal', 'pick 3', 'pick', [
+          n('solve([3,1])', 'used={3,1}', 'normal', 'pick 1', 'pick', [
+            n('[3,1,2] ✅', 'LEAF', 'leaf', 'pick 2', 'pick', []),
+          ]),
+          n('solve([3,2])', 'used={3,2}', 'normal', 'pick 2', 'pick', [
+            n('[3,2,1] ✅', 'LEAF', 'leaf', 'pick 1', 'pick', []),
+          ]),
+        ]),
+      ]),
+      options: ['O(2ⁿ)', 'O(n!)', 'O(4ⁿ / √n)', 'O(n²)'],
+      answer: 1,
+      explanation: 'Branching decreases by 1 each level — 3 choices at level 0, 2 at level 1, 1 at level 2. Multiply: 3×2×1 = 6 = 3! leaves. Pattern: n × (n-1) × ... × 1 = n!',
+    },
+    {
+      q: 'This tree (Generate Parentheses, n=2) has 2 branches per node but one is pruned. What is the TC for general n?',
+      tree: n('gen(o=0,c=0)', 'n=2', 'normal', null, null, [
+        n('gen(o=1,c=0)', 'sb="("', 'normal', 'add "("', 'pick', [
+          n('gen(o=2,c=0)', 'sb="(("', 'normal', 'add "("', 'pick', [
+            n('gen(o=2,c=1)', 'sb="(()"', 'normal', 'add ")"', 'pick', [
+              n('"(())" ✅', 'LEAF', 'leaf', 'add ")"', 'pick', []),
+            ]),
+          ]),
+          n('gen(o=1,c=1)', 'sb="()"', 'normal', 'add ")"', 'pick', [
+            n('gen(o=2,c=1)', 'sb="()("', 'normal', 'add "("', 'pick', [
+              n('"()()" ✅', 'LEAF', 'leaf', 'add ")"', 'pick', []),
+            ]),
+          ]),
+        ]),
+        n('PRUNED ❌', 'close > open', 'pruned', 'add ")"', 'skip', []),
+      ]),
+      options: ['O(2ⁿ)', 'O(4ⁿ)', 'O(4ⁿ / √n)', 'O(n!)'],
+      answer: 2,
+      explanation: 'Binary branching gives raw 4ⁿ nodes, but guards (open < n, close < open) prune most branches early. Only Catalan(n) valid strings survive. TC = O(4ⁿ / √n) — the Catalan number pattern.',
+    },
+    {
+      q: 'Look at this tree (Letter Combinations, digits="23", each digit has 3 letters). What is the TC for n digits where each digit maps to at most k letters?',
+      tree: n('solve(d=0)', 'digits="23"', 'normal', null, null, [
+        n('solve(d=1)', 'path="a"', 'normal', 'a', 'pick', [
+          n('"ad" ✅', 'LEAF', 'leaf', 'd', 'pick', []),
+          n('"ae" ✅', 'LEAF', 'leaf', 'e', 'pick', []),
+          n('"af" ✅', 'LEAF', 'leaf', 'f', 'pick', []),
+        ]),
+        n('solve(d=1)', 'path="b"', 'normal', 'b', 'pick', [
+          n('"bd" ✅', 'LEAF', 'leaf', 'd', 'pick', []),
+          n('"be" ✅', 'LEAF', 'leaf', 'e', 'pick', []),
+          n('"bf" ✅', 'LEAF', 'leaf', 'f', 'pick', []),
+        ]),
+        n('solve(d=1)', 'path="c"', 'normal', 'c', 'pick', [
+          n('"cd" ✅', 'LEAF', 'leaf', 'd', 'pick', []),
+          n('"ce" ✅', 'LEAF', 'leaf', 'e', 'pick', []),
+          n('"cf" ✅', 'LEAF', 'leaf', 'f', 'pick', []),
+        ]),
+      ]),
+      options: ['O(n²)', 'O(2ⁿ)', 'O(n!)', 'O(kⁿ × n)'],
+      answer: 3,
+      explanation: 'Branching factor = k (letters per digit) at every level. Depth = n (digits). TC = k^n × n — the ×n comes from building the string at each leaf. For k=4 (max letters on a phone key): O(4ⁿ × n).',
+    },
+    {
+      q: 'Look at this tree. At the moment the call stack reaches the highlighted leaf [1,2,3], how many function frames are active simultaneously? What does this tell us about SC?',
+      tree: n('solve(i=0)', 'frame 1', 'normal', null, null, [
+        n('solve(i=1)', 'frame 2', 'normal', 'pick 1', 'pick', [
+          n('solve(i=2)', 'frame 3', 'normal', 'pick 2', 'pick', [
+            n('[1,2,3] ✅', 'frame 4 ← PEAK', 'found', 'pick 3', 'pick', []),
+            n('[1,2] ✅', 'LEAF', 'leaf', 'skip 3', 'skip', []),
+          ]),
+          n('solve(i=2)', 'frame 3', 'normal', 'skip 2', 'skip', [
+            n('[1,3] ✅', 'LEAF', 'leaf', 'pick 3', 'pick', []),
+            n('[1] ✅', 'LEAF', 'leaf', 'skip 3', 'skip', []),
+          ]),
+        ]),
+        n('solve(i=1)', 'frame 2', 'normal', 'skip 1', 'skip', [
+          n('solve(i=2)', 'frame 3', 'normal', 'pick 2', 'pick', [
+            n('[2,3] ✅', 'LEAF', 'leaf', 'pick 3', 'pick', []),
+            n('[2] ✅', 'LEAF', 'leaf', 'skip 3', 'skip', []),
+          ]),
+          n('solve(i=2)', 'frame 3', 'normal', 'skip 2', 'skip', [
+            n('[3] ✅', 'LEAF', 'leaf', 'pick 3', 'pick', []),
+            n('[] ✅', 'LEAF', 'leaf', 'skip 3', 'skip', []),
+          ]),
+        ]),
+      ]),
+      options: [
+        '2 frames — only current and parent are active',
+        '8 frames — one per leaf',
+        '4 frames (n+1) — one per level of the tree → SC = O(n)',
+        '15 frames — one per node in the entire tree',
+      ],
+      answer: 2,
+      explanation: 'At peak depth, exactly n+1 frames are active (one per tree level). All other branches have already returned. Stack depth = n = depth of tree → SC = O(n). The total number of nodes does NOT matter for SC — only the longest active path does.',
+    },
+    {
+      q: 'Look at this tree. At each node, exactly 2 recursive calls are made with no loop. Which backtracking pattern is this?',
+      tree: n('solve(n=3)', 'open=0 close=0', 'normal', null, null, [
+        n('solve(n=3)', 'open=1 close=0', 'normal', 'add "("', 'pick', [
+          n('solve(n=3)', 'open=2 close=0', 'normal', 'add "("', 'pick', [
+            n('solve(n=3)', 'open=2 close=1', 'normal', 'add ")"', 'pick', [
+              n('"((()))" ✅', 'LEAF', 'leaf', 'add ")"', 'pick', []),
+            ]),
+          ]),
+          n('solve(n=3)', 'open=1 close=1', 'normal', 'add ")"', 'pick', [
+            n('...', 'more paths', 'normal', '...', 'pick', []),
+          ]),
+        ]),
+        n('PRUNED ❌', 'close > open', 'pruned', 'add ")"', 'skip', []),
+      ]),
+      options: [
+        'Pick / Not Pick — 2 choices: include or exclude each element',
+        'Two Explicit Calls — 2 named recursive calls at each node, not a loop',
+        'For Loop (Multi-branch) — a loop drives all recursive calls',
+        'Grid DFS — explore 4 directions from a cell',
+      ],
+      answer: 1,
+      explanation: 'Two Explicit Calls: at each node the code makes exactly 2 named recursive calls — one for "(" and one for ")". No loop is involved. Pick/Not-Pick also has 2 calls but decides include/exclude on an element, not two distinct action types.',
     },
   ],
 }

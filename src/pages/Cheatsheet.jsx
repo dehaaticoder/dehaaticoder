@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import QuizTreeDiagram from '../components/QuizTreeDiagram'
 import { backtrackingCheatsheet } from '../data/cheatsheets/backtracking'
 
 const cheatsheets = {
@@ -158,6 +159,46 @@ export default function Cheatsheet() {
               </div>
             </section>
 
+            {/* TC/SC Guide */}
+            {data.complexityGuide && (
+              <section>
+                <h2 className="text-xl font-bold text-stone-800 mb-1">{data.complexityGuide.title}</h2>
+                <p className="text-stone-500 text-sm mb-5">{data.complexityGuide.intro}</p>
+                <div className="space-y-4 mb-6">
+                  {data.complexityGuide.cases.map(c => {
+                    const border = c.color === 'blue' ? 'border-blue-200 bg-blue-50' : c.color === 'green' ? 'border-green-200 bg-green-50' : 'border-purple-200 bg-purple-50'
+                    const badge = c.color === 'blue' ? 'bg-blue-100 text-blue-700' : c.color === 'green' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
+                    const formula = c.color === 'blue' ? 'text-blue-800' : c.color === 'green' ? 'text-green-800' : 'text-purple-800'
+                    return (
+                      <div key={c.name} className={`border rounded-xl p-5 ${border}`}>
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${badge}`}>{c.name}</span>
+                          <code className={`text-sm font-bold font-mono ${formula}`}>{c.formula}</code>
+                        </div>
+                        <p className="text-stone-600 text-sm mb-1">{c.when}</p>
+                        <p className="text-stone-500 text-xs italic mb-2">Example: {c.example}</p>
+                        <div className="flex flex-wrap gap-1">
+                          {c.problems.map(p => <span key={p} className="text-xs bg-white border border-stone-200 px-2 py-0.5 rounded-full text-stone-600">{p}</span>)}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <h3 className="font-bold text-stone-700 text-sm mb-3">SC Rules</h3>
+                <div className="space-y-2">
+                  {data.complexityGuide.scRules.map(r => (
+                    <div key={r.rule} className="bg-white border border-stone-200 rounded-xl px-5 py-3 flex gap-3">
+                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700 h-fit shrink-0">SC</span>
+                      <div>
+                        <p className="font-semibold text-stone-800 text-sm mb-0.5">{r.rule}</p>
+                        <p className="text-stone-500 text-sm">{r.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Big-O Table */}
             <section>
               <h2 className="text-xl font-bold text-stone-800 mb-4">Time & Space Complexity</h2>
@@ -244,6 +285,10 @@ export default function Cheatsheet() {
                     <span className="text-xs font-bold text-stone-400 shrink-0 mt-0.5">Q{qi + 1}</span>
                     <p className="font-semibold text-stone-800">{q.q}</p>
                   </div>
+                  {q.tree && <QuizTreeDiagram root={q.tree} />}
+                  {!q.tree && q.diagram && (
+                    <pre className="mx-6 mt-4 bg-stone-900 text-green-300 px-5 py-4 rounded-xl text-xs leading-relaxed overflow-x-auto font-mono">{q.diagram}</pre>
+                  )}
                   <div className="px-6 py-4 space-y-2">
                     {q.options.map((opt, oi) => {
                       let style = 'border-stone-200 text-stone-700 hover:border-green-400'

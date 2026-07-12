@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { topics } from '../data/topics'
 import { topicContent } from '../data/topicContent'
+import { problemCountByTopic } from '../data/problems'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 
@@ -56,7 +57,7 @@ export default function Topic() {
             <h1 className="text-4xl font-bold text-stone-900">{topic.title}</h1>
             <div className="flex items-center gap-3 mt-2 text-sm text-stone-400">
               <span>⏱ {topic.estimatedTime}</span>
-              <span>📝 {topic.problemCount} problems</span>
+              <span>📝 {problemCountByTopic[topic.slug] ?? topic.problemCount} problems</span>
               <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">{topic.difficulty}</span>
             </div>
           </div>

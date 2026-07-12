@@ -3,11 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import QuizTreeDiagram from '../components/QuizTreeDiagram'
-import { backtrackingCheatsheet } from '../data/cheatsheets/backtracking'
-
-const cheatsheets = {
-  backtracking: backtrackingCheatsheet,
-}
+import { cheatsheets } from '../data/cheatsheets'
 
 const tagColors = {
   gotcha: 'bg-red-100 text-red-700',

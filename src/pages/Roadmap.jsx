@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { topics, difficultyOrder } from '../data/topics'
+import { problemCountByTopic } from '../data/problems'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 
@@ -78,7 +79,7 @@ export default function Roadmap() {
                     <p className="text-stone-500 text-sm mb-3 leading-relaxed">{topic.description}</p>
                     <div className="flex items-center gap-4 text-xs text-stone-400">
                       <span>⏱ {topic.estimatedTime}</span>
-                      <span>📝 {topic.problemCount} problems</span>
+                      <span>📝 {problemCountByTopic[topic.slug] ?? topic.problemCount} problems</span>
                     </div>
                     {/* Gaon Ki Baat preview */}
                     <div className="mt-3 pt-3 border-t border-stone-100 text-xs text-amber-700 italic">

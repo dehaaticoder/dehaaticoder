@@ -1,11 +1,9 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { backtrackingProblems } from '../data/problems/backtracking'
+import { allProblems } from '../data/problems'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import visualizers from '../components/visualizers/index'
-
-const allProblems = { ...backtrackingProblems }
 
 const difficultyColors = {
   Easy:   'bg-green-100 text-green-700',

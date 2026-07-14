@@ -1445,7 +1445,7 @@ Generate(row=0):
       { text: 'Using row <= n in isSafe() column check instead of row < i — this checks the current row itself, which always has the queen you just placed.', quote: 'Apne aap se hi lad rahe ho — current row mat check karo, sirf upar dekho.' },
       { text: 'Converting board to strings inside the for-loop instead of at base case — you add incomplete boards to the answer.', quote: 'Adha kaam karke certificate mat maango — row==n pe hi harvest karo.' },
     ],
-    relatedProblems: ['word-search', 'maze-paths', 'sudoku-solver'],
+    relatedProblems: ['word-search', 'maze-paths'],
     revisionLevel: 1,
   },
 }

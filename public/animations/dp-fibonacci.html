@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Fibonacci — Recursion Tree Visualizer</title>
+<style>
+  body { font-family: monospace; padding: 12px; background: #0d1117; color: #e6edf3; margin: 0; }
+  h3 { color: #58a6ff; margin-bottom: 10px; font-size: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn { background: #238636; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; font-family: monospace; }
+  .btn:hover { opacity: 0.85; }
+  .btn.blue { background: #1f6feb; } .btn.orange { background: #9e6a03; } .btn.red { background: #b62324; }
+  .info { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 12px; min-height: 36px; line-height: 1.6; }
+  .step-lbl { color: #58a6ff; font-weight: bold; } .desc-txt { color: #f0883e; }
+  .prog { height: 3px; background: #21262d; border-radius: 2px; margin-bottom: 10px; }
+  .prog-fill { height: 100%; background: #58a6ff; border-radius: 2px; transition: width 0.2s; }
+  canvas { width: 100%; height: 280px; display: block; background: #161b22; border-radius: 8px; margin-bottom: 10px; }
+  .legend { display: flex; gap: 12px; margin-bottom: 8px; font-size: 11px; flex-wrap: wrap; }
+  .leg { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .code-area { background: #21262d; border-radius: 6px; padding: 10px; font-size: 11px; line-height: 1.9; }
+  .cl { padding: 0 4px; border-radius: 3px; border-left: 2px solid transparent; }
+  .cl.hl { background: #f0883e22; border-left-color: #f0883e; }
+  .kw { color: #ff7b72; } .fn { color: #d2a8ff; } .cm { color: #6e7681; } .num { color: #79c0ff; }
+  .cache-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cache-chip { background: #161b22; border: 1px solid #30363d; border-radius: 4px; padding: 3px 8px; font-size: 11px; }
+  .cache-chip.hit { border-color: #3fb950; color: #3fb950; background: #1a2e1a; }
+</style>
+</head>
+<body>
+<h3>🌳 FIBONACCI RECURSION TREE — fib(5)</h3>
+
+<div class="btn-row">
+  <button class="btn blue" onclick="prev()">◀ PREV</button>
+  <button class="btn" id="playbtn" onclick="togglePlay()">▶ PLAY</button>
+  <button class="btn blue" onclick="next()">NEXT ▶</button>
+  <button class="btn red" onclick="reset()">↺ RESET</button>
+  <button class="btn orange" onclick="setSpeed(1000)">SLOW</button>
+  <button class="btn orange" onclick="setSpeed(400)">FAST</button>
+</div>
+
+<div class="prog"><div class="prog-fill" id="pf" style="width:0%"></div></div>
+<div class="info"><span class="step-lbl" id="slbl"></span> <span class="desc-txt" id="sdesc"></span></div>
+
+<div class="legend">
+  <div class="leg"><div class="dot" style="background:#58a6ff"></div> Active call</div>
+  <div class="leg"><div class="dot" style="background:#3fb950"></div> Returned (base case)</div>
+  <div class="leg"><div class="dot" style="background:#f0883e"></div> Returned (computed)</div>
+  <div class="leg"><div class="dot" style="background:#b62324"></div> Duplicate! (overlapping)</div>
+</div>
+
+<canvas id="cv"></canvas>
+
+<div style="font-size:10px;color:#8b949e;margin-bottom:4px;">MEMOIZATION CACHE dp[]</div>
+<div class="cache-row" id="cache"></div>
+
+<div class="code-area">
+<div class="cl" id="l0"><span class="kw">int</span> <span class="fn">fib</span>(<span class="kw">int</span> n) {</div>
+<div class="cl" id="l1">  <span class="kw">if</span> (n &lt;= <span class="num">1</span>) <span class="kw">return</span> n; <span class="cm">// base case</span></div>
+<div class="cl" id="l2">  <span class="kw">if</span> (dp[n] != -<span class="num">1</span>) <span class="kw">return</span> dp[n]; <span class="cm">// cache hit</span></div>
+<div class="cl" id="l3">  dp[n] = <span class="fn">fib</span>(n-<span class="num">1</span>) + <span class="fn">fib</span>(n-<span class="num">2</span>);</div>
+<div class="cl" id="l4">  <span class="kw">return</span> dp[n];</div>
+<div class="cl">}</div>
+</div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+// Tree nodes: {id, label, x, y, parent, value, state}
+// states: 'pending','active','base','computed','duplicate'
+const nodes = [
+  {id:0, label:'fib(5)', x:0.5,  y:0.10, parent:-1, value:5,  fibVal:5},
+  {id:1, label:'fib(4)', x:0.27, y:0.28, parent:0,  value:4,  fibVal:3},
+  {id:2, label:'fib(3)', x:0.73, y:0.28, parent:0,  value:3,  fibVal:2, dup:true},
+  {id:3, label:'fib(3)', x:0.15, y:0.50, parent:1,  value:3,  fibVal:2},
+  {id:4, label:'fib(2)', x:0.40, y:0.50, parent:1,  value:2,  fibVal:1, dup:true},
+  {id:5, label:'fib(2)', x:0.62, y:0.50, parent:2,  value:2,  fibVal:1, dup:true},
+  {id:6, label:'fib(1)', x:0.84, y:0.50, parent:2,  value:1,  fibVal:1},
+  {id:7, label:'fib(2)', x:0.07, y:0.72, parent:3,  value:2,  fibVal:1},
+  {id:8, label:'fib(1)', x:0.23, y:0.72, parent:3,  value:1,  fibVal:1},
+  {id:9, label:'fib(1)', x:0.34, y:0.72, parent:4,  value:1,  fibVal:1, dup:true},
+  {id:10,label:'fib(0)', x:0.46, y:0.72, parent:4,  value:0,  fibVal:0, dup:true},
+  {id:11,label:'fib(1)', x:0.01, y:0.90, parent:7,  value:1,  fibVal:1},
+  {id:12,label:'fib(0)', x:0.13, y:0.90, parent:7,  value:0,  fibVal:0},
+];
+
+const steps = [
+  {lbl:'Start',    desc:'Call fib(5). We need to compute it from scratch.', active:[0], done:[], code:'l0', cache:{}},
+  {lbl:'Recurse',  desc:'fib(5) calls fib(4) first (left child).', active:[0,1], done:[], code:'l3', cache:{}},
+  {lbl:'Recurse',  desc:'fib(4) calls fib(3).', active:[0,1,3], done:[], code:'l3', cache:{}},
+  {lbl:'Recurse',  desc:'fib(3) calls fib(2).', active:[0,1,3,7], done:[], code:'l3', cache:{}},
+  {lbl:'Recurse',  desc:'fib(2) calls fib(1). Base case — returns 1.', active:[0,1,3,7,11], done:[], code:'l1', cache:{}},
+  {lbl:'Base',     desc:'fib(1) = 1. Returns to fib(2).', active:[0,1,3,7], done:[11], code:'l1', cache:{1:1}},
+  {lbl:'Base',     desc:'fib(2) calls fib(0). Base case — returns 0.', active:[0,1,3,7,12], done:[11], code:'l1', cache:{1:1}},
+  {lbl:'Computed', desc:'fib(0) = 0. fib(2) = fib(1)+fib(0) = 1+0 = 1. Stored in cache.', active:[0,1,3], done:[11,12,7], code:'l4', cache:{1:1,2:1}},
+  {lbl:'Base',     desc:'fib(3) calls fib(1). Base case — returns 1.', active:[0,1,3,8], done:[11,12,7], code:'l1', cache:{1:1,2:1}},
+  {lbl:'Computed', desc:'fib(1) = 1. fib(3) = fib(2)+fib(1) = 1+1 = 2. Stored in cache.', active:[0,1], done:[11,12,7,8,3], code:'l4', cache:{1:1,2:1,3:2}},
+  {lbl:'Recurse',  desc:'fib(4) now calls fib(2). But wait — fib(2) already in cache!', active:[0,1,4], done:[11,12,7,8,3], code:'l2', cache:{1:1,2:1,3:2}},
+  {lbl:'Cache Hit',desc:'dp[2] != -1 → return dp[2]=1 instantly. No recomputation!', active:[0,1], done:[11,12,7,8,3,9,10,4], code:'l2', cache:{1:1,2:1,3:2}},
+  {lbl:'Computed', desc:'fib(4) = fib(3)+fib(2) = 2+1 = 3. Stored in cache.', active:[0], done:[11,12,7,8,3,9,10,4,1], code:'l4', cache:{1:1,2:1,3:2,4:3}},
+  {lbl:'Cache Hit',desc:'fib(5) now calls fib(3). Already in cache — returns 2 instantly!', active:[0,2], done:[11,12,7,8,3,9,10,4,1], code:'l2', cache:{1:1,2:1,3:2,4:3}},
+  {lbl:'Answer',   desc:'fib(5) = fib(4)+fib(3) = 3+2 = 5. Total unique calls: only N+1 = 6!', active:[], done:[11,12,7,8,3,9,10,4,1,2,5,6,0], code:'l4', cache:{0:0,1:1,2:1,3:2,4:3,5:5}},
+];
+
+let cur=0, timer=null, speed=700;
+const W=()=>cv.width, H=()=>cv.height;
+
+function resize(){
+  const rect=cv.getBoundingClientRect();
+  cv.width=rect.width*devicePixelRatio;
+  cv.height=280*devicePixelRatio;
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  draw();
+}
+
+function nodeColor(id, s){
+  if(s.active.includes(id)) return '#58a6ff';
+  if(s.done.includes(id)){
+    const n=nodes[id];
+    if(n.value<=1) return '#3fb950';
+    if(n.dup) return '#b62324';
+    return '#f0883e';
+  }
+  return '#30363d';
+}
+
+function draw(){
+  const s=steps[cur];
+  const W=cv.width/devicePixelRatio, H=cv.height/devicePixelRatio;
+  ctx.clearRect(0,0,cv.width,cv.height);
+
+  // draw edges
+  nodes.forEach(n=>{
+    if(n.parent<0) return;
+    const p=nodes[n.parent];
+    ctx.beginPath();
+    ctx.moveTo(p.x*W, p.y*H);
+    ctx.lineTo(n.x*W, n.y*H);
+    const col = (s.active.includes(n.id)||s.done.includes(n.id)) ? '#444' : '#2a2a2a';
+    ctx.strokeStyle=col;
+    ctx.lineWidth=1.5;
+    ctx.stroke();
+  });
+
+  // draw nodes
+  nodes.forEach(n=>{
+    const x=n.x*W, y=n.y*H, r=18;
+    const col=nodeColor(n.id, s);
+    const visible = s.active.includes(n.id)||s.done.includes(n.id);
+
+    if(!visible){ // ghost
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle='#161b22'; ctx.fill();
+      ctx.strokeStyle='#21262d'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#3a3a3a'; ctx.font=`10px monospace`; ctx.textAlign='center';
+      ctx.fillText(n.label,x,y+4);
+      return;
+    }
+
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=col+'22'; ctx.fill();
+    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke();
+
+    ctx.fillStyle=col; ctx.font=`bold 10px monospace`; ctx.textAlign='center';
+    ctx.fillText(n.label,x,y+1);
+
+    if(s.done.includes(n.id)){
+      ctx.fillStyle='#fff'; ctx.font=`bold 9px monospace`;
+      ctx.fillText('='+n.fibVal,x,y+11);
+    }
+
+    // cache hit badge
+    if(n.dup && s.done.includes(n.id)){
+      ctx.fillStyle='#b62324'; ctx.font=`bold 8px monospace`;
+      ctx.fillText('DUP',x,y-22);
+    }
+  });
+}
+
+function renderStep(s){
+  document.getElementById('slbl').textContent=s.lbl+':';
+  document.getElementById('sdesc').textContent=s.desc;
+  document.getElementById('pf').style.width=((cur/(steps.length-1))*100)+'%';
+  ['l0','l1','l2','l3','l4'].forEach(id=>{
+    document.getElementById(id).className='cl'+(s.code===id?' hl':'');
+  });
+  // cache display
+  const ce=document.getElementById('cache');
+  ce.innerHTML='';
+  for(let i=0;i<=5;i++){
+    const chip=document.createElement('div');
+    chip.className='cache-chip'+(s.cache[i]!==undefined?' hit':'');
+    chip.textContent=`dp[${i}]=${s.cache[i]!==undefined?s.cache[i]:'?'}`;
+    ce.appendChild(chip);
+  }
+  draw();
+}
+
+function next(){ if(cur<steps.length-1){cur++;renderStep(steps[cur]);} }
+function prev(){ if(cur>0){cur--;renderStep(steps[cur]);} }
+function reset(){ cur=0; renderStep(steps[0]); stopPlay(); }
+function setSpeed(s){ speed=s; if(timer){stopPlay();togglePlay();} }
+function togglePlay(){
+  if(timer){ stopPlay(); }
+  else { document.getElementById('playbtn').textContent='⏸ PAUSE'; timer=setInterval(()=>{ if(cur>=steps.length-1){stopPlay();}else{next();} },speed); }
+}
+function stopPlay(){ clearInterval(timer); timer=null; document.getElementById('playbtn').textContent='▶ PLAY'; }
+
+window.addEventListener('resize', resize);
+resize();
+renderStep(steps[0]);
+</script>
+</body>
+</html>

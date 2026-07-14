@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Climbing Stairs — DP Table Visualizer</title>
+<style>
+  body { font-family: monospace; padding: 12px; background: #0d1117; color: #e6edf3; margin: 0; }
+  h3 { color: #58a6ff; margin-bottom: 10px; font-size: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn { background: #238636; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; font-family: monospace; }
+  .btn:hover { opacity: 0.85; }
+  .btn.blue { background: #1f6feb; } .btn.orange { background: #9e6a03; } .btn.red { background: #b62324; }
+  .info { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 12px; min-height: 36px; line-height: 1.6; }
+  .step-lbl { color: #58a6ff; font-weight: bold; } .desc-txt { color: #f0883e; }
+  .prog { height: 3px; background: #21262d; border-radius: 2px; margin-bottom: 10px; }
+  .prog-fill { height: 100%; background: #58a6ff; border-radius: 2px; transition: width 0.2s; width: 0%; }
+  .dp-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+  .dp-label { font-size: 11px; color: #8b949e; width: 40px; text-align: right; }
+  .dp-cell { width: 52px; height: 52px; border: 2px solid #30363d; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; transition: all 0.3s; background: #161b22; }
+  .dp-cell .idx { color: #6e7681; font-size: 9px; }
+  .dp-cell .val { color: #8b949e; font-size: 16px; font-weight: bold; }
+  .dp-cell.active { border-color: #f0883e; background: #2d1f0a; }
+  .dp-cell.active .val { color: #f0883e; }
+  .dp-cell.filled { border-color: #238636; background: #1a2e1a; }
+  .dp-cell.filled .val { color: #3fb950; }
+  .dp-cell.answer { border-color: #58a6ff; background: #1c2d40; }
+  .dp-cell.answer .val { color: #58a6ff; }
+  .formula { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 12px; }
+  .formula-title { color: #8b949e; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .fml { color: #d2a8ff; font-size: 13px; }
+  .fml span { color: #f0883e; }
+  .stairs { display: flex; align-items: flex-end; gap: 4px; margin-bottom: 10px; height: 80px; }
+  .stair { background: #21262d; border: 1px solid #30363d; border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 10px; color: #8b949e; transition: all 0.3s; }
+  .stair.filled { background: #1a2e1a; border-color: #238636; color: #3fb950; }
+  .stair.active { background: #2d1f0a; border-color: #f0883e; color: #f0883e; }
+  .stair.answer { background: #1c2d40; border-color: #58a6ff; color: #58a6ff; }
+  .code-area { background: #21262d; border-radius: 6px; padding: 10px; font-size: 11px; line-height: 1.9; }
+  .cl { padding: 0 4px; border-radius: 3px; border-left: 2px solid transparent; }
+  .cl.hl { background: #f0883e22; border-left-color: #f0883e; }
+  .kw { color: #ff7b72; } .fn { color: #d2a8ff; } .cm { color: #6e7681; } .num { color: #79c0ff; }
+  .ways { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px; margin-bottom: 10px; min-height: 28px; font-size: 11px; }
+  .way-chip { display: inline-block; background: #1a2e1a; border: 1px solid #3fb950; color: #3fb950; border-radius: 4px; padding: 2px 8px; margin: 2px; font-size: 11px; }
+</style>
+</head>
+<body>
+<h3>🪜 CLIMBING STAIRS — DP TABLE — n=6</h3>
+
+<div class="btn-row">
+  <button class="btn blue" onclick="prev()">◀ PREV</button>
+  <button class="btn" id="playbtn" onclick="togglePlay()">▶ PLAY</button>
+  <button class="btn blue" onclick="next()">NEXT ▶</button>
+  <button class="btn red" onclick="reset()">↺ RESET</button>
+  <button class="btn orange" onclick="setSpeed(1000)">SLOW</button>
+  <button class="btn orange" onclick="setSpeed(400)">FAST</button>
+</div>
+
+<div class="prog"><div class="prog-fill" id="pf"></div></div>
+<div class="info"><span class="step-lbl" id="slbl"></span> <span class="desc-txt" id="sdesc"></span></div>
+
+<!-- Stairs visual -->
+<div class="stairs" id="stairs"></div>
+
+<!-- DP Table -->
+<div class="dp-row">
+  <div class="dp-label">index</div>
+  <div id="cells" style="display:flex;gap:6px;"></div>
+</div>
+<div class="dp-row">
+  <div class="dp-label">dp[i]</div>
+  <div id="vals" style="display:flex;gap:6px;"></div>
+</div>
+
+<!-- Formula -->
+<div class="formula">
+  <div class="formula-title">Recurrence</div>
+  <div class="fml" id="fml">dp[i] = dp[i-1] + dp[i-2]</div>
+</div>
+
+<!-- Ways breakdown -->
+<div style="font-size:10px;color:#8b949e;margin-bottom:4px;">WAYS TO REACH CURRENT STAIR</div>
+<div class="ways" id="ways"></div>
+
+<!-- Code -->
+<div class="code-area" id="code">
+<div class="cl" id="l0"><span class="kw">int</span>[] dp = <span class="kw">new int</span>[n+<span class="num">1</span>];</div>
+<div class="cl" id="l1">dp[<span class="num">0</span>] = <span class="num">1</span>; <span class="cm">// do nothing</span></div>
+<div class="cl" id="l2">dp[<span class="num">1</span>] = <span class="num">1</span>; <span class="cm">// one step</span></div>
+<div class="cl" id="l3"><span class="kw">for</span> (<span class="kw">int</span> i=<span class="num">2</span>; i&lt;=n; i++)</div>
+<div class="cl" id="l4">  dp[i] = dp[i-<span class="num">1</span>] + dp[i-<span class="num">2</span>];</div>
+<div class="cl" id="l5"><span class="kw">return</span> dp[n];</div>
+</div>
+
+<script>
+const N = 6;
+const waysMap = {
+  0: ['[]'],
+  1: ['[1]'],
+  2: ['[1,1]','[2]'],
+  3: ['[1,1,1]','[1,2]','[2,1]'],
+  4: ['[1,1,1,1]','[1,2,1]','[1,1,2]','[2,1,1]','[2,2]'],
+  5: ['[1,1,1,1,1]','[1,2,1,1]','[1,1,2,1]','[1,1,1,2]','[2,1,1,1]','[2,2,1]','[2,1,2]','[1,2,2]'],
+  6: ['...8 ways total']
+};
+
+const dp = new Array(N+1).fill(null);
+
+const steps = [
+  { lbl:'Step 0', desc:'Initialise dp array of size n+1. All values empty.', code:'l0', active:-1, filled:[], formula:'dp[i] = dp[i-1] + dp[i-2]' },
+  { lbl:'Base Case', desc:'dp[0] = 1 — 1 way to stay at ground (do nothing).', code:'l1', active:0, filled:[], formula:'base: dp[0] = 1' },
+  { lbl:'Base Case', desc:'dp[1] = 1 — 1 way to reach stair 1: take 1 step.', code:'l2', active:1, filled:[0], formula:'base: dp[1] = 1' },
+  { lbl:'i = 2', desc:'dp[2] = dp[1] + dp[0] = 1 + 1 = 2. Came from stair 1 or stair 0.', code:'l4', active:2, filled:[0,1], formula:'dp[2] = dp[1] + dp[0] = 1 + 1 = 2' },
+  { lbl:'i = 3', desc:'dp[3] = dp[2] + dp[1] = 2 + 1 = 3.', code:'l4', active:3, filled:[0,1,2], formula:'dp[3] = dp[2] + dp[1] = 2 + 1 = 3' },
+  { lbl:'i = 4', desc:'dp[4] = dp[3] + dp[2] = 3 + 2 = 5.', code:'l4', active:4, filled:[0,1,2,3], formula:'dp[4] = dp[3] + dp[2] = 3 + 2 = 5' },
+  { lbl:'i = 5', desc:'dp[5] = dp[4] + dp[3] = 5 + 3 = 8.', code:'l4', active:5, filled:[0,1,2,3,4], formula:'dp[5] = dp[4] + dp[3] = 5 + 3 = 8' },
+  { lbl:'i = 6', desc:'dp[6] = dp[5] + dp[4] = 8 + 5 = 13.', code:'l4', active:6, filled:[0,1,2,3,4,5], formula:'dp[6] = dp[5] + dp[4] = 8 + 5 = 13' },
+  { lbl:'Answer', desc:'return dp[6] = 13. There are 13 distinct ways to climb 6 stairs!', code:'l5', active:-1, filled:[0,1,2,3,4,5,6], answer:6, formula:'return dp[6] = 13 ✅' },
+];
+
+const dpValues = [1,1,2,3,5,8,13];
+
+// Build stairs
+const stairsEl = document.getElementById('stairs');
+for(let i=0;i<=N;i++){
+  const s = document.createElement('div');
+  s.className='stair';
+  s.id='stair'+i;
+  s.style.width='52px';
+  s.style.height=(10+i*10)+'px';
+  s.textContent=i;
+  stairsEl.appendChild(s);
+}
+
+// Build index cells
+const cellsEl = document.getElementById('cells');
+const valsEl = document.getElementById('vals');
+for(let i=0;i<=N;i++){
+  const c=document.createElement('div');
+  c.className='dp-cell'; c.id='cell'+i;
+  c.innerHTML=`<div class="idx">[${i}]</div><div class="val">?</div>`;
+  cellsEl.appendChild(c);
+  const v=document.createElement('div');
+  v.className='dp-cell'; v.id='val'+i;
+  v.innerHTML=`<div class="val">—</div>`;
+  valsEl.appendChild(v);
+}
+
+let cur=0, timer=null, speed=700;
+
+function render(s){
+  document.getElementById('slbl').textContent=s.lbl+':';
+  document.getElementById('sdesc').textContent=s.desc;
+  document.getElementById('fml').textContent=s.formula;
+  document.getElementById('pf').style.width=((cur/(steps.length-1))*100)+'%';
+
+  // highlight code
+  ['l0','l1','l2','l3','l4','l5'].forEach(id=>{
+    document.getElementById(id).className='cl'+(s.code===id?' hl':'');
+  });
+
+  // reset cells
+  for(let i=0;i<=N;i++){
+    const cell=document.getElementById('cell'+i);
+    const val=document.getElementById('val'+i);
+    const stair=document.getElementById('stair'+i);
+    cell.className='dp-cell';
+    val.className='dp-cell';
+    stair.className='stair';
+
+    if(s.answer===i){
+      cell.className='dp-cell answer';
+      val.className='dp-cell answer';
+      val.querySelector('.val').textContent=dpValues[i];
+      stair.className='stair answer';
+    } else if(s.active===i){
+      cell.className='dp-cell active';
+      val.className='dp-cell active';
+      val.querySelector('.val').textContent=dpValues[i];
+      stair.className='stair active';
+    } else if(s.filled && s.filled.includes(i)){
+      cell.className='dp-cell filled';
+      val.className='dp-cell filled';
+      val.querySelector('.val').textContent=dpValues[i];
+      stair.className='stair filled';
+    } else {
+      val.querySelector('.val').textContent='—';
+    }
+  }
+
+  // ways
+  const wi = s.active >= 0 ? s.active : (s.answer >= 0 ? s.answer : -1);
+  const waysEl = document.getElementById('ways');
+  if(wi>=0 && waysMap[wi]){
+    waysEl.innerHTML = waysMap[wi].map(w=>`<span class="way-chip">${w}</span>`).join(' ');
+  } else {
+    waysEl.innerHTML='<span style="color:#6e7681">—</span>';
+  }
+}
+
+function next(){ if(cur<steps.length-1){cur++;render(steps[cur]);} }
+function prev(){ if(cur>0){cur--;render(steps[cur]);} }
+function reset(){ cur=0; render(steps[0]); stopPlay(); }
+function setSpeed(s){ speed=s; if(timer){stopPlay();togglePlay();} }
+function togglePlay(){
+  if(timer){ stopPlay(); }
+  else { document.getElementById('playbtn').textContent='⏸ PAUSE'; timer=setInterval(()=>{ if(cur>=steps.length-1){stopPlay();}else{next();} },speed); }
+}
+function stopPlay(){ clearInterval(timer); timer=null; document.getElementById('playbtn').textContent='▶ PLAY'; }
+
+render(steps[0]);
+</script>
+</body>
+</html>

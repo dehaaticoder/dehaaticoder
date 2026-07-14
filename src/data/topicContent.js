@@ -174,8 +174,8 @@ SIMPLE RULE:
     ],
     keyInsight: 'Ask 3 questions: What is my decision? What remains after that decision? Am I minimizing/maximizing or counting? If counting → add all choices. If minimizing → pick the best.',
     animations: [
-      { file: 'dp-fibonacci.mp4',       title: 'Fibonacci — Recursion Tree' },
-      { file: 'dp-climbing-stairs.mp4', title: 'Climbing Stairs — DP Table' },
+      { file: 'dp-fibonacci.html',       title: 'Fibonacci — Recursion Tree' },
+      { file: 'dp-climbing-stairs.html', title: 'Climbing Stairs — DP Table' },
     ],
     commonMistakes: [
       'Forgetting the base case — dp[0] and dp[1] must be set before the loop.',

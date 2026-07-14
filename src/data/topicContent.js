@@ -161,4 +161,31 @@ SIMPLE RULE:
       { slug: 'sudoku-solver',          title: 'Sudoku Solver',                        difficulty: 'Hard',   lcNum: 37   },
     ],
   },
+
+  dp: {
+    intro: `Dynamic Programming is a technique to avoid solving the same subproblem twice. You solve it once, store the answer, and reuse it whenever needed. DP = Recursion + Memory.`,
+    whyItWorks: `Every DP problem has two properties: Optimal Substructure (big answer built from smaller answers) and Overlapping Subproblems (same smaller problem appears multiple times). Storing the answer the first time makes every repeat lookup instant.`,
+    teachingFlow: [
+      { step: 'Mental Model',    desc: 'Decision → Remaining → Minimize or Count?' },
+      { step: 'Brute Force',     desc: 'Write the plain recursion first. Get the recurrence.' },
+      { step: 'Top Down',        desc: 'Add a dp[] cache to the recursion. Memoization.' },
+      { step: 'Bottom Up',       desc: 'Fill dp[] iteratively from base case to answer.' },
+      { step: 'Space Optimize',  desc: 'Keep only the last 1-2 values instead of full array.' },
+    ],
+    keyInsight: 'Ask 3 questions: What is my decision? What remains after that decision? Am I minimizing/maximizing or counting? If counting → add all choices. If minimizing → pick the best.',
+    animations: [
+      { file: 'dp-fibonacci.mp4',       title: 'Fibonacci — Recursion Tree' },
+      { file: 'dp-climbing-stairs.mp4', title: 'Climbing Stairs — DP Table' },
+    ],
+    commonMistakes: [
+      'Forgetting the base case — dp[0] and dp[1] must be set before the loop.',
+      'Wrong dp array size — use n+1 not n, otherwise dp[n] goes out of bounds.',
+      'Using greedy when DP is needed — greedy picks locally best, DP finds globally best.',
+      'Adding wrong variable twice in the recurrence — dp[n-1] + dp[n-1] instead of dp[n-1] + dp[n-2].',
+    ],
+    problems: [
+      { slug: 'climbing-stairs', title: 'Climbing Stairs',  difficulty: 'Easy',   lcNum: 70  },
+      { slug: 'min-squares',     title: 'Perfect Squares',  difficulty: 'Medium', lcNum: 279 },
+    ],
+  },
 }

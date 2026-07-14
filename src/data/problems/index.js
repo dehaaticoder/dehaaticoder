@@ -1,11 +1,12 @@
 import { backtrackingProblems } from './backtracking'
+import { dpProblems } from './dp'
 
 // Add new topic imports here as topics are built:
 // import { linkedListProblems } from './linked-list'
-// import { dpProblems } from './dp'
 
 export const problemsByTopic = {
   backtracking: backtrackingProblems,
+  dp: dpProblems,
 }
 
 export const allProblems = Object.assign({}, ...Object.values(problemsByTopic))

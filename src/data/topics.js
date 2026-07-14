@@ -153,7 +153,7 @@ export const topics = [
     description: 'Avoid repeated work. Store answers. The hardest and most rewarding topic.',
     gaonKiBaat: 'If you measured the field from village A to B yesterday, why measure it again today? Write it down. That is DP.',
     tags: ['memoization', 'tabulation', 'optimization'],
-    status: 'coming-soon',
+    status: 'available',
   },
 ]
 

@@ -158,7 +158,6 @@ SIMPLE RULE:
       { slug: 'word-search',            title: 'Word Search',                          difficulty: 'Medium', lcNum: 79   },
       // Hard
       { slug: 'n-queens',               title: 'N-Queens',                             difficulty: 'Hard',   lcNum: 51   },
-      { slug: 'sudoku-solver',          title: 'Sudoku Solver',                        difficulty: 'Hard',   lcNum: 37   },
     ],
   },
 

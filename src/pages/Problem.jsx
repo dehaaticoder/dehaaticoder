@@ -143,7 +143,15 @@ export default function Problem() {
             )}
           </div>
           {showIntuition ? (
-            <p className="text-stone-600 leading-relaxed text-lg">{problem.intuition}</p>
+            <div className="space-y-4">
+              {problem.intuition.split('\n\n').map((para, i) => (
+                <p key={i} className={
+                  para === para.toUpperCase() && para.length < 60
+                    ? 'text-xs font-bold uppercase tracking-widest text-stone-400 mt-2'
+                    : 'text-stone-600 leading-relaxed'
+                }>{para}</p>
+              ))}
+            </div>
           ) : (
             <div className="bg-stone-50 border border-dashed border-stone-200 rounded-xl px-6 py-5 text-stone-400 text-sm text-center">
               Try the hints first. Intuition reveals the core idea.

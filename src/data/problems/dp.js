@@ -256,7 +256,23 @@ Answer: 3  (4+1+1 or 4+1+1)`,
       'Define: GetMax(index) = maximum money obtainable from index to end. Write this sentence before writing code.',
       'Base case: index >= nums.length → return 0. If you are past the last house, you get nothing.',
     ],
-    intuition: `Decision at each house: rob it or skip it. If you rob it, you jump to index+2 (adjacent is off-limits). If you skip, you move to index+1. The recurrence: rob(index) = max(nums[index] + rob(index+2), rob(index+1)). The adjacency constraint is enforced by jumping +2 — no visited[] needed. Memoize on index alone because rob(index) always returns the same answer regardless of the path taken to reach it.`,
+    intuition: `HOW DID WE ARRIVE AT THIS APPROACH?
+
+Start from the last house (index = n-1) and ask: if I am standing at this house, do I rob it or skip it? That is the only decision. Nothing else matters at this moment.
+
+If I PICK this house → I cannot touch the adjacent one, so my next valid call jumps to index-2. My gain: nums[index] + GetMax(index-2).
+If I DON'T PICK → I move to index-1 with nothing added. My gain: GetMax(index-1).
+Answer at this house = max(pick, notPick). Trust the recursion — it will explore all futures from there.
+
+WHY IS THIS DP AND NOT JUST RECURSION?
+
+Draw the recursion tree for [2,7,9,3,1]. GetMax(3) gets called from GetMax(5) via notPick AND from GetMax(4) via pick. Same subproblem, same answer. That is overlapping subproblems. The answer for GetMax(3) is always the same regardless of which path reached it — that is optimal substructure. Both properties present → DP applies. Cache dp[index] the first time, return instantly every repeat call.
+
+TIME AND SPACE COMPLEXITY
+
+TC = unique calls × work per call = N unique indices × O(1) per call = O(N).
+SC = O(N) for the dp[] array + O(N) for the call stack = O(N) total.
+Space-optimized bottom-up reduces stack to O(1) by using two variables.`,
     approaches: [
       {
         label: 'Brute Force — Pure Recursion (TLE)',

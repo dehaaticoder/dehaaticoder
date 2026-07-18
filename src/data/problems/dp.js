@@ -349,6 +349,8 @@ Answer: 12`,
       { text: 'Base case: index == nums.length - 1 — misses the last house. Use index >= nums.length → return 0.', quote: 'Aakhri ghar chhodna nahi chahiye — >= se check karo, == se nahi.' },
       { text: 'Thinking you need a loop inside the recursion — "explore every future house." Wrong. Two choices only: index+2 (rob) or index+1 (skip). The recursive call itself explores everything from there. Trust the recursion.', quote: 'Loop lagaoge toh recursion ka kaam chhin loge — do raaste hain bas, aage recursion sambhaal lega.' },
       { text: 'Starting with DP before recursion — designing dp[][] before writing the plain recursion. Always: brute force recursion → overlapping subproblems → memoization → tabulation.', quote: 'Bina kheti ke fasal ki soch? Pehle haal chalaao — recursion pehle, DP baad mein.' },
+      { text: 'Not defining the recursive function before coding — always complete this sentence first: "GetMax(index) returns ___." If you cannot finish that sentence clearly, you are not ready to write code. For House Robber: "maximum money obtainable from houses 0 to index."', quote: 'Bina naqsha banaye ghar banate ho? Pehle likho function kya lauta raha hai — phir code likhna.' },
+      { text: 'Thinking procedurally ("what should I do next?") instead of state-wise ("what does this call represent?"). Procedural thinking leads to extra loops, visited arrays, accumulated ans parameters. State-based thinking leads to clean recursion: one index, two choices, trust the recursion.', quote: 'Kadam kadam soch rahe ho — seedha manzil socho. State kya hai, wahi DP ka asli sawaal hai.' },
     ],
     spotCheck: [
       {

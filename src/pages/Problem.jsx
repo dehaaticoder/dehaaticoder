@@ -312,11 +312,23 @@ export default function Problem() {
               {problem.spotCheck.map((item, i) => (
                 <div key={i} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
                   <div className="px-5 py-4 border-b border-stone-100">
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2 flex-wrap">
+                      {item.approach && (
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${
+                          item.approach === 'recursive'  ? 'bg-blue-100 text-blue-700' :
+                          item.approach === 'top-down'   ? 'bg-purple-100 text-purple-700' :
+                          item.approach === 'bottom-up'  ? 'bg-green-100 text-green-700' :
+                          'bg-stone-100 text-stone-500'
+                        }`}>
+                          {item.approach === 'recursive' ? '🔁 Recursive' :
+                           item.approach === 'top-down'  ? '⬇ Top Down' :
+                           item.approach === 'bottom-up' ? '⬆ Bottom Up' : item.approach}
+                        </span>
+                      )}
                       <span className="text-xs font-bold bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full shrink-0 mt-0.5">
                         {item.type === 'objective' ? 'MCQ' : 'Q'}
                       </span>
-                      <p className="text-stone-700 text-sm font-medium">{item.q}</p>
+                      <p className="text-stone-700 text-sm font-medium flex-1">{item.q}</p>
                     </div>
                     {item.type === 'objective' && (
                       <div className="mt-3 ml-8 space-y-1">

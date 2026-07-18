@@ -268,6 +268,10 @@ WHY IS THIS DP AND NOT JUST RECURSION?
 
 Draw the recursion tree for [2,7,9,3,1]. GetMax(3) gets called from GetMax(5) via notPick AND from GetMax(4) via pick. Same subproblem, same answer. That is overlapping subproblems. The answer for GetMax(3) is always the same regardless of which path reached it — that is optimal substructure. Both properties present → DP applies. Cache dp[index] the first time, return instantly every repeat call.
 
+IN ONE SENTENCE
+
+GetMax(index) = best I can do from houses 0 to index, built by asking: what is the best from 0 to index-2 (if I pick this house) and what is the best from 0 to index-1 (if I skip this house)? Each call delegates to smaller subproblems. The root call GetMax(n-1) just combines two answers — it does not need to know anything else.
+
 TIME AND SPACE COMPLEXITY
 
 TC = unique calls × work per call = N unique indices × O(1) per call = O(N).

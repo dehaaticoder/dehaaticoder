@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Climbing Stairs — Memoization Tree</title>
+<style>
+  body { font-family: monospace; padding: 12px; background: #0d1117; color: #e6edf3; margin: 0; }
+  h3 { color: #58a6ff; margin-bottom: 10px; font-size: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn { background: #238636; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; font-family: monospace; }
+  .btn:hover { opacity: 0.85; }
+  .btn.blue { background: #1f6feb; } .btn.orange { background: #9e6a03; } .btn.red { background: #b62324; }
+  .info { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 12px; min-height: 36px; line-height: 1.6; }
+  .step-lbl { color: #58a6ff; font-weight: bold; } .desc-txt { color: #f0883e; }
+  .prog { height: 3px; background: #21262d; border-radius: 2px; margin-bottom: 10px; }
+  .prog-fill { height: 100%; background: #58a6ff; border-radius: 2px; transition: width 0.2s; }
+  canvas { width: 100%; height: 290px; display: block; background: #161b22; border-radius: 8px; margin-bottom: 10px; }
+  .legend { display: flex; gap: 12px; margin-bottom: 8px; font-size: 11px; flex-wrap: wrap; align-items: center; }
+  .leg { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .code-area { background: #21262d; border-radius: 6px; padding: 10px; font-size: 11px; line-height: 1.9; }
+  .cl { padding: 0 4px; border-radius: 3px; border-left: 2px solid transparent; }
+  .cl.hl { background: #f0883e22; border-left-color: #f0883e; }
+  .kw { color: #ff7b72; } .fn { color: #d2a8ff; } .cm { color: #6e7681; } .num { color: #79c0ff; }
+  .cache-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cache-chip { background: #161b22; border: 1px solid #30363d; border-radius: 4px; padding: 3px 8px; font-size: 11px; color: #6e7681; }
+  .cache-chip.hit { border-color: #3fb950; color: #3fb950; background: #1a2e1a; }
+  .insight { background: #1a2e1a; border: 1px solid #3fb950; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #3fb950; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h3>⚡ CLIMBING STAIRS — TOP DOWN MEMOIZATION — n=4</h3>
+
+<div class="btn-row">
+  <button class="btn blue" onclick="prev()">◀ PREV</button>
+  <button class="btn" id="playbtn" onclick="togglePlay()">▶ PLAY</button>
+  <button class="btn blue" onclick="next()">NEXT ▶</button>
+  <button class="btn red" onclick="reset()">↺ RESET</button>
+  <button class="btn orange" onclick="setSpeed(1100)">SLOW</button>
+  <button class="btn orange" onclick="setSpeed(450)">FAST</button>
+</div>
+
+<div class="prog"><div class="prog-fill" id="pf" style="width:0%"></div></div>
+<div class="info"><span class="step-lbl" id="slbl">Ready</span> <span class="desc-txt" id="sdesc">— Press PLAY or NEXT to begin</span></div>
+
+<div class="legend">
+  <div class="leg"><div class="dot" style="background:#58a6ff"></div> Exploring</div>
+  <div class="leg"><div class="dot" style="background:#3fb950"></div> Base case / Cached</div>
+  <div class="leg"><div class="dot" style="background:#f0883e"></div> Computed + stored</div>
+  <div class="leg"><div class="dot" style="background:#d2a8ff"></div> Cache hit — skipped!</div>
+</div>
+
+<div style="font-size:10px;color:#8b949e;margin-bottom:4px;">CACHE dp[] — initialized to -1</div>
+<div class="cache-row" id="cache"></div>
+
+<canvas id="cv"></canvas>
+
+<div class="code-area">
+<div class="cl" id="l0"><span class="kw">int</span> <span class="fn">ways</span>(<span class="kw">int</span> n, <span class="kw">int</span>[] dp) {</div>
+<div class="cl" id="l1">&nbsp; <span class="kw">if</span> (n &lt;= <span class="num">1</span>) <span class="kw">return</span> <span class="num">1</span>;</div>
+<div class="cl" id="l2">&nbsp; <span class="kw">if</span> (dp[n] != -<span class="num">1</span>) <span class="kw">return</span> dp[n]; <span class="cm">// cache hit!</span></div>
+<div class="cl" id="l3">&nbsp; dp[n] = <span class="fn">ways</span>(n-<span class="num">1</span>, dp) + <span class="fn">ways</span>(n-<span class="num">2</span>, dp);</div>
+<div class="cl" id="l4">&nbsp; <span class="kw">return</span> dp[n];</div>
+<div class="cl">}</div>
+</div>
+
+<div class="insight" id="insight" style="display:none"></div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+// Same tree structure as recursion version but nodes 2,4,5,6 are cache-hit nodes (never expanded)
+// State: 'pending','active','base','computed','cached'
+const nodes = [
+  {id:0, label:'ways(4)', x:0.50, y:0.09, parent:-1, val:5,  state:'pending', edge2:false},
+  {id:1, label:'ways(3)', x:0.27, y:0.30, parent:0,  val:3,  state:'pending', edge2:false},
+  {id:2, label:'ways(2)', x:0.73, y:0.30, parent:0,  val:2,  state:'pending', edge2:true,  cacheHit:true},
+  {id:3, label:'ways(2)', x:0.13, y:0.55, parent:1,  val:2,  state:'pending', edge2:false},
+  {id:4, label:'ways(1)', x:0.41, y:0.55, parent:1,  val:1,  state:'pending', edge2:true,  cacheHit:true},
+  {id:7, label:'ways(1)', x:0.05, y:0.80, parent:3,  val:1,  state:'pending', edge2:false},
+  {id:8, label:'ways(0)', x:0.21, y:0.80, parent:3,  val:1,  state:'pending', edge2:true},
+];
+
+// steps: active=currently computing, done=finished, cached=shown as cache hit, cache=dp values
+const steps = [
+  {lbl:'Start',       desc:'ways(4) — dp[] all -1. Let\'s compute.',                                      active:[0],     done:[],       cached:[],  code:'l0', cache:{}},
+  {lbl:'1 step →',    desc:'ways(4) calls ways(3). dp[3] = -1, must compute.',                            active:[0,1],   done:[],       cached:[],  code:'l3', cache:{}},
+  {lbl:'1 step →',    desc:'ways(3) calls ways(2). dp[2] = -1, must compute.',                            active:[0,1,3], done:[],       cached:[],  code:'l3', cache:{}},
+  {lbl:'1 step →',    desc:'ways(2) calls ways(1). dp[1] = -1... but n≤1 so base case!',                 active:[0,1,3,7],done:[],      cached:[],  code:'l1', cache:{}},
+  {lbl:'Base Case',   desc:'n=1 ≤ 1 → return 1. Stored: dp[1] = 1.',                                    active:[0,1,3], done:[7],      cached:[],  code:'l1', cache:{1:1}},
+  {lbl:'2 steps →',   desc:'ways(2) calls ways(0). n≤1 → base case!',                                    active:[0,1,3,8],done:[7],     cached:[],  code:'l1', cache:{1:1}},
+  {lbl:'Base Case',   desc:'n=0 ≤ 1 → return 1. Stored: dp[0] = 1.',                                    active:[0,1,3], done:[7,8],    cached:[],  code:'l1', cache:{0:1,1:1}},
+  {lbl:'Stored ✓',    desc:'ways(2) = ways(1) + ways(0) = 1+1 = 2. Stored: dp[2] = 2.',                 active:[0,1],   done:[7,8,3],  cached:[],  code:'l4', cache:{0:1,1:1,2:2}},
+  {lbl:'2 steps →',   desc:'ways(3) calls ways(1). Check dp[1] first...',                                active:[0,1,4], done:[7,8,3],  cached:[],  code:'l2', cache:{0:1,1:1,2:2}},
+  {lbl:'Cache Hit! ⚡',desc:'dp[1] = 1 ≠ -1 → return 1 instantly! No recursion needed.',               active:[0,1],   done:[7,8,3],  cached:[4], code:'l2', cache:{0:1,1:1,2:2}},
+  {lbl:'Stored ✓',    desc:'ways(3) = ways(2) + ways(1) = 2+1 = 3. Stored: dp[3] = 3.',                 active:[0],     done:[7,8,3,1],cached:[4], code:'l4', cache:{0:1,1:1,2:2,3:3}},
+  {lbl:'2 steps →',   desc:'ways(4) calls ways(2). Check dp[2] first...',                                active:[0,2],   done:[7,8,3,1],cached:[4], code:'l2', cache:{0:1,1:1,2:2,3:3}},
+  {lbl:'Cache Hit! ⚡',desc:'dp[2] = 2 ≠ -1 → return 2 instantly! Entire ways(2) subtree SKIPPED.',    active:[0],     done:[7,8,3,1],cached:[4,2],code:'l2',cache:{0:1,1:1,2:2,3:3}},
+  {lbl:'Answer: 5',   desc:'ways(4) = ways(3) + ways(2) = 3+2 = 5. Only 5 unique calls vs 9 in pure recursion!', active:[], done:[0,1,2,3,7,8], cached:[4,2], code:'l4', cache:{0:1,1:1,2:2,3:3,4:5}, insight:'5 calls for n=4 vs 9 without memo. For n=45: 46 calls vs 35 trillion. That\'s the power of memoization.'},
+];
+
+let cur=0, timer=null, speed=750;
+const DPR=()=>window.devicePixelRatio||1;
+
+function resize(){
+  const rect=cv.getBoundingClientRect();
+  cv.width=rect.width*DPR();
+  cv.height=290*DPR();
+  draw();
+}
+
+function nodeColor(id, s){
+  if(s.cached && s.cached.includes(id)) return '#d2a8ff';
+  if(s.active.includes(id)) return '#58a6ff';
+  if(s.done.includes(id)){
+    const n=nodes.find(x=>x.id===id);
+    if(n && (n.val===1 && n.id>=7)) return '#3fb950';
+    return '#f0883e';
+  }
+  return '#30363d';
+}
+
+function draw(){
+  const s=steps[cur];
+  const W=cv.width/DPR(), H=cv.height/DPR();
+  ctx.save(); ctx.scale(DPR(), DPR());
+  ctx.clearRect(0,0,W,H);
+
+  nodes.forEach(n=>{
+    if(n.parent<0) return;
+    const p=nodes.find(x=>x.id===n.parent);
+    if(!p) return;
+    const px=p.x*W, py=p.y*H, nx=n.x*W, ny=n.y*H;
+    const visible=s.active.includes(n.id)||s.done.includes(n.id)||(s.cached&&s.cached.includes(n.id));
+    ctx.beginPath();
+    ctx.moveTo(px,py); ctx.lineTo(nx,ny);
+    ctx.strokeStyle=visible?'#555':'#252525';
+    ctx.lineWidth=1.5;
+    if(n.edge2) ctx.setLineDash([5,4]); else ctx.setLineDash([]);
+    ctx.stroke(); ctx.setLineDash([]);
+    if(visible){
+      const mx=(px+nx)/2, my=(py+ny)/2;
+      ctx.fillStyle='#8b949e'; ctx.font=`9px monospace`; ctx.textAlign='center';
+      ctx.fillText(n.edge2?'2 steps':'1 step', mx+(n.edge2?10:-10), my);
+    }
+  });
+
+  nodes.forEach(n=>{
+    const x=n.x*W, y=n.y*H, r=20;
+    const isCached=s.cached&&s.cached.includes(n.id);
+    const col=nodeColor(n.id,s);
+    const visible=s.active.includes(n.id)||s.done.includes(n.id)||isCached;
+
+    if(!visible){
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle='#161b22'; ctx.fill();
+      ctx.strokeStyle='#21262d'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#2f2f2f'; ctx.font=`9px monospace`; ctx.textAlign='center';
+      ctx.fillText(n.label,x,y+3);
+      return;
+    }
+
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=col+'22'; ctx.fill();
+    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle=col; ctx.font=`bold 9px monospace`; ctx.textAlign='center';
+    ctx.fillText(n.label,x,y+1);
+
+    if(s.done.includes(n.id)||isCached){
+      ctx.fillStyle='#fff'; ctx.font=`bold 9px monospace`;
+      ctx.fillText('= '+n.val, x, y+12);
+    }
+
+    if(isCached){
+      ctx.fillStyle='#d2a8ff'; ctx.font=`bold 8px monospace`;
+      ctx.fillText('CACHED',x,y-26);
+    }
+  });
+
+  ctx.restore();
+}
+
+function renderStep(s){
+  document.getElementById('slbl').textContent=s.lbl+':';
+  document.getElementById('sdesc').textContent=s.desc;
+  document.getElementById('pf').style.width=((cur/(steps.length-1))*100)+'%';
+  ['l0','l1','l2','l3','l4'].forEach(id=>{
+    document.getElementById(id).className='cl'+(s.code===id?' hl':'');
+  });
+  const ce=document.getElementById('cache');
+  ce.innerHTML='';
+  for(let i=0;i<=4;i++){
+    const chip=document.createElement('div');
+    chip.className='cache-chip'+(s.cache[i]!==undefined?' hit':'');
+    chip.textContent=`dp[${i}]=${s.cache[i]!==undefined?s.cache[i]:'?'}`;
+    ce.appendChild(chip);
+  }
+  const ins=document.getElementById('insight');
+  if(s.insight){ ins.style.display='block'; ins.textContent='💡 '+s.insight; }
+  else { ins.style.display='none'; }
+  draw();
+}
+
+function next(){ if(cur<steps.length-1){cur++;renderStep(steps[cur]);} }
+function prev(){ if(cur>0){cur--;renderStep(steps[cur]);} }
+function reset(){ cur=0; renderStep(steps[0]); stopPlay(); }
+function setSpeed(s){ speed=s; if(timer){stopPlay();togglePlay();} }
+function togglePlay(){
+  if(timer){ stopPlay(); }
+  else { document.getElementById('playbtn').textContent='⏸ PAUSE'; timer=setInterval(()=>{ if(cur>=steps.length-1){stopPlay();}else{next();} },speed); }
+}
+function stopPlay(){ clearInterval(timer); timer=null; document.getElementById('playbtn').textContent='▶ PLAY'; }
+
+window.addEventListener('resize', resize);
+resize();
+renderStep(steps[0]);
+</script>
+</body>
+</html>

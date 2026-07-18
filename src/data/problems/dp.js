@@ -106,8 +106,10 @@ dp[5] = dp[4] + dp[3] = 5 + 3 = 8
 Answer: 8`,
     mistakes: [
       { text: 'Setting dp[0] = 0 instead of 1 — 0 stairs has exactly 1 way (do nothing). Getting this wrong shifts all values.', quote: 'Ghar pe hi baithe raho — yeh bhi ek raasta hai. dp[0] = 1 hota hai, 0 nahi.' },
+      { text: 'Typo in recurrence: writing ways(n-1) + ways(n+1) instead of ways(n-1) + ways(n-2). The second term goes backward — n+1 causes infinite recursion.', quote: 'Seedhiyan chadh rahe ho ya utar rahe ho? n+1 likhoge toh kabhi nahi pahunchoge — n-2 chahiye.' },
       { text: 'In memoization, writing dp[n] = solve(n-1) + solve(n-1) — same variable twice. One must be n-2.', quote: 'Ek hi haath se do kaam nahi hota — n-1 aur n-2 dono chahiye, ek nahi.' },
       { text: 'Using dp array of size n instead of n+1 — dp[n] goes out of bounds.', quote: 'Jagah chhoti rakh di toh saamaan bahar girta hai — n+1 size chahiye dp array mein.' },
+      { text: 'Guard check if(n<2) placed after dp[0]=1, dp[1]=1 assignments — when n=0 the array has size 1 and dp[1]=1 crashes. Move the guard before all assignments.', quote: 'Darwaza band karne se pehle andar ghus gaye — pehle check karo, phir array bharo.' },
       { text: 'Forgetting that this is just Fibonacci with different base cases — reimplementing unnecessarily complex logic.', quote: 'Naya khana socha, lekin dal chawal hi banta hai — yeh Fibonacci hi hai, bas alag shuruat.' },
     ],
     relatedProblems: ['min-squares'],
@@ -219,12 +221,192 @@ dp[6]: try 1² → dp[5]+1 = 3
 
 Answer: 3  (4+1+1 or 4+1+1)`,
     mistakes: [
-      { text: 'Using greedy — always pick the largest perfect square. Fails for N=12: greedy gives 4, DP gives 3.', quote: 'Sabse bada sikka lena samajhdari nahi — kabhi chhote sikke zyada kaam aate hain.' },
-      { text: 'Initialising dp[] with 0 instead of Integer.MAX_VALUE — minimum logic breaks, wrong answers everywhere.', quote: 'Khali register mein zero likhoge toh min dhundhna impossible ho jaata hai — MAX_VALUE se shuru karo.' },
+      { text: 'Using greedy — always pick the largest perfect square. Fails for N=12: greedy gives 4, DP gives 3 (4+4+4).', quote: 'Sabse bada sikka lena samajhdari nahi — kabhi chhote sikke zyada kaam aate hain.' },
+      { text: 'Initializing dp[] with 0 instead of n+1 or MAX_VALUE — minimum logic breaks instantly. dp[i] starts at 0 so Math.min(0, anything) always returns 0.', quote: 'Khali register mein zero likhoge toh min dhundhna impossible ho jaata hai — n+1 se shuru karo.' },
+      { text: 'Using Integer.MAX_VALUE as infinity and then doing 1 + MAX_VALUE — integer overflow gives a negative number. Use n+1 as safe infinity instead.', quote: 'Infinity se ek aage jaoge toh ulta gir jaoge — n+1 hi kaafi hai, MAX_VALUE mat lo.' },
+      { text: 'Passing res as a parameter to the recursive call — each call needs its own local res starting at MAX. Sharing it means earlier calls corrupt later ones.', quote: 'Apna thali doosre ko mat dena — har call ka apna res hona chahiye, parameter nahi.' },
       { text: 'Writing x <= n in loop instead of x*x <= n — tries values whose square exceeds n, causes array out of bounds.', quote: 'Haath itna lambaoge toh giroge — x*x <= n check karo, sirf x <= n nahi.' },
       { text: 'Forgetting +1 in the recurrence — you count the square you used but never add 1 for it.', quote: 'Ek sikka jeb mein daala par count nahi kiya — +1 bhoolna matlab ek kaam ka credit chhod dena.' },
     ],
     relatedProblems: ['climbing-stairs'],
+    revisionLevel: 1,
+  },
+
+  'house-robber': {
+    slug: 'house-robber',
+    title: 'House Robber',
+    lcNum: 198,
+    lcLink: 'https://leetcode.com/problems/house-robber/',
+    difficulty: 'Medium',
+    topic: 'dp',
+    companies: ['Amazon', 'Google', 'Microsoft', 'LinkedIn'],
+    patterns: ['1D DP', 'Pick / Not Pick', 'Memoization', 'Tabulation'],
+    description: `You are a professional robber planning to rob houses along a street. Each house has some money. Adjacent houses have security systems — if two adjacent houses are robbed on the same night, police are alerted. Return the maximum amount you can rob tonight without alerting the police.`,
+    constraints: [
+      '1 <= nums.length <= 100',
+      '0 <= nums[i] <= 400',
+    ],
+    examples: [
+      { input: 'nums = [2,7,9,3,1]', output: '12  (rob house 0,2,4 → 2+9+1=12)' },
+      { input: 'nums = [1,2,3,1]',   output: '4   (rob house 0,2 → 1+3=4)' },
+    ],
+    gaonKiBaat: 'Do padosi ke ghar ek raat mein nahi loot sakte — ek chhodna padega. Lekin yeh nahi sochna ki kaunsa best hai — recursion khud explore kar lega. Bas seedha agli valid state pe ja.',
+    hints: [
+      'At each house, you have exactly two choices: rob it (skip the next one, jump to index+2) or skip it (move to index+1). Nothing else.',
+      'Define: GetMax(index) = maximum money obtainable from index to end. Write this sentence before writing code.',
+      'Base case: index >= nums.length → return 0. If you are past the last house, you get nothing.',
+    ],
+    intuition: `Decision at each house: rob it or skip it. If you rob it, you jump to index+2 (adjacent is off-limits). If you skip, you move to index+1. The recurrence: rob(index) = max(nums[index] + rob(index+2), rob(index+1)). The adjacency constraint is enforced by jumping +2 — no visited[] needed. Memoize on index alone because rob(index) always returns the same answer regardless of the path taken to reach it.`,
+    approaches: [
+      {
+        label: 'Brute Force — Pure Recursion (TLE)',
+        idea: 'Try both choices at every house. No caching — same subproblems recomputed many times.',
+        tc: 'O(2^N)',
+        sc: 'O(N) call stack',
+        code: `int rob(int[] nums, int index) {
+    if (index >= nums.length) return 0;
+    int pick    = nums[index] + rob(nums, index + 2);
+    int notPick = rob(nums, index + 1);
+    return Math.max(pick, notPick);
+}`,
+        pros: ['Direct translation of the recurrence — easy to understand'],
+        cons: ['O(2^N) — same subproblems computed exponentially many times'],
+      },
+      {
+        label: 'Top Down — Memoization',
+        idea: 'Cache results in dp[index]. Each unique index computed only once. TC drops to O(N).',
+        tc: 'O(N)',
+        sc: 'O(N) dp array + O(N) call stack',
+        code: `int[] dp;
+
+int rob(int[] nums) {
+    dp = new int[nums.length];
+    Arrays.fill(dp, -1);
+    return solve(nums, 0);
+}
+
+int solve(int[] nums, int index) {
+    if (index >= nums.length) return 0;
+    if (dp[index] != -1) return dp[index];
+    int pick    = nums[index] + solve(nums, index + 2);
+    int notPick = solve(nums, index + 1);
+    dp[index] = Math.max(pick, notPick);
+    return dp[index];
+}`,
+        pros: ['Natural extension of brute force', 'Easy to write in interview'],
+        cons: ['Recursive stack still O(N)'],
+      },
+      {
+        label: 'Bottom Up — Tabulation',
+        idea: 'Fill dp[] from right to left. dp[i] = max money from house i to end.',
+        tc: 'O(N)',
+        sc: 'O(N)',
+        code: `int rob(int[] nums) {
+    int n = nums.length;
+    int[] dp = new int[n + 2];  // +2 to avoid bounds check for index+2
+    for (int i = n - 1; i >= 0; i--) {
+        int pick    = nums[i] + dp[i + 2];
+        int notPick = dp[i + 1];
+        dp[i] = Math.max(pick, notPick);
+    }
+    return dp[0];
+}`,
+        pros: ['No recursion', 'Cleaner than memoization'],
+        cons: ['O(N) extra space'],
+      },
+      {
+        label: 'Space Optimized — Two Variables',
+        idea: 'dp[i] only depends on dp[i+1] and dp[i+2]. Keep two variables instead of full array.',
+        tc: 'O(N)',
+        sc: 'O(1)',
+        code: `int rob(int[] nums) {
+    int next1 = 0, next2 = 0;  // dp[i+1] and dp[i+2]
+    for (int i = nums.length - 1; i >= 0; i--) {
+        int curr = Math.max(nums[i] + next2, next1);
+        next2 = next1;
+        next1 = curr;
+    }
+    return next1;
+}`,
+        pros: ['O(1) space — best solution'],
+        cons: [],
+      },
+    ],
+    dryRun: `nums = [2,7,9,3,1]
+
+dp[5] = 0  (past end)
+dp[4] = 0  (past end, used as dp[i+2])
+dp[4] = max(1 + dp[6], dp[5]) = max(1,0) = 1
+dp[3] = max(3 + dp[5], dp[4]) = max(3,1) = 3
+dp[2] = max(9 + dp[4], dp[3]) = max(10,3) = 10
+dp[1] = max(7 + dp[3], dp[2]) = max(10,10) = 10
+dp[0] = max(2 + dp[2], dp[1]) = max(12,10) = 12
+
+Answer: 12`,
+    mistakes: [
+      { text: 'Carrying `ans` as a parameter — breaks memoization. The same index can be reached via different paths with different ans values. dp[index] stores a different value each time → cache corrupted. Fix: function returns "max from index to end" with no accumulated state.', quote: 'Apna hisaab khud rakhna function ka kaam nahi — bas aage ka max batao, pichle ka bojh mat uthao.' },
+      { text: 'Using visited[] to enforce the adjacency rule — unnecessary. Jumping to index+2 already enforces "no adjacent houses." visited[] adds complexity and is wrong: after unsetting visited[index], the notPick branch goes to index+1 (adjacent), which can still rob a neighbor.', quote: 'Taala laga diya darwaze pe, phir bhi chor andar gaya — index+2 hi asli taala hai, visited nahi.' },
+      { text: 'Base case: index == nums.length - 1 — misses the last house. Use index >= nums.length → return 0.', quote: 'Aakhri ghar chhodna nahi chahiye — >= se check karo, == se nahi.' },
+      { text: 'Thinking you need a loop inside the recursion — "explore every future house." Wrong. Two choices only: index+2 (rob) or index+1 (skip). The recursive call itself explores everything from there. Trust the recursion.', quote: 'Loop lagaoge toh recursion ka kaam chhin loge — do raaste hain bas, aage recursion sambhaal lega.' },
+      { text: 'Starting with DP before recursion — designing dp[][] before writing the plain recursion. Always: brute force recursion → overlapping subproblems → memoization → tabulation.', quote: 'Bina kheti ke fasal ki soch? Pehle haal chalaao — recursion pehle, DP baad mein.' },
+    ],
+    spotCheck: [
+      {
+        type: 'subjective',
+        q: 'Complete this sentence before writing any code: "GetMax(index) returns ___"',
+        answer: 'Maximum money obtainable by robbing houses from index to the end of the array.',
+      },
+      {
+        type: 'objective',
+        q: 'What goes wrong when you carry `ans` as a parameter in the recursive function?',
+        options: [
+          'The base case breaks',
+          'Memoization is corrupted — same index reached with different ans values writes different results to dp[index]',
+          'The recursion goes into infinite loop',
+          'Nothing, it works fine',
+        ],
+        answer: 1,
+      },
+      {
+        type: 'objective',
+        q: 'Why is visited[] not needed in House Robber?',
+        options: [
+          'visited[] only works with ArrayList, not int[]',
+          'Jumping to index+2 already enforces the no-adjacent constraint naturally',
+          'visited[] causes a stack overflow',
+          'Recursion does not support visited arrays',
+        ],
+        answer: 1,
+      },
+      {
+        type: 'objective',
+        q: 'What is the correct base case?',
+        options: [
+          'index == nums.length - 1, return nums[index]',
+          'index == nums.length, return 0',
+          'index >= nums.length, return 0',
+          'index > 0, return nums[0]',
+        ],
+        answer: 2,
+      },
+      {
+        type: 'subjective',
+        q: 'GetMax(3) is called twice — once when ans=5, once when ans=10. What goes wrong with dp[3]?',
+        answer: 'dp[3] stores a different value depending on which path reached it. The cache is corrupted — the second call overwrites dp[3] with the wrong accumulated total. Fix: remove ans from the function signature entirely.',
+      },
+      {
+        type: 'objective',
+        q: 'TC of House Robber memoization solution?',
+        options: [
+          'O(2^N) — two choices per house',
+          'O(N²) — nested loops',
+          'O(N) — N unique states × O(1) work per state',
+          'O(N log N)',
+        ],
+        answer: 2,
+      },
+    ],
+    relatedProblems: ['climbing-stairs', 'min-squares'],
     revisionLevel: 1,
   },
 }

@@ -126,7 +126,7 @@ export default function Topic() {
         {/* 4 Patterns */}
         {content.patterns && (
           <section>
-            <h2 className="text-2xl font-bold text-stone-800 mb-2">The 4 Backtracking Patterns</h2>
+            <h2 className="text-2xl font-bold text-stone-800 mb-2">{content.patternsTitle || 'The 4 Patterns'}</h2>
             <p className="text-stone-500 mb-6">Pick the right pattern based on your problem shape.</p>
             <div className="space-y-8">
               {content.patterns.map((pattern, i) => (
@@ -134,9 +134,16 @@ export default function Topic() {
                   {/* Header */}
                   <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between flex-wrap gap-2">
                     <h3 className="font-bold text-stone-800 text-lg">{pattern.name}</h3>
-                    <span className={`text-xs font-semibold px-3 py-1 rounded-full ${pattern.unpick ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                      {pattern.unpick ? '⚠ Unpick required' : '✓ No unpick needed'}
-                    </span>
+                    {pattern.unpick !== undefined && (
+                      <span className={`text-xs font-semibold px-3 py-1 rounded-full ${pattern.unpick ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {pattern.unpick ? '⚠ Unpick required' : '✓ No unpick needed'}
+                      </span>
+                    )}
+                    {pattern.initTo !== undefined && (
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-100 text-blue-700">
+                        init dp[] = {pattern.initTo}
+                      </span>
+                    )}
                   </div>
 
                   {/* When to use */}
@@ -151,13 +158,23 @@ export default function Topic() {
                     <p className="text-stone-600 text-sm leading-relaxed">{pattern.whyThisPattern}</p>
                   </div>
 
-                  {/* Why unpick / why not */}
-                  <div className={`px-6 py-4 border-b border-stone-100 ${pattern.unpick ? 'bg-red-50' : 'bg-green-50'}`}>
-                    <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${pattern.unpick ? 'text-red-500' : 'text-green-600'}`}>
-                      {pattern.unpick ? 'Why must we unpick?' : 'Why no unpick?'}
-                    </p>
-                    <p className={`text-sm leading-relaxed ${pattern.unpick ? 'text-red-800' : 'text-green-800'}`}>{pattern.whyUnpick}</p>
-                  </div>
+                  {/* Why unpick / why not — backtracking only */}
+                  {pattern.unpick !== undefined && (
+                    <div className={`px-6 py-4 border-b border-stone-100 ${pattern.unpick ? 'bg-red-50' : 'bg-green-50'}`}>
+                      <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${pattern.unpick ? 'text-red-500' : 'text-green-600'}`}>
+                        {pattern.unpick ? 'Why must we unpick?' : 'Why no unpick?'}
+                      </p>
+                      <p className={`text-sm leading-relaxed ${pattern.unpick ? 'text-red-800' : 'text-green-800'}`}>{pattern.whyUnpick}</p>
+                    </div>
+                  )}
+
+                  {/* Key rule — DP only */}
+                  {pattern.keyRule && (
+                    <div className="px-6 py-4 border-b border-stone-100 bg-blue-50">
+                      <p className="text-xs font-semibold uppercase tracking-widest mb-1 text-blue-600">Key Rule</p>
+                      <p className="text-sm leading-relaxed text-blue-900">{pattern.keyRule}</p>
+                    </div>
+                  )}
 
                   {/* Examples */}
                   <div className="px-6 py-3 border-b border-stone-100">

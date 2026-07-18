@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Climbing Stairs — Pure Recursion Tree</title>
+<style>
+  body { font-family: monospace; padding: 12px; background: #0d1117; color: #e6edf3; margin: 0; }
+  h3 { color: #58a6ff; margin-bottom: 10px; font-size: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn { background: #238636; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; font-family: monospace; }
+  .btn:hover { opacity: 0.85; }
+  .btn.blue { background: #1f6feb; } .btn.orange { background: #9e6a03; } .btn.red { background: #b62324; }
+  .info { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 12px; min-height: 36px; line-height: 1.6; }
+  .step-lbl { color: #58a6ff; font-weight: bold; } .desc-txt { color: #f0883e; }
+  .prog { height: 3px; background: #21262d; border-radius: 2px; margin-bottom: 10px; }
+  .prog-fill { height: 100%; background: #58a6ff; border-radius: 2px; transition: width 0.2s; }
+  canvas { width: 100%; height: 290px; display: block; background: #161b22; border-radius: 8px; margin-bottom: 10px; }
+  .legend { display: flex; gap: 12px; margin-bottom: 8px; font-size: 11px; flex-wrap: wrap; align-items: center; }
+  .leg { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .code-area { background: #21262d; border-radius: 6px; padding: 10px; font-size: 11px; line-height: 1.9; }
+  .cl { padding: 0 4px; border-radius: 3px; border-left: 2px solid transparent; }
+  .cl.hl { background: #f0883e22; border-left-color: #f0883e; }
+  .kw { color: #ff7b72; } .fn { color: #d2a8ff; } .cm { color: #6e7681; } .num { color: #79c0ff; }
+  .insight { background: #1a2e1a; border: 1px solid #3fb950; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #3fb950; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h3>🔁 CLIMBING STAIRS — PURE RECURSION — n=4 (no memo)</h3>
+
+<div class="btn-row">
+  <button class="btn blue" onclick="prev()">◀ PREV</button>
+  <button class="btn" id="playbtn" onclick="togglePlay()">▶ PLAY</button>
+  <button class="btn blue" onclick="next()">NEXT ▶</button>
+  <button class="btn red" onclick="reset()">↺ RESET</button>
+  <button class="btn orange" onclick="setSpeed(1100)">SLOW</button>
+  <button class="btn orange" onclick="setSpeed(450)">FAST</button>
+</div>
+
+<div class="prog"><div class="prog-fill" id="pf" style="width:0%"></div></div>
+<div class="info"><span class="step-lbl" id="slbl">Ready</span> <span class="desc-txt" id="sdesc">— Press PLAY or NEXT to begin</span></div>
+
+<div class="legend">
+  <div class="leg"><div class="dot" style="background:#58a6ff"></div> Exploring</div>
+  <div class="leg"><div class="dot" style="background:#3fb950"></div> Base case (n≤1)</div>
+  <div class="leg"><div class="dot" style="background:#f0883e"></div> Computed</div>
+  <div class="leg"><div class="dot" style="background:#b62324"></div> OVERLAP — recomputed!</div>
+  <span style="color:#8b949e;font-size:10px;">── solid = 1 step &nbsp; ╌╌ dashed = 2 steps</span>
+</div>
+
+<canvas id="cv"></canvas>
+
+<div class="code-area">
+<div class="cl" id="l0"><span class="kw">int</span> <span class="fn">ways</span>(<span class="kw">int</span> n) {</div>
+<div class="cl" id="l1">&nbsp; <span class="kw">if</span> (n &lt;= <span class="num">1</span>) <span class="kw">return</span> <span class="num">1</span>; <span class="cm">// base: 0 or 1 stair → 1 way</span></div>
+<div class="cl" id="l2">&nbsp; <span class="kw">return</span> <span class="fn">ways</span>(n-<span class="num">1</span>) + <span class="fn">ways</span>(n-<span class="num">2</span>); <span class="cm">// try 1 step AND 2 steps</span></div>
+<div class="cl">}</div>
+</div>
+
+<div class="insight" id="insight" style="display:none"></div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+// id, label, x(0-1), y(0-1), parent, ways-value, isBase, isDup (overlap), parentEdge2 (reached via 2-step)
+const nodes = [
+  {id:0, label:'ways(4)', x:0.50, y:0.09, parent:-1, val:5, base:false, dup:false, edge2:false},
+  {id:1, label:'ways(3)', x:0.27, y:0.30, parent:0,  val:3, base:false, dup:false, edge2:false},
+  {id:2, label:'ways(2)', x:0.73, y:0.30, parent:0,  val:2, base:false, dup:true,  edge2:true},
+  {id:3, label:'ways(2)', x:0.13, y:0.55, parent:1,  val:2, base:false, dup:false, edge2:false},
+  {id:4, label:'ways(1)', x:0.41, y:0.55, parent:1,  val:1, base:true,  dup:true,  edge2:true},
+  {id:5, label:'ways(1)', x:0.61, y:0.55, parent:2,  val:1, base:true,  dup:true,  edge2:false},
+  {id:6, label:'ways(0)', x:0.85, y:0.55, parent:2,  val:1, base:true,  dup:true,  edge2:true},
+  {id:7, label:'ways(1)', x:0.05, y:0.80, parent:3,  val:1, base:true,  dup:false, edge2:false},
+  {id:8, label:'ways(0)', x:0.21, y:0.80, parent:3,  val:1, base:true,  dup:false, edge2:true},
+];
+
+const steps = [
+  {lbl:'Start',      desc:'ways(4) — count all paths to reach stair 4. Each step: 1 or 2 stairs.',  active:[0],       done:[],             code:'l0', insight:''},
+  {lbl:'1 step →',   desc:'ways(4) tries taking 1 step first → calls ways(3).',                      active:[0,1],     done:[],             code:'l2', insight:''},
+  {lbl:'1 step →',   desc:'ways(3) tries taking 1 step → calls ways(2).',                            active:[0,1,3],   done:[],             code:'l2', insight:''},
+  {lbl:'1 step →',   desc:'ways(2) tries taking 1 step → calls ways(1).',                            active:[0,1,3,7], done:[],             code:'l2', insight:''},
+  {lbl:'Base Case',  desc:'n=1 ≤ 1 → return 1. One path from stair 1: take 1 step.',                active:[0,1,3],   done:[7],            code:'l1', insight:''},
+  {lbl:'2 steps →',  desc:'ways(2) tries taking 2 steps → calls ways(0).',                           active:[0,1,3,8], done:[7],            code:'l2', insight:''},
+  {lbl:'Base Case',  desc:'n=0 ≤ 1 → return 1. Already at top — 1 way (do nothing).',               active:[0,1,3],   done:[7,8],          code:'l1', insight:''},
+  {lbl:'Computed',   desc:'ways(2) = ways(1) + ways(0) = 1+1 = 2. But we stored nothing — pure recursion!', active:[0,1], done:[7,8,3],  code:'l2', insight:''},
+  {lbl:'2 steps →',  desc:'ways(3) now tries 2 steps → calls ways(1). But we just computed this!',  active:[0,1,4],   done:[7,8,3],        code:'l2', insight:''},
+  {lbl:'OVERLAP! ⚠', desc:'ways(1) = 1 again. Computed for the 2nd time — duplicate work!',         active:[0,1],     done:[7,8,3,4],      code:'l1', insight:''},
+  {lbl:'Computed',   desc:'ways(3) = ways(2) + ways(1) = 2+1 = 3. Now backtrack to ways(4).',       active:[0],       done:[7,8,3,4,1],    code:'l2', insight:''},
+  {lbl:'2 steps →',  desc:'ways(4) tries 2 steps → calls ways(2). OVERLAP! Already computed above!',active:[0,2],     done:[7,8,3,4,1],    code:'l2', insight:''},
+  {lbl:'Recomputing',desc:'ways(2) starts from scratch again. Calls ways(1) — 3rd time!',            active:[0,2,5],   done:[7,8,3,4,1],    code:'l2', insight:''},
+  {lbl:'Wasted! ⚠',  desc:'ways(1) = 1 — computed for the 3rd time. Pure waste.',                   active:[0,2],     done:[7,8,3,4,1,5],  code:'l1', insight:''},
+  {lbl:'Recomputing',desc:'ways(2) calls ways(0) again — 2nd time computing this too.',              active:[0,2,6],   done:[7,8,3,4,1,5],  code:'l2', insight:''},
+  {lbl:'Wasted! ⚠',  desc:'ways(0) = 1 again. ways(2) = 2 — SAME result, recomputed from scratch!',active:[0],       done:[7,8,3,4,1,5,6,2], code:'l1', insight:''},
+  {lbl:'Answer: 5',  desc:'ways(4) = 3+2 = 5. But: ways(2) computed 2×, ways(1) computed 3×, ways(0) computed 2×. Total 9 calls for n=4!', active:[], done:[0,1,2,3,4,5,6,7,8], code:'l2', insight:'9 calls for n=4. For n=45: ~2^45 = 35 trillion calls! This is why memoization is needed — store the result the first time, skip next time.'},
+];
+
+let cur=0, timer=null, speed=750;
+const DPR=()=>window.devicePixelRatio||1;
+
+function resize(){
+  const rect=cv.getBoundingClientRect();
+  cv.width=rect.width*DPR();
+  cv.height=290*DPR();
+  draw();
+}
+
+function nodeColor(id, s){
+  if(s.active.includes(id)) return '#58a6ff';
+  if(s.done.includes(id)){
+    const n=nodes[id];
+    if(n.base && !n.dup) return '#3fb950';
+    if(n.dup) return '#b62324';
+    return '#f0883e';
+  }
+  return '#30363d';
+}
+
+function draw(){
+  const s=steps[cur];
+  const W=cv.width/DPR(), H=cv.height/DPR();
+  ctx.save(); ctx.scale(DPR(), DPR());
+  ctx.clearRect(0,0,W,H);
+
+  // Draw edges
+  nodes.forEach(n=>{
+    if(n.parent<0) return;
+    const p=nodes[n.parent];
+    const px=p.x*W, py=p.y*H, nx=n.x*W, ny=n.y*H;
+    const visible=s.active.includes(n.id)||s.done.includes(n.id);
+    ctx.beginPath();
+    ctx.moveTo(px,py); ctx.lineTo(nx,ny);
+    ctx.strokeStyle = visible ? '#555' : '#252525';
+    ctx.lineWidth=1.5;
+    if(n.edge2) ctx.setLineDash([5,4]); else ctx.setLineDash([]);
+    ctx.stroke(); ctx.setLineDash([]);
+
+    // edge label
+    if(visible){
+      const mx=(px+nx)/2, my=(py+ny)/2;
+      ctx.fillStyle='#8b949e'; ctx.font=`9px monospace`; ctx.textAlign='center';
+      ctx.fillText(n.edge2?'2 steps':'1 step', mx+(n.edge2?10:-10), my);
+    }
+  });
+
+  // Draw nodes
+  nodes.forEach(n=>{
+    const x=n.x*W, y=n.y*H, r=20;
+    const col=nodeColor(n.id,s);
+    const visible=s.active.includes(n.id)||s.done.includes(n.id);
+
+    if(!visible){
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle='#161b22'; ctx.fill();
+      ctx.strokeStyle='#21262d'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#2f2f2f'; ctx.font=`9px monospace`; ctx.textAlign='center';
+      ctx.fillText(n.label,x,y+3);
+      return;
+    }
+
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=col+'22'; ctx.fill();
+    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle=col; ctx.font=`bold 9px monospace`; ctx.textAlign='center';
+    ctx.fillText(n.label,x,y+1);
+
+    if(s.done.includes(n.id)){
+      ctx.fillStyle='#fff'; ctx.font=`bold 9px monospace`;
+      ctx.fillText('= '+n.val, x, y+12);
+    }
+
+    if(n.dup && s.done.includes(n.id)){
+      ctx.fillStyle='#b62324'; ctx.font=`bold 8px monospace`;
+      ctx.fillText('DUP!',x,y-25);
+    }
+  });
+
+  ctx.restore();
+}
+
+function renderStep(s){
+  document.getElementById('slbl').textContent=s.lbl+':';
+  document.getElementById('sdesc').textContent=s.desc;
+  document.getElementById('pf').style.width=((cur/(steps.length-1))*100)+'%';
+  ['l0','l1','l2'].forEach(id=>{
+    document.getElementById(id).className='cl'+(s.code===id?' hl':'');
+  });
+  const ins=document.getElementById('insight');
+  if(s.insight){ ins.style.display='block'; ins.textContent='💡 '+s.insight; }
+  else { ins.style.display='none'; }
+  draw();
+}
+
+function next(){ if(cur<steps.length-1){cur++;renderStep(steps[cur]);} }
+function prev(){ if(cur>0){cur--;renderStep(steps[cur]);} }
+function reset(){ cur=0; renderStep(steps[0]); stopPlay(); }
+function setSpeed(s){ speed=s; if(timer){stopPlay();togglePlay();} }
+function togglePlay(){
+  if(timer){ stopPlay(); }
+  else { document.getElementById('playbtn').textContent='⏸ PAUSE'; timer=setInterval(()=>{ if(cur>=steps.length-1){stopPlay();}else{next();} },speed); }
+}
+function stopPlay(){ clearInterval(timer); timer=null; document.getElementById('playbtn').textContent='▶ PLAY'; }
+
+window.addEventListener('resize', resize);
+resize();
+renderStep(steps[0]);
+</script>
+</body>
+</html>

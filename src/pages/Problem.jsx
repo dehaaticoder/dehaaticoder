@@ -19,6 +19,7 @@ export default function Problem() {
   const [showApproaches, setShowApproaches] = useState(false)
   const [showDryRun, setShowDryRun] = useState(false)
   const [vizFullscreen, setVizFullscreen] = useState(false)
+  const [spotRevealed, setSpotRevealed] = useState({})
 
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') setVizFullscreen(false) }
@@ -293,6 +294,56 @@ export default function Problem() {
             })}
           </div>
         </section>
+
+        {/* Spot Check */}
+        {problem.spotCheck && problem.spotCheck.length > 0 && (
+          <section>
+            <h2 className="text-xl font-bold text-stone-800 mb-2">⚡ Spot Check</h2>
+            <p className="text-stone-500 text-sm mb-5">Quick questions to test if the concept stuck. Answer in your head, then reveal.</p>
+            <div className="space-y-4">
+              {problem.spotCheck.map((item, i) => (
+                <div key={i} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+                  <div className="px-5 py-4 border-b border-stone-100">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xs font-bold bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full shrink-0 mt-0.5">
+                        {item.type === 'objective' ? 'MCQ' : 'Q'}
+                      </span>
+                      <p className="text-stone-700 text-sm font-medium">{item.q}</p>
+                    </div>
+                    {item.type === 'objective' && (
+                      <div className="mt-3 ml-8 space-y-1">
+                        {item.options.map((opt, j) => (
+                          <p key={j} className={`text-sm px-3 py-1.5 rounded-lg border ${
+                            spotRevealed[i] && j === item.answer
+                              ? 'border-green-400 bg-green-50 text-green-800 font-semibold'
+                              : 'border-stone-100 text-stone-600'
+                          }`}>
+                            {String.fromCharCode(65 + j)}. {opt}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {spotRevealed[i] ? (
+                    item.type === 'subjective' && (
+                      <div className="px-5 py-3 bg-green-50 border-t border-green-100">
+                        <p className="text-xs font-semibold text-green-600 mb-1">Answer</p>
+                        <p className="text-sm text-green-900">{item.answer}</p>
+                      </div>
+                    )
+                  ) : (
+                    <button
+                      onClick={() => setSpotRevealed(r => ({ ...r, [i]: true }))}
+                      className="w-full px-5 py-3 text-xs font-semibold text-stone-400 hover:text-green-600 hover:bg-green-50 transition text-left border-t border-stone-100"
+                    >
+                      👁 Reveal Answer
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Related Problems */}
         <section>

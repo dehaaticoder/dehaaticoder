@@ -244,6 +244,8 @@ for (int i = 1; i <= m; i++)
       { file: 'dp-climbing-stairs-memo.html',      title: 'Climbing Stairs — Memoization (Cache Hits)' },
       { file: 'dp-fibonacci.html',                 title: 'Fibonacci — Recursion Tree with Memo' },
       { file: 'dp-climbing-stairs.html',           title: 'Climbing Stairs — Bottom Up DP Table' },
+      { file: 'dp-house-robber-recursion.html',   title: 'House Robber — Pure Recursion (Overlapping Subproblems)' },
+      { file: 'dp-house-robber-memo.html',        title: 'House Robber — Memoization (Cache Hit)' },
     ],
     commonMistakes: [
       'Forgetting the base case — dp[0] and dp[1] must be set before the loop.',

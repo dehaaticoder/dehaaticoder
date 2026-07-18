@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>House Robber — Pure Recursion Tree</title>
+<style>
+  body { font-family: monospace; padding: 12px; background: #0d1117; color: #e6edf3; margin: 0; }
+  h3 { color: #58a6ff; margin-bottom: 10px; font-size: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn { background: #238636; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; font-family: monospace; }
+  .btn:hover { opacity: 0.85; }
+  .btn.blue { background: #1f6feb; } .btn.orange { background: #9e6a03; } .btn.red { background: #b62324; }
+  .info { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 12px; min-height: 36px; line-height: 1.6; }
+  .step-lbl { color: #58a6ff; font-weight: bold; } .desc-txt { color: #f0883e; }
+  .prog { height: 3px; background: #21262d; border-radius: 2px; margin-bottom: 10px; }
+  .prog-fill { height: 100%; background: #58a6ff; border-radius: 2px; transition: width 0.2s; }
+  canvas { width: 100%; height: 310px; display: block; background: #161b22; border-radius: 8px; margin-bottom: 10px; }
+  .legend { display: flex; gap: 12px; margin-bottom: 8px; font-size: 11px; flex-wrap: wrap; align-items: center; }
+  .leg { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .code-area { background: #21262d; border-radius: 6px; padding: 10px; font-size: 11px; line-height: 1.9; }
+  .cl { padding: 0 4px; border-radius: 3px; border-left: 2px solid transparent; }
+  .cl.hl { background: #f0883e22; border-left-color: #f0883e; }
+  .kw { color: #ff7b72; } .fn { color: #d2a8ff; } .cm { color: #6e7681; } .num { color: #79c0ff; }
+  .insight { background: #1a2e1a; border: 1px solid #3fb950; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #3fb950; margin-top: 10px; }
+  .nums-row { display: flex; gap: 6px; margin-bottom: 10px; font-size: 11px; }
+  .num-chip { background: #21262d; border: 1px solid #30363d; border-radius: 4px; padding: 3px 8px; }
+  .num-chip.hl { border-color: #58a6ff; color: #58a6ff; font-weight: bold; }
+</style>
+</head>
+<body>
+<h3>🏠 HOUSE ROBBER — PURE RECURSION — nums=[2,7,9,3]</h3>
+
+<div class="nums-row" id="numsRow">
+  <span style="color:#8b949e;margin-right:2px;">nums:</span>
+  <span class="num-chip" id="n0">2</span>
+  <span class="num-chip" id="n1">7</span>
+  <span class="num-chip" id="n2">9</span>
+  <span class="num-chip" id="n3">3</span>
+</div>
+
+<div class="btn-row">
+  <button class="btn blue" onclick="prev()">◀ PREV</button>
+  <button class="btn" id="playbtn" onclick="togglePlay()">▶ PLAY</button>
+  <button class="btn blue" onclick="next()">NEXT ▶</button>
+  <button class="btn red" onclick="reset()">↺ RESET</button>
+  <button class="btn orange" onclick="setSpeed(1100)">SLOW</button>
+  <button class="btn orange" onclick="setSpeed(450)">FAST</button>
+</div>
+
+<div class="prog"><div class="prog-fill" id="pf" style="width:0%"></div></div>
+<div class="info"><span class="step-lbl" id="slbl">Ready</span> <span class="desc-txt" id="sdesc">— Press PLAY or NEXT to begin</span></div>
+
+<div class="legend">
+  <div class="leg"><div class="dot" style="background:#58a6ff"></div> Exploring</div>
+  <div class="leg"><div class="dot" style="background:#3fb950"></div> Base case</div>
+  <div class="leg"><div class="dot" style="background:#f0883e"></div> Computed</div>
+  <div class="leg"><div class="dot" style="background:#b62324"></div> OVERLAP — recomputed!</div>
+  <span style="color:#8b949e;font-size:10px;">── solid = pick &nbsp; ╌╌ dashed = notPick</span>
+</div>
+
+<canvas id="cv"></canvas>
+
+<div class="code-area">
+<div class="cl" id="l0"><span class="kw">int</span> <span class="fn">GetMax</span>(<span class="kw">int</span>[] nums, <span class="kw">int</span> index) {</div>
+<div class="cl" id="l1">&nbsp; <span class="kw">if</span> (index == <span class="num">1</span>) <span class="kw">return</span> Math.max(nums[<span class="num">0</span>], nums[<span class="num">1</span>]); <span class="cm">// base</span></div>
+<div class="cl" id="l2">&nbsp; <span class="kw">if</span> (index == <span class="num">0</span>) <span class="kw">return</span> nums[<span class="num">0</span>];              <span class="cm">// base</span></div>
+<div class="cl" id="l3">&nbsp; <span class="kw">int</span> pick    = nums[index] + <span class="fn">GetMax</span>(nums, index - <span class="num">2</span>);</div>
+<div class="cl" id="l4">&nbsp; <span class="kw">int</span> notPick = <span class="fn">GetMax</span>(nums, index - <span class="num">1</span>);</div>
+<div class="cl" id="l5">&nbsp; <span class="kw">return</span> Math.max(pick, notPick);</div>
+<div class="cl">}</div>
+</div>
+
+<div class="insight" id="insight" style="display:none"></div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+// Nodes: id, label, x(0-1), y(0-1), parent, val, base, dup, edge2(notPick=dashed)
+const nodes = [
+  {id:0, label:'GetMax(3)', x:0.50, y:0.10, parent:-1, val:11, base:false, dup:false, edge2:false},
+  {id:1, label:'GetMax(1)', x:0.25, y:0.38, parent:0,  val:7,  base:true,  dup:false, edge2:false, edgeLabel:'pick [3]=3'},
+  {id:2, label:'GetMax(2)', x:0.75, y:0.38, parent:0,  val:11, base:false, dup:false, edge2:true,  edgeLabel:'notPick'},
+  {id:3, label:'GetMax(0)', x:0.57, y:0.70, parent:2,  val:2,  base:true,  dup:false, edge2:false, edgeLabel:'pick [2]=9'},
+  {id:4, label:'GetMax(1)', x:0.91, y:0.70, parent:2,  val:7,  base:true,  dup:true,  edge2:true,  edgeLabel:'notPick'},
+];
+
+const steps = [
+  {lbl:'Start',       desc:'GetMax(3) — max money from houses 0..3. Two choices: pick house[3] or not.',         active:[0],       done:[],           code:'l0', hl:[]},
+  {lbl:'pick →',      desc:'Pick house[3]=3. Must skip adjacent → call GetMax(1). index-2 enforces no-adjacent.',active:[0,1],     done:[],           code:'l3', hl:[3]},
+  {lbl:'Base case',   desc:'index==1 → return max(nums[0],nums[1]) = max(2,7) = 7. Done.',                       active:[0],       done:[1],          code:'l1', hl:[1]},
+  {lbl:'notPick →',   desc:'Now try notPick: skip house[3]. Move to GetMax(2) — full range 0..2.',               active:[0,2],     done:[1],          code:'l4', hl:[]},
+  {lbl:'pick →',      desc:'GetMax(2): pick house[2]=9. Skip adjacent → call GetMax(0).',                        active:[0,2,3],   done:[1],          code:'l3', hl:[2]},
+  {lbl:'Base case',   desc:'index==0 → return nums[0] = 2. Done.',                                               active:[0,2],     done:[1,3],        code:'l2', hl:[0]},
+  {lbl:'notPick →',   desc:'GetMax(2) tries notPick → calls GetMax(1). But we just solved this above!',          active:[0,2,4],   done:[1,3],        code:'l4', hl:[]},
+  {lbl:'OVERLAP ⚠',   desc:'GetMax(1) = 7 again — computed for the 2nd time! Exact same work repeated.',        active:[0,2],     done:[1,3,4],      code:'l1', hl:[1]},
+  {lbl:'Computed',    desc:'GetMax(2) = max(pick=9+2, notPick=7) = max(11,7) = 11.',                             active:[0],       done:[1,2,3,4],    code:'l5', hl:[2]},
+  {lbl:'Answer: 11',  desc:'GetMax(3) = max(pick=3+7, notPick=11) = max(10,11) = 11. GetMax(1) computed 2×!',   active:[],        done:[0,1,2,3,4],  code:'l5', hl:[], insight:'GetMax(1) computed twice. For larger arrays the overlap grows exponentially — that\'s why memoization is needed.'},
+];
+
+let cur=0, timer=null, speed=750;
+const DPR=()=>window.devicePixelRatio||1;
+
+function resize(){
+  const rect=cv.getBoundingClientRect();
+  cv.width=rect.width*DPR();
+  cv.height=310*DPR();
+  draw();
+}
+
+function nodeColor(id,s){
+  if(s.active.includes(id)) return '#58a6ff';
+  if(s.done.includes(id)){
+    const nd=nodes[id];
+    if(nd.dup) return '#b62324';
+    if(nd.base) return '#3fb950';
+    return '#f0883e';
+  }
+  return '#30363d';
+}
+
+function draw(){
+  const s=steps[cur];
+  const W=cv.width/DPR(), H=cv.height/DPR();
+  ctx.save(); ctx.scale(DPR(),DPR());
+  ctx.clearRect(0,0,W,H);
+
+  nodes.forEach(nd=>{
+    if(nd.parent<0) return;
+    const p=nodes[nd.parent];
+    const px=p.x*W, py=p.y*H+22, nx=nd.x*W, ny=nd.y*H;
+    const visible=s.active.includes(nd.id)||s.done.includes(nd.id);
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(nx,ny);
+    ctx.strokeStyle=visible?'#555':'#252525';
+    ctx.lineWidth=1.5;
+    nd.edge2?ctx.setLineDash([5,4]):ctx.setLineDash([]);
+    ctx.stroke(); ctx.setLineDash([]);
+    if(visible && nd.edgeLabel){
+      const mx=(px+nx)/2, my=(py+ny)/2;
+      ctx.fillStyle=nd.dup?'#b62324':(nd.edge2?'#8b949e':'#3fb950');
+      ctx.font=`bold 9px monospace`; ctx.textAlign='center';
+      ctx.fillText(nd.edgeLabel, mx+(nd.edge2?12:-12), my-3);
+    }
+  });
+
+  nodes.forEach(nd=>{
+    const x=nd.x*W, y=nd.y*H, r=22;
+    const col=nodeColor(nd.id,s);
+    const visible=s.active.includes(nd.id)||s.done.includes(nd.id);
+
+    if(!visible){
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle='#161b22'; ctx.fill();
+      ctx.strokeStyle='#21262d'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#2f2f2f'; ctx.font=`9px monospace`; ctx.textAlign='center';
+      ctx.fillText(nd.label,x,y+3);
+      return;
+    }
+
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=col+'22'; ctx.fill();
+    ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.stroke();
+    ctx.fillStyle=col; ctx.font=`bold 9px monospace`; ctx.textAlign='center';
+    ctx.fillText(nd.label,x,y+1);
+
+    if(s.done.includes(nd.id)){
+      ctx.fillStyle='#fff'; ctx.font=`bold 9px monospace`;
+      ctx.fillText('= '+nd.val, x, y+13);
+    }
+    if(nd.dup && s.done.includes(nd.id)){
+      ctx.fillStyle='#b62324'; ctx.font=`bold 8px monospace`;
+      ctx.fillText('DUP!',x,y-28);
+    }
+  });
+
+  // highlight active nums chips
+  [0,1,2,3].forEach((i,_)=>{
+    document.getElementById('n'+i).className='num-chip'+(s.hl&&s.hl.includes(i)?' hl':'');
+  });
+
+  ctx.restore();
+}
+
+function renderStep(s){
+  document.getElementById('slbl').textContent=s.lbl+':';
+  document.getElementById('sdesc').textContent=s.desc;
+  document.getElementById('pf').style.width=((cur/(steps.length-1))*100)+'%';
+  ['l0','l1','l2','l3','l4','l5'].forEach(id=>{
+    document.getElementById(id).className='cl'+(s.code===id?' hl':'');
+  });
+  const ins=document.getElementById('insight');
+  if(s.insight){ins.style.display='block';ins.textContent='💡 '+s.insight;}
+  else{ins.style.display='none';}
+  draw();
+}
+
+function next(){if(cur<steps.length-1){cur++;renderStep(steps[cur]);}}
+function prev(){if(cur>0){cur--;renderStep(steps[cur]);}}
+function reset(){cur=0;renderStep(steps[0]);stopPlay();}
+function setSpeed(s){speed=s;if(timer){stopPlay();togglePlay();}}
+function togglePlay(){
+  if(timer){stopPlay();}
+  else{document.getElementById('playbtn').textContent='⏸ PAUSE';timer=setInterval(()=>{if(cur>=steps.length-1){stopPlay();}else{next();}},speed);}
+}
+function stopPlay(){clearInterval(timer);timer=null;document.getElementById('playbtn').textContent='▶ PLAY';}
+
+window.addEventListener('resize',resize);
+resize();
+renderStep(steps[0]);
+</script>
+</body>
+</html>

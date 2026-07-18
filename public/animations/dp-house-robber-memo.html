@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>House Robber — Memoization</title>
+<style>
+  body { font-family: monospace; padding: 12px; background: #0d1117; color: #e6edf3; margin: 0; }
+  h3 { color: #58a6ff; margin-bottom: 10px; font-size: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn { background: #238636; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; font-family: monospace; }
+  .btn:hover { opacity: 0.85; }
+  .btn.blue { background: #1f6feb; } .btn.orange { background: #9e6a03; } .btn.red { background: #b62324; }
+  .info { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 12px; min-height: 36px; line-height: 1.6; }
+  .step-lbl { color: #58a6ff; font-weight: bold; } .desc-txt { color: #f0883e; }
+  .prog { height: 3px; background: #21262d; border-radius: 2px; margin-bottom: 10px; }
+  .prog-fill { height: 100%; background: #58a6ff; border-radius: 2px; transition: width 0.2s; }
+  canvas { width: 100%; height: 310px; display: block; background: #161b22; border-radius: 8px; margin-bottom: 10px; }
+  .legend { display: flex; gap: 12px; margin-bottom: 8px; font-size: 11px; flex-wrap: wrap; align-items: center; }
+  .leg { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .code-area { background: #21262d; border-radius: 6px; padding: 10px; font-size: 11px; line-height: 1.9; }
+  .cl { padding: 0 4px; border-radius: 3px; border-left: 2px solid transparent; }
+  .cl.hl { background: #f0883e22; border-left-color: #f0883e; }
+  .kw { color: #ff7b72; } .fn { color: #d2a8ff; } .cm { color: #6e7681; } .num { color: #79c0ff; }
+  .cache-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cache-chip { background: #161b22; border: 1px solid #30363d; border-radius: 4px; padding: 3px 8px; font-size: 11px; color: #6e7681; }
+  .cache-chip.hit { border-color: #3fb950; color: #3fb950; background: #1a2e1a; }
+  .insight { background: #1a2e1a; border: 1px solid #3fb950; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #3fb950; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h3>⚡ HOUSE ROBBER — MEMOIZATION — nums=[2,7,9,3]</h3>
+
+<div class="btn-row">
+  <button class="btn blue" onclick="prev()">◀ PREV</button>
+  <button class="btn" id="playbtn" onclick="togglePlay()">▶ PLAY</button>
+  <button class="btn blue" onclick="next()">NEXT ▶</button>
+  <button class="btn red" onclick="reset()">↺ RESET</button>
+  <button class="btn orange" onclick="setSpeed(1100)">SLOW</button>
+  <button class="btn orange" onclick="setSpeed(450)">FAST</button>
+</div>
+
+<div class="prog"><div class="prog-fill" id="pf" style="width:0%"></div></div>
+<div class="info"><span class="step-lbl" id="slbl">Ready</span> <span class="desc-txt" id="sdesc">— Press PLAY or NEXT to begin</span></div>
+
+<div class="legend">
+  <div class="leg"><div class="dot" style="background:#58a6ff"></div> Exploring</div>
+  <div class="leg"><div class="dot" style="background:#3fb950"></div> Base case / Stored</div>
+  <div class="leg"><div class="dot" style="background:#f0883e"></div> Computed + cached</div>
+  <div class="leg"><div class="dot" style="background:#d2a8ff"></div> Cache hit — skipped!</div>
+</div>
+
+<div style="font-size:10px;color:#8b949e;margin-bottom:4px;">CACHE dp[] — initialized to -1</div>
+<div class="cache-row" id="cache"></div>
+
+<canvas id="cv"></canvas>
+
+<div class="code-area">
+<div class="cl" id="l0"><span class="kw">int</span> <span class="fn">GetMax</span>(<span class="kw">int</span>[] nums, <span class="kw">int</span>[] dp, <span class="kw">int</span> index) {</div>
+<div class="cl" id="l1">&nbsp; <span class="kw">if</span> (index == <span class="num">1</span>) <span class="kw">return</span> Math.max(nums[<span class="num">0</span>], nums[<span class="num">1</span>]); <span class="cm">// base</span></div>
+<div class="cl" id="l2">&nbsp; <span class="kw">if</span> (index == <span class="num">0</span>) <span class="kw">return</span> nums[<span class="num">0</span>];              <span class="cm">// base</span></div>
+<div class="cl" id="l3">&nbsp; <span class="kw">if</span> (dp[index] != -<span class="num">1</span>) <span class="kw">return</span> dp[index];   <span class="cm">// cache hit!</span></div>
+<div class="cl" id="l4">&nbsp; <span class="kw">int</span> pick    = nums[index] + <span class="fn">GetMax</span>(nums, dp, index - <span class="num">2</span>);</div>
+<div class="cl" id="l5">&nbsp; <span class="kw">int</span> notPick = <span class="fn">GetMax</span>(nums, dp, index - <span class="num">1</span>);</div>
+<div class="cl" id="l6">&nbsp; dp[index] = Math.max(pick, notPick);</div>
+<div class="cl" id="l7">&nbsp; <span class="kw">return</span> dp[index];</div>
+<div class="cl">}</div>
+</div>
+
+<div class="insight" id="insight" style="display:none"></div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+const nodes = [
+  {id:0, label:'GetMax(3)', x:0.50, y:0.10, parent:-1, val:11, base:false, edge2:false, cacheHit:false, edgeLabel:''},
+  {id:1, label:'GetMax(1)', x:0.25, y:0.38, parent:0,  val:7,  base:true,  edge2:false, cacheHit:false, edgeLabel:'pick [3]=3'},
+  {id:2, label:'GetMax(2)', x:0.75, y:0.38, parent:0,  val:11, base:false, edge2:true,  cacheHit:false, edgeLabel:'notPick'},
+  {id:3, label:'GetMax(0)', x:0.57, y:0.70, parent:2,  val:2,  base:true,  edge2:false, cacheHit:false, edgeLabel:'pick [2]=9'},
+  {id:4, label:'GetMax(1)', x:0.91, y:0.70, parent:2,  val:7,  base:false, edge2:true,  cacheHit:true,  edgeLabel:'notPick'},
+];
+
+const steps = [
+  {lbl:'Start',        desc:'GetMax(3) — dp[] all -1. nums=[2,7,9,3].',                                              active:[0],     done:[],        cached:[],  code:'l0', cache:{}},
+  {lbl:'pick →',       desc:'Pick house[3]=3 → call GetMax(1). dp[1]=-1, must compute.',                             active:[0,1],   done:[],        cached:[],  code:'l4', cache:{}},
+  {lbl:'Base case',    desc:'index==1 → return max(2,7)=7. Stored: dp[1]=7.',                                        active:[0],     done:[1],       cached:[],  code:'l1', cache:{1:7}},
+  {lbl:'notPick →',    desc:'Skip house[3] → call GetMax(2). dp[2]=-1, must compute.',                               active:[0,2],   done:[1],       cached:[],  code:'l5', cache:{1:7}},
+  {lbl:'pick →',       desc:'GetMax(2): pick house[2]=9 → call GetMax(0). dp[0]=-1, must compute.',                  active:[0,2,3], done:[1],       cached:[],  code:'l4', cache:{1:7}},
+  {lbl:'Base case',    desc:'index==0 → return nums[0]=2. Stored: dp[0]=2.',                                         active:[0,2],   done:[1,3],     cached:[],  code:'l2', cache:{0:2,1:7}},
+  {lbl:'notPick →',    desc:'GetMax(2): notPick → call GetMax(1). Check dp[1] first...',                             active:[0,2,4], done:[1,3],     cached:[],  code:'l3', cache:{0:2,1:7}},
+  {lbl:'Cache Hit! ⚡', desc:'dp[1]=7 ≠ -1 → return 7 instantly! No recursion. GetMax(1) subtree SKIPPED.',         active:[0,2],   done:[1,3],     cached:[4],code:'l3', cache:{0:2,1:7}},
+  {lbl:'Stored ✓',     desc:'GetMax(2) = max(pick=9+2, notPick=7) = max(11,7) = 11. Stored: dp[2]=11.',             active:[0],     done:[1,2,3],   cached:[4],code:'l6', cache:{0:2,1:7,2:11}},
+  {lbl:'Answer: 11',   desc:'GetMax(3) = max(pick=3+7, notPick=11) = 11. Only 4 unique calls vs 5 in pure recursion!', active:[], done:[0,1,2,3], cached:[4],code:'l7', cache:{0:2,1:7,2:11,3:11}, insight:'4 unique calls for n=4. Without memo: 5 calls with GetMax(1) computed twice. For n=100: savings are massive — each index solved exactly once.'},
+];
+
+let cur=0, timer=null, speed=750;
+const DPR=()=>window.devicePixelRatio||1;
+
+function resize(){
+  const rect=cv.getBoundingClientRect();
+  cv.width=rect.width*DPR();
+  cv.height=310*DPR();
+  draw();
+}
+
+function nodeColor(id,s){
+  if(s.cached&&s.cached.includes(id)) return '#d2a8ff';
+  if(s.active.includes(id)) return '#58a6ff';
+  if(s.done.includes(id)){
+    const nd=nodes[id];
+    if(nd.base) return '#3fb950';
+    return '#f0883e';
+  }
+  return '#30363d';
+}
+
+function draw(){
+  const s=steps[cur];
+  const W=cv.width/DPR(), H=cv.height/DPR();
+  ctx.save(); ctx.scale(DPR(),DPR());
+  ctx.clearRect(0,0,W,H);
+
+  nodes.forEach(nd=>{
+    if(nd.parent<0) return;
+    const p=nodes[nd.parent];
+    const px=p.x*W, py=p.y*H+22, nx=nd.x*W, ny=nd.y*H;
+    const visible=s.active.includes(nd.id)||s.done.includes(nd.id)||(s.cached&&s.cached.includes(nd.id));
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(nx,ny);
+    ctx.strokeStyle=visible?'#555':'#252525';
+    ctx.lineWidth=1.5;
+    nd.edge2?ctx.setLineDash([5,4]):ctx.setLineDash([]);
+    ctx.stroke(); ctx.setLineDash([]);
+    if(visible&&nd.edgeLabel){
+      const mx=(px+nx)/2, my=(py+ny)/2;
+      const isCached=s.cached&&s.cached.includes(nd.id);
+      ctx.fillStyle=isCached?'#d2a8ff':(nd.edge2?'#8b949e':'#3fb950');
+      ctx.font=`bold 9px monospace`; ctx.textAlign='center';
+      ctx.fillText(nd.edgeLabel, mx+(nd.edge2?12:-12), my-3);
+    }
+  });
+
+  nodes.forEach(nd=>{
+    const x=nd.x*W, y=nd.y*H, r=22;
+    const isCached=s.cached&&s.cached.includes(nd.id);
+    const col=nodeColor(nd.id,s);
+    const visible=s.active.includes(nd.id)||s.done.includes(nd.id)||isCached;
+
+    if(!visible){
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle='#161b22'; ctx.fill();
+      ctx.strokeStyle='#21262d'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#2f2f2f'; ctx.font=`9px monospace`; ctx.textAlign='center';
+      ctx.fillText(nd.label,x,y+3);
+      return;
+    }
+
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=col+'22'; ctx.fill();
+    ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.stroke();
+    ctx.fillStyle=col; ctx.font=`bold 9px monospace`; ctx.textAlign='center';
+    ctx.fillText(nd.label,x,y+1);
+
+    if(s.done.includes(nd.id)||isCached){
+      ctx.fillStyle='#fff'; ctx.font=`bold 9px monospace`;
+      ctx.fillText('= '+nd.val, x, y+13);
+    }
+    if(isCached){
+      ctx.fillStyle='#d2a8ff'; ctx.font=`bold 8px monospace`;
+      ctx.fillText('CACHED',x,y-28);
+    }
+  });
+
+  ctx.restore();
+}
+
+function renderStep(s){
+  document.getElementById('slbl').textContent=s.lbl+':';
+  document.getElementById('sdesc').textContent=s.desc;
+  document.getElementById('pf').style.width=((cur/(steps.length-1))*100)+'%';
+  ['l0','l1','l2','l3','l4','l5','l6','l7'].forEach(id=>{
+    document.getElementById(id).className='cl'+(s.code===id?' hl':'');
+  });
+  const ce=document.getElementById('cache');
+  ce.innerHTML='';
+  for(let i=0;i<=3;i++){
+    const chip=document.createElement('div');
+    chip.className='cache-chip'+(s.cache[i]!==undefined?' hit':'');
+    chip.textContent=`dp[${i}]=${s.cache[i]!==undefined?s.cache[i]:'?'}`;
+    ce.appendChild(chip);
+  }
+  const ins=document.getElementById('insight');
+  if(s.insight){ins.style.display='block';ins.textContent='💡 '+s.insight;}
+  else{ins.style.display='none';}
+  draw();
+}
+
+function next(){if(cur<steps.length-1){cur++;renderStep(steps[cur]);}}
+function prev(){if(cur>0){cur--;renderStep(steps[cur]);}}
+function reset(){cur=0;renderStep(steps[0]);stopPlay();}
+function setSpeed(s){speed=s;if(timer){stopPlay();togglePlay();}}
+function togglePlay(){
+  if(timer){stopPlay();}
+  else{document.getElementById('playbtn').textContent='⏸ PAUSE';timer=setInterval(()=>{if(cur>=steps.length-1){stopPlay();}else{next();}},speed);}
+}
+function stopPlay(){clearInterval(timer);timer=null;document.getElementById('playbtn').textContent='▶ PLAY';}
+
+window.addEventListener('resize',resize);
+resize();
+renderStep(steps[0]);
+</script>
+</body>
+</html>

@@ -1,28 +1,32 @@
 import { useState } from 'react'
 
-const A = [2, 7, 9, 3]
-const N = A.length
-const SVG_W = 700, LEVEL_H = 74, NW = 62, NH = 38
+const TARGET = 5
+const SVG_W = 700, LEVEL_H = 65, NW = 58, NH = 36
 
 const PAL = [
-  { fill: '#e0e7ff', stroke: '#6366f1', text: '#3730a3' }, // i=0
-  { fill: '#dbeafe', stroke: '#3b82f6', text: '#1e40af' }, // i=1
-  { fill: '#dcfce7', stroke: '#22c55e', text: '#15803d' }, // i=2
-  { fill: '#fef9c3', stroke: '#ca8a04', text: '#78350f' }, // i=3
-  { fill: '#f1f5f9', stroke: '#94a3b8', text: '#64748b' }, // base i>=N
+  { fill: '#fee2e2', stroke: '#ef4444', text: '#b91c1c' }, // n=0 red (base)
+  { fill: '#ffedd5', stroke: '#f97316', text: '#c2410c' }, // n=1 orange
+  { fill: '#fef9c3', stroke: '#ca8a04', text: '#78350f' }, // n=2 amber
+  { fill: '#dcfce7', stroke: '#22c55e', text: '#15803d' }, // n=3 green
+  { fill: '#dbeafe', stroke: '#3b82f6', text: '#1e40af' }, // n=4 blue
+  { fill: '#e0e7ff', stroke: '#6366f1', text: '#3730a3' }, // n=5 indigo
 ]
-const pal = i => PAL[Math.min(i, PAL.length - 1)]
 
-// DP values (bottom-up)
-const ROB = new Array(N + 2).fill(0)
-for (let i = N - 1; i >= 0; i--) ROB[i] = Math.max(A[i] + ROB[i + 2], ROB[i + 1])
+// DP values
+const DP = new Array(TARGET + 1).fill(Infinity)
+DP[0] = 0
+for (let i = 1; i <= TARGET; i++) {
+  for (let x = 1; x * x <= i; x++) DP[i] = Math.min(DP[i], 1 + DP[i - x * x])
+}
 
-function buildTree(i) {
-  const node = { i, children: [] }
-  if (i < N) {
-    node.children.push(buildTree(i + 2)) // take house i → go to i+2
-    node.children.push(buildTree(i + 1)) // skip house i → go to i+1
-  }
+// Perfect squares ≤ n
+function squares(n) {
+  const s = []; for (let x = 1; x * x <= n; x++) s.push(x * x); return s
+}
+
+function buildTree(n) {
+  const node = { n, children: [] }
+  if (n > 0) squares(n).forEach(sq => node.children.push(buildTree(n - sq)))
   return node
 }
 
@@ -35,12 +39,15 @@ function assignX(node, total) {
   node.x = node.children.reduce((s, c) => s + c.x, 0) / node.children.length
 }
 let _uid = 0; const _seen = {}
-function flattenDFS(node, pid = null, side = null) {
-  const id = _uid++; node.id = id; node.pid = pid; node.side = side
-  node.isMemo = _seen[node.i] !== undefined
-  if (!node.isMemo) _seen[node.i] = true
+function flattenDFS(node, pid = null, sqLabel = null) {
+  const id = _uid++; node.id = id; node.pid = pid; node.sqLabel = sqLabel
+  node.isMemo = _seen[node.n] !== undefined
+  if (!node.isMemo) _seen[node.n] = true
   const r = [node]
-  node.children.forEach((c, idx) => r.push(...flattenDFS(c, id, idx === 0 ? 'take' : 'skip')))
+  node.children.forEach((c, idx) => {
+    const sq = squares(node.n)[idx]
+    r.push(...flattenDFS(c, id, `-${Math.round(Math.sqrt(sq))}²`))
+  })
   return r
 }
 function assignMemoVis(node, pv = true, pm = false) {
@@ -48,7 +55,7 @@ function assignMemoVis(node, pv = true, pm = false) {
   node.children.forEach(c => assignMemoVis(c, node.memoVisible, node.isMemo))
 }
 
-const _tree = buildTree(0)
+const _tree = buildTree(TARGET)
 assignDepth(_tree)
 _li = 0; assignX(_tree, leafCount(_tree))
 const nodes = flattenDFS(_tree)
@@ -57,37 +64,32 @@ assignMemoVis(_tree)
 const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]))
 const edges = nodes.filter(n => n.pid !== null).map(n => {
   const p = nodeById[n.pid]
-  return { x1: p.x, y1: p.d * LEVEL_H + 40, x2: n.x, y2: n.d * LEVEL_H + 40, side: n.side, childId: n.id }
+  return { x1: p.x, y1: p.d * LEVEL_H + 38, x2: n.x, y2: n.d * LEVEL_H + 38, label: n.sqLabel, childId: n.id }
 })
 const callCounts = {}
-nodes.forEach(n => { callCounts[n.i] = (callCounts[n.i] || 0) + 1 })
+nodes.forEach(n => { callCounts[n.n] = (callCounts[n.n] || 0) + 1 })
 const maxD = Math.max(...nodes.map(n => n.d))
-const SVG_H = maxD * LEVEL_H + 90
+const SVG_H = maxD * LEVEL_H + 80
 const memoCallCount = nodes.filter(n => n.memoVisible).length
 
-export default function HouseRobberVisualizer({ fullscreen = false }) {
+export default function PerfectSquaresVisualizer({ fullscreen = false }) {
   const [memo, setMemo] = useState(false)
   const visIds = new Set(nodes.filter(n => memo ? n.memoVisible : true).map(n => n.id))
 
   return (
     <div className={`font-sans text-sm select-none ${fullscreen ? 'p-8' : 'p-4'}`}>
       <p className="text-xs text-stone-400 mb-3">
-        A = [{A.join(', ')}] &nbsp;|&nbsp; rob(i) = max(A[i] + rob(i+2), rob(i+1))
+        minSq({TARGET}) — each edge label is the square subtracted (1² or 2²)
       </p>
 
       {/* Legend */}
       <div className="flex flex-wrap gap-1.5 mb-3 text-xs">
-        {[0, 1, 2, 3].map(i => (
+        {Array.from({ length: TARGET + 1 }, (_, i) => i).reverse().map(i => (
           <span key={i} className="px-2 py-1 rounded-md border font-mono"
             style={{ background: PAL[i].fill, borderColor: PAL[i].stroke, color: PAL[i].text }}>
-            rob({i})={ROB[i]} — {callCounts[i]}×
+            f({i}) = {DP[i] === Infinity ? '∞' : DP[i]} — {callCounts[i] || 0}×
           </span>
         ))}
-        <span className="px-2 py-1 rounded-md border font-mono"
-          style={{ background: PAL[4].fill, borderColor: PAL[4].stroke, color: PAL[4].text }}>
-          base (i≥{N}) = 0
-        </span>
-        <span className="text-stone-400 self-center ml-1">— take &nbsp; - - skip</span>
       </div>
 
       {/* Toggle */}
@@ -106,7 +108,7 @@ export default function HouseRobberVisualizer({ fullscreen = false }) {
       <div className="overflow-x-auto rounded-xl border border-stone-100 bg-stone-50">
         <svg width={SVG_W} height={SVG_H} style={{ display: 'block', minWidth: SVG_W }}>
           <defs>
-            <marker id="hr-arr" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+            <marker id="ps-arr" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
               <path d="M0,0 L0,7 L7,3.5 z" fill="#94a3b8" />
             </marker>
           </defs>
@@ -114,34 +116,31 @@ export default function HouseRobberVisualizer({ fullscreen = false }) {
             if (!visIds.has(e.childId)) return null
             return <line key={i}
               x1={e.x1} y1={e.y1 + NH / 2 + 2} x2={e.x2} y2={e.y2 - NH / 2 - 2}
-              stroke={e.side === 'take' ? '#475569' : '#94a3b8'} strokeWidth={1.5}
-              strokeDasharray={e.side === 'skip' ? '6,3' : ''} markerEnd="url(#hr-arr)" />
+              stroke="#64748b" strokeWidth={1.5} markerEnd="url(#ps-arr)" />
           })}
           {edges.map((e, i) => {
             if (!visIds.has(e.childId)) return null
             return <text key={`l${i}`} x={(e.x1 + e.x2) / 2} y={(e.y1 + e.y2) / 2 + 2}
-              textAnchor="middle" fontSize={8} fill={e.side === 'take' ? '#64748b' : '#94a3b8'}>
-              {e.side}
-            </text>
+              textAnchor="middle" fontSize={8} fill="#94a3b8">{e.label}</text>
           })}
           {nodes.map(node => {
             if (!visIds.has(node.id)) return null
-            const c = pal(node.i)
+            const c = PAL[Math.min(node.n, PAL.length - 1)]
             const isCached = memo && node.isMemo
             const isRepeat = !memo && node.isMemo
-            const cx = node.x, cy = node.d * LEVEL_H + 40
+            const cx = node.x, cy = node.d * LEVEL_H + 38
             return <g key={node.id}>
               <rect x={cx - NW / 2} y={cy - NH / 2} width={NW} height={NH} rx={8}
                 fill={isCached ? '#f1f5f9' : c.fill}
                 stroke={isCached ? '#94a3b8' : c.stroke}
                 strokeWidth={isRepeat ? 1.5 : 2}
                 strokeDasharray={isCached || isRepeat ? '4,2' : ''} />
-              <text x={cx} y={cy - 5} textAnchor="middle" fontSize={11} fontWeight={700}
+              <text x={cx} y={cy - 4} textAnchor="middle" fontSize={11} fontWeight={700}
                 fill={isCached ? '#94a3b8' : isRepeat ? c.stroke : c.text}>
-                rob({node.i})
+                f({node.n})
               </text>
               <text x={cx} y={cy + 11} textAnchor="middle" fontSize={9} fill={isCached ? '#94a3b8' : '#78716c'}>
-                {isCached ? '✓ cached' : isRepeat ? 'repeat!' : node.i >= N ? '= 0' : `= ${ROB[node.i]}`}
+                {isCached ? '✓ cached' : isRepeat ? 'repeat!' : node.n === 0 ? '= 0' : `= ${DP[node.n]}`}
               </text>
             </g>
           })}
@@ -150,8 +149,8 @@ export default function HouseRobberVisualizer({ fullscreen = false }) {
 
       <div className="mt-3 bg-stone-900 text-green-400 px-4 py-2.5 rounded-lg text-xs font-mono">
         {memo
-          ? `With memo: ${memoCallCount} calls — each rob(i) computed once, returned from cache on repeat.`
-          : `Without memo: ${nodes.length} calls — rob(2) called ${callCounts[2] || 0}×, rob(3) called ${callCounts[3] || 0}×. Same subproblem recomputed!`}
+          ? `With memo: ${memoCallCount} calls — f(0), f(1) cached and reused instead of recomputed.`
+          : `Without memo: ${nodes.length} calls — f(0) called ${callCounts[0] || 0}×, f(1) called ${callCounts[1] || 0}× — same work done again!`}
       </div>
     </div>
   )

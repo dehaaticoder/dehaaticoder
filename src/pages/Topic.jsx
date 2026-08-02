@@ -213,6 +213,48 @@ export default function Topic() {
           </div>
         </section>
 
+        {/* Concept Comparisons */}
+        {content.conceptComparisons && (
+          <section>
+            <h2 className="text-2xl font-bold text-stone-800 mb-6">Concept Comparisons</h2>
+            <div className="space-y-8">
+              {content.conceptComparisons.map((cmp, ci) => (
+                <div key={ci} className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+                  <div className="px-5 py-4 border-b border-stone-100 bg-stone-50">
+                    <h3 className="font-bold text-stone-800 text-base">{cmp.title}</h3>
+                    {cmp.intro && <p className="text-stone-500 text-sm mt-1">{cmp.intro}</p>}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-green-50">
+                          {cmp.headers.map((h, hi) => (
+                            <th key={hi} className="text-left px-4 py-3 font-semibold text-stone-700 border-b border-stone-100 whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cmp.rows.map((row, ri) => (
+                          <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-stone-50'}>
+                            {row.map((cell, ci2) => (
+                              <td key={ci2} className={`px-4 py-3 text-stone-600 border-b border-stone-100 align-top ${ci2 === 0 ? 'font-semibold text-stone-800 whitespace-nowrap' : ''}`}>{cell}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {cmp.footer && (
+                    <div className="px-5 py-3 bg-green-50 border-t border-green-100">
+                      <p className="text-green-800 text-xs font-medium">{cmp.footer}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Common mistakes */}
         <section>
           <h2 className="text-2xl font-bold text-stone-800 mb-4">Common Mistakes</h2>

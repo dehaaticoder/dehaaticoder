@@ -9,6 +9,10 @@ import LetterCombinationsVisualizer from './LetterCombinationsVisualizer'
 import CombinationSumVisualizer from './CombinationSumVisualizer'
 import NQueensVisualizer from './NQueensVisualizer'
 import HouseRobberVisualizer from './HouseRobberVisualizer'
+import ClimbingStairsVisualizer from './ClimbingStairsVisualizer'
+import PerfectSquaresVisualizer from './PerfectSquaresVisualizer'
+import NDigitNumbersVisualizer from './NDigitNumbersVisualizer'
+import UniquePathsVisualizer from './UniquePathsVisualizer'
 
 // Registry: problem slug → visualizer component
 // To add a new visualizer: create the component and add one line here. Zero changes to Problem.jsx.
@@ -24,6 +28,10 @@ const visualizers = {
   'combination-sum':      CombinationSumVisualizer,
   'n-queens':             NQueensVisualizer,
   'house-robber':         HouseRobberVisualizer,
+  'climbing-stairs':      ClimbingStairsVisualizer,
+  'min-squares':          PerfectSquaresVisualizer,
+  'n-digit-numbers':      NDigitNumbersVisualizer,
+  'unique-paths':         UniquePathsVisualizer,
 }
 
 export default visualizers

@@ -1,9 +1,9 @@
 import { backtrackingCheatsheet } from './backtracking'
-
-// Add new topic cheatsheets here as topics are built:
-// import { linkedListCheatsheet } from './linked-list'
-// import { dpCheatsheet } from './dp'
+import { dpCheatsheet } from './dp'
+import { oopCheatsheet } from './oop'
 
 export const cheatsheets = {
   backtracking: backtrackingCheatsheet,
+  dp: dpCheatsheet,
+  oop: oopCheatsheet,
 }

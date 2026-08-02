@@ -127,6 +127,38 @@ SIMPLE RULE:
 - Using List, array, or board → SHARED → must unpick
 - Using String or passing value → OWN COPY → no unpick needed`,
     },
+    conceptComparisons: [
+      {
+        title: 'Pure Recursion vs Backtracking',
+        intro: 'Both use the same analysis formula — but they solve different problem shapes and the numbers come out differently.',
+        headers: ['', 'Pure Recursion', 'Backtracking'],
+        rows: [
+          ['What it solves',   'Break into subproblems, combine results',          'Explore choices, undo a choice to try the next'],
+          ['Core operation',   'Compute and return',                                'Pick → Recurse → Unpick'],
+          ['Mutable state',    'None — each call is independent',                  'Yes — shared list / visited[] that gets mutated and restored'],
+          ['TC formula',       'total calls × work per call',                      'total calls × work per call (same formula)'],
+          ['SC formula',       'stack depth only',                                 'stack depth + mutable state size'],
+          ['Branching factor', 'Depends on the problem',                           'Depends on the problem'],
+          ['Examples',         'Fibonacci, Unique Paths, Merge Sort',              'Subsets, Permutations, N-Queens, Sudoku'],
+          ['Can both exist?',  'Sometimes — Subsets can be written either way',    'Sometimes — but Fibonacci cannot be backtracking'],
+        ],
+        footer: 'Rule: ask "do I have a choice to undo?" No → pure recursion. Yes → backtracking. Same formula, different numbers.',
+      },
+      {
+        title: 'TC and SC across all Recursion styles',
+        intro: 'The formula is the same. The numbers differ based on branching factor and depth of that problem.',
+        headers: ['Problem', 'Type', 'Branching', 'Depth', 'TC', 'SC'],
+        rows: [
+          ['Fibonacci',      'Pure recursion',  '2',       'N',   'O(2^N)',       'O(N)'],
+          ['Unique Paths',   'Pure recursion',  '2',       'N+M', 'O(2^(N+M))',   'O(N+M)'],
+          ['Subsets',        'Backtracking',    '2',       'N',   'O(2^N × N)',   'O(N) stack + O(N) path'],
+          ['Permutations',   'Backtracking',    'N,N-1..', 'N',   'O(N! × N)',    'O(N) stack + O(N) path'],
+          ['N-Queens',       'Backtracking',    'up to N', 'N',   'O(N!)',        'O(N) stack + O(N) board'],
+          ['Combination Sum','Both possible',   'up to N', 'target/min', 'O(2^N)','O(depth)'],
+        ],
+        footer: 'SC for backtracking = stack depth + extra mutable state (path list, visited[]). Pure recursion has no extra state.',
+      },
+    ],
     commonMistakes: [
       'Forgetting to unpick after recursion when using a shared List — causes all results to be wrong or empty',
       'Not copying the list before adding to result — result.add(current) adds a reference, not a snapshot. When current changes later, your stored result changes too',
@@ -159,6 +191,239 @@ SIMPLE RULE:
       { slug: 'word-search',            title: 'Word Search',                          difficulty: 'Medium', lcNum: 79   },
       // Hard
       { slug: 'n-queens',               title: 'N-Queens',                             difficulty: 'Hard',   lcNum: 51   },
+    ],
+  },
+
+  arrays: {
+    intro: `Arrays are the foundation of DSA. Every other data structure builds on top of them. Master the core patterns — prefix sum, sliding window, contribution technique — and most array problems become straightforward.`,
+    whyItWorks: `Arrays store elements in contiguous memory. This gives O(1) access by index. Most optimizations come from precomputing something (prefix sum) or maintaining a window (sliding window) so you avoid repeated work.`,
+    teachingFlow: [
+      { step: 'Index & Access',      desc: 'O(1) access, O(N) search. The foundation.' },
+      { step: 'Prefix Sum',          desc: 'Precompute to answer range queries in O(1).' },
+      { step: 'Sliding Window',      desc: 'Fixed or variable window — avoid recomputing overlap.' },
+      { step: 'Contribution',        desc: 'How many times does A[i] appear across all subarrays?' },
+      { step: 'Two Pointer',         desc: 'Shrink and expand from both ends — O(N) instead of O(N²).' },
+    ],
+    keyInsight: 'Before writing a loop, ask: am I recomputing the same thing? If yes — precompute with prefix sum or slide a window. This single question eliminates 80% of brute force solutions.',
+    patternsTitle: 'Core Array Patterns',
+    patterns: [
+      {
+        name: 'Pattern 1 — Prefix Sum + Range Query',
+        when: 'Multiple range queries [L, R] on the same array. Brute force is O(N×Q).',
+        whyThisPattern: 'Build prefix array once in O(N). Each query becomes O(1) subtraction. Total: O(N+Q) instead of O(N×Q).',
+        keyRule: 'Query [L, R]: if L==0 return prefix[R], else prefix[R] - prefix[L-1]. Handle L==0 separately to avoid index -1.',
+        examples: 'Even Numbers in a Range, Special Index, Sum of Odd/Even Indexed Elements',
+        code: `// Build prefix
+int[] prefix = new int[n];
+prefix[0] = A[0];
+for (int i = 1; i < n; i++)
+    prefix[i] = prefix[i-1] + A[i];
+
+// Query [L, R]
+int sum = (L == 0) ? prefix[R] : prefix[R] - prefix[L-1];`,
+      },
+      {
+        name: 'Pattern 2 — Sliding Window (Fixed Size)',
+        when: 'Find max/min/sum of every subarray of exactly size K.',
+        whyThisPattern: 'Instead of recomputing sum from scratch each time (O(N×K)), slide the window: add the new element entering, remove the element leaving. O(N).',
+        keyRule: 'Compute first window. Then slide: add A[right], subtract A[right - K]. Track max at each step.',
+        examples: 'Maximum Subarray Sum of Fixed Length, Subarray with Given Sum and Length',
+        code: `int sum = 0;
+for (int i = 0; i < K; i++) sum += A[i];   // first window
+int max = sum;
+for (int i = K; i < n; i++) {
+    sum += A[i] - A[i - K];                 // slide
+    max = Math.max(max, sum);
+}`,
+      },
+      {
+        name: 'Pattern 3 — Sliding Window (Variable Size)',
+        when: 'Find longest/shortest subarray satisfying a condition (sum ≤ B, all unique, etc.).',
+        whyThisPattern: 'Two pointers s and e. Expand e to include more elements. Shrink s when condition is violated. Each element enters and leaves the window at most once — O(N).',
+        keyRule: 'Use s <= e (not s < e) to allow the empty window (sum = 0). This handles the case where all elements exceed the limit.',
+        examples: 'Maximum Subarray (sum ≤ B), Longest Substring Without Repeating Characters',
+        code: `int s = 0, sum = 0, max = 0;
+for (int e = 0; e < n; e++) {
+    sum += A[e];
+    while (sum > B && s <= e)   // s <= e allows empty window
+        sum -= A[s++];
+    max = Math.max(max, e - s + 1);
+}`,
+      },
+      {
+        name: 'Pattern 4 — Contribution Technique',
+        when: 'Sum of all subarray sums. Avoid generating all subarrays — O(N³). Instead ask: how much does each element contribute?',
+        whyThisPattern: 'A[i] appears in all subarrays that start at index 0..i and end at index i..n-1. Count = (i+1) × (n-i). Multiply and sum — O(N).',
+        keyRule: 'Cast to long before multiplying: (long)(i+1)*(n-i). For n=10⁵, result can exceed int max (2.1×10⁹).',
+        examples: 'Sum of All Subarrays',
+        code: `long ans = 0;
+for (int i = 0; i < n; i++)
+    ans += (long)A[i] * (i + 1) * (n - i);   // long cast critical`,
+      },
+      {
+        name: 'Pattern 5 — 3-Reverse Trick (Array Rotation)',
+        when: 'Rotate array right by K positions in-place. O(N) time, O(1) space.',
+        whyThisPattern: 'Rotating right by K = last K elements come to front. Three reverses achieve this without extra space.',
+        keyRule: 'Always do K = K%N first (K can be > N). In the reverse helper: both start++ AND end-- must execute per iteration.',
+        examples: 'Array Rotation (LC 189)',
+        code: `K = K % n;
+if (K == 0) return;
+reverse(A, 0, n-1);    // full
+reverse(A, 0, K-1);    // first part
+reverse(A, K, n-1);    // second part
+
+void reverse(int[] A, int s, int e) {
+    while (s < e) {
+        int tmp = A[s]; A[s] = A[e]; A[e] = tmp;
+        s++; e--;   // BOTH must move — missing e-- is a classic bug
+    }
+}`,
+      },
+    ],
+    commonMistakes: [
+      'Missing end-- in the reverse helper — only incrementing start++ means end never moves, giving garbage output. Both pointers must move every iteration.',
+      'Array size n instead of n*(n+1)/2 when storing all subarrays — n*(n+1)/2 is the total count of subarrays, not n.',
+      'Integer overflow in contribution technique — (i+1)*(n-i) for n=10⁵ exceeds int. Always cast: (long)(i+1)*(n-i).',
+      'Using s < e instead of s <= e in variable sliding window — misses the empty window (sum=0) case, which is needed when all elements exceed the limit.',
+      'Forgetting K = K%N before rotation — when K > N, rotating by K is the same as rotating by K%N. Skipping this causes wrong index access.',
+      'Prefix sum query without handling L==0 separately — prefix[L-1] when L=0 accesses index -1 and crashes.',
+      'Using i%2 vs A[i]%2 for Special Index — i%2 is index parity (what you want), A[i]%2 is element value parity (wrong).',
+    ],
+    problems: [
+      { slug: 'closest-minmax',         title: 'Closest MinMax',                          difficulty: 'Medium', lcNum: null },
+      { slug: 'special-index',          title: 'Special Index',                           difficulty: 'Medium', lcNum: null },
+      { slug: 'sum-all-subarrays',      title: 'Sum of All Subarrays',                   difficulty: 'Easy',   lcNum: null },
+      { slug: 'max-subarray-sum-le-b',  title: 'Maximum Subarray (sum ≤ B)',             difficulty: 'Easy',   lcNum: null },
+      { slug: 'even-numbers-range',     title: 'Even Numbers in a Range',                difficulty: 'Medium', lcNum: null },
+      { slug: 'generate-subarrays',     title: 'Generate All Subarrays',                 difficulty: 'VeryEasy', lcNum: null },
+      { slug: 'count-factors',          title: 'Count Factors',                          difficulty: 'VeryEasy', lcNum: null },
+      { slug: 'array-rotation',         title: 'Array Rotation (Rotate Right by K)',     difficulty: 'VeryEasy', lcNum: 189  },
+      { slug: 'special-subseq-ag',      title: 'Special Subsequences "AG"',             difficulty: 'Easy',   lcNum: null },
+      { slug: 'max-fixed-window',       title: 'Maximum Subarray Sum of Fixed Length',  difficulty: 'VeryEasy', lcNum: null },
+    ],
+  },
+
+  sql: {
+    intro: `SQL is the language of data. Every query you write is a question you ask the database. Master the building blocks — SELECT, JOIN, WHERE, GROUP BY — and then layer on subqueries, aggregations, and window functions.`,
+    whyItWorks: `SQL is declarative — you describe WHAT you want, not HOW to get it. The database engine figures out the most efficient execution plan. Your job is to express the question correctly.`,
+    teachingFlow: [
+      { step: 'SELECT & WHERE',    desc: 'Filter rows. The most basic query.' },
+      { step: 'JOIN',              desc: 'Combine tables. INNER vs LEFT vs RIGHT.' },
+      { step: 'GROUP BY',          desc: 'Aggregate data. COUNT, SUM, AVG, MAX, MIN.' },
+      { step: 'Subqueries',        desc: 'Query inside a query. Scalar, IN, FROM, EXISTS.' },
+      { step: 'Window Functions',  desc: 'ROW_NUMBER, RANK, LAG, LEAD — without collapsing rows.' },
+    ],
+    keyInsight: 'SQL clause order matters: SELECT → FROM → JOIN → WHERE → GROUP BY → HAVING → ORDER BY → LIMIT. You must write them in this order. If you put WHERE after GROUP BY, it is a syntax error.',
+    patternsTitle: 'Key SQL Patterns',
+    patterns: [
+      {
+        name: 'Pattern 1 — Conditional COUNT',
+        when: 'Count only rows matching a condition, alongside total count — in one query.',
+        whyThisPattern: 'WHERE filters out rows entirely. CASE WHEN inside COUNT keeps all rows visible but only counts the matching ones. Both numbers come from one pass.',
+        keyRule: 'COUNT(CASE WHEN condition THEN 1 END) — no ELSE needed. False condition returns NULL, and COUNT skips NULLs automatically.',
+        examples: 'Immediate Food Delivery % (Q7), Pass rate calculations',
+        code: `SELECT
+    COUNT(*) AS total,
+    COUNT(CASE WHEN condition THEN 1 END) AS matching,
+    ROUND(COUNT(CASE WHEN condition THEN 1 END) * 100.0 / COUNT(*), 2) AS percentage
+FROM table;
+
+-- Alternative using SUM:
+SUM(CASE WHEN condition THEN 1 ELSE 0 END)  -- same result`,
+      },
+      {
+        name: 'Pattern 2 — NOT IN vs NOT EXISTS',
+        when: 'Find rows in table A that have no match in table B.',
+        whyThisPattern: 'Both work, but NOT IN has a NULL trap: if the subquery returns even one NULL, NOT IN returns no rows at all. NOT EXISTS is NULL-safe.',
+        keyRule: 'Use NOT IN when the column is a primary/foreign key (never NULL). Use NOT EXISTS for safety when NULLs are possible. EXISTS always takes a subquery — SELECT 1 is convention.',
+        examples: 'No Job History (Q2), Customers without Orders (Q5)',
+        code: `-- NOT IN (simple, safe when no NULLs)
+SELECT * FROM employees
+WHERE employee_id NOT IN (SELECT employee_id FROM job_history);
+
+-- NOT EXISTS (NULL-safe, short-circuits)
+SELECT * FROM customers c
+WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.cust_id = c.id);`,
+      },
+      {
+        name: 'Pattern 3 — Subquery Types',
+        when: 'Choosing the right subquery form for the problem.',
+        whyThisPattern: 'Different subquery placements serve different purposes. Using the wrong one either gives wrong results or errors.',
+        keyRule: 'Subquery in FROM must ALWAYS have an alias. Correlated subquery runs once per outer row — O(N²). EXISTS short-circuits at first match.',
+        examples: 'Nth Highest Salary (Q3), Department queries',
+        code: `-- Scalar subquery (returns one value)
+SELECT * FROM employees WHERE salary = (SELECT MAX(salary) FROM employees);
+
+-- IN subquery (returns a list)
+SELECT * FROM employees WHERE dept_id IN (SELECT dept_id FROM departments WHERE name = 'HR');
+
+-- FROM subquery (must alias)
+SELECT * FROM (SELECT * FROM employees WHERE salary > 50000) AS temp;
+
+-- Correlated subquery (runs per row — slow)
+SELECT * FROM employees e1
+WHERE salary > (SELECT AVG(salary) FROM employees e2 WHERE e2.dept_id = e1.dept_id);`,
+      },
+      {
+        name: 'Pattern 4 — Inline Arithmetic',
+        when: 'Compute derived values (percentages, totals, ratios) directly in SELECT.',
+        whyThisPattern: 'SQL can do math inline on column values — no need for application-side computation.',
+        keyRule: 'Integer division truncates in SQL. 5/2 = 2 not 2.5. Use * 100.0 (not * 100) to force decimal result. ROUND(expression, decimal_places) — alias goes OUTSIDE ROUND.',
+        examples: 'Immediate Food Delivery % (Q7), salary calculations',
+        code: `-- Integer division trap
+SELECT 5 / 2;          -- returns 2, not 2.5
+
+-- Force decimal
+SELECT 5 * 1.0 / 2;   -- returns 2.5
+SELECT 5 / 2.0;        -- returns 2.5
+
+-- ROUND syntax -- alias OUTSIDE
+SELECT ROUND(count * 100.0 / total, 2) AS percentage   -- correct
+FROM ...;`,
+      },
+      {
+        name: 'Pattern 5 — Multi-Column IN',
+        when: 'Match rows where two columns together equal a pair from a subquery. Common for "find the row with the earliest/latest value per group".',
+        whyThisPattern: 'Single-column IN can only match one value. Multi-column IN matches an exact (col1, col2) pair — so you get the original row without arbitrary device_id selection.',
+        keyRule: 'Do NOT include extra columns in the subquery that are not part of the match — subquery must return exactly the same number of columns as the IN tuple.',
+        examples: 'Game Play Analysis II (Q9) — find device_id from first login date per player',
+        code: `-- Find device_id for each player's first login
+SELECT player_id, device_id
+FROM activity
+WHERE (player_id, event_date) IN (
+    SELECT player_id, MIN(event_date)   -- exactly 2 columns to match (player_id, event_date)
+    FROM activity
+    GROUP BY player_id
+)
+ORDER BY player_id;
+
+-- Why not GROUP BY alone?
+-- GROUP BY player_id with device_id in SELECT = SQL picks device_id arbitrarily
+-- Multi-column IN goes back to the original row = correct device_id guaranteed`,
+      },
+    ],
+    commonMistakes: [
+      'Using == instead of = in SQL — SQL uses single = for comparison, == does not exist.',
+      'Wrong clause order — WHERE must come before GROUP BY. GROUP BY before WHERE is a syntax error.',
+      'Missing table name in subquery FROM — "FROM WHERE salary > X" is invalid. Must be "FROM employees WHERE salary > X".',
+      'Missing parentheses around subquery — "WHERE salary IN SELECT..." fails. Must be "WHERE salary IN (SELECT...)".',
+      'Trailing comma in SELECT — "SELECT name, salary, FROM table" crashes. Remove comma after last column.',
+      'ROUND alias inside parentheses — ROUND(expr, 2) AS alias not ROUND(expr AS alias, 2). Alias always goes outside.',
+      'COUNT(condition) does not filter — COUNT(A = B) counts all non-NULL rows regardless of whether A=B is true. Use COUNT(CASE WHEN A = B THEN 1 END) instead.',
+      'Subquery in FROM without alias — every derived table in FROM must have an alias: "SELECT * FROM (SELECT ...) AS temp". Without AS temp it errors.',
+      'NOT IN returns nothing when subquery has NULLs — if subquery returns [1, 2, NULL], NOT IN (1, 2, NULL) is always false for every row.',
+      'LEFT JOIN + WHERE condition converts to INNER JOIN — WHERE c.name = "RED" after a LEFT JOIN filters out NULL rows from the left side, making it behave like INNER JOIN.',
+    ],
+    problems: [
+      { slug: 'department-employees',    title: 'Department Names (Q1)',                difficulty: 'Easy',   lcNum: null },
+      { slug: 'no-job-history',          title: 'No Job History (Q2)',                 difficulty: 'Easy',   lcNum: null },
+      { slug: 'third-highest-salary',    title: '3rd Highest Salary (Q3)',             difficulty: 'Medium', lcNum: null },
+      { slug: 'managers-4-employees',    title: '4 or More Employees (Q4)',            difficulty: 'Medium', lcNum: null },
+      { slug: 'customers-no-orders',     title: 'Customers without Orders (Q5)',       difficulty: 'Easy',   lcNum: null },
+      { slug: 'sales-person-no-red',     title: 'Sales Person (Q6)',                   difficulty: 'Medium', lcNum: null },
+      { slug: 'immediate-delivery',      title: 'Immediate Food Delivery % (Q7)',      difficulty: 'Medium', lcNum: null },
+      { slug: 'biggest-single-number',   title: 'Biggest Single Number (Q8)',          difficulty: 'Easy',   lcNum: null },
+      { slug: 'game-play-analysis',      title: 'Game Play Analysis II (Q9)',          difficulty: 'Medium', lcNum: null },
     ],
   },
 
@@ -263,9 +528,10 @@ for (int i = 1; i <= m; i++)
       'Thinking start++ or end++ inside a recursive call affects the caller — primitives are passed by value in Java. Incrementing a parameter is local only. The caller\'s variable is unchanged, so start never actually moves forward.',
     ],
     problems: [
-      { slug: 'climbing-stairs', title: 'Climbing Stairs',  difficulty: 'Easy',   lcNum: 70  },
-      { slug: 'min-squares',     title: 'Perfect Squares',  difficulty: 'Medium', lcNum: 279 },
-      { slug: 'house-robber',    title: 'House Robber',     difficulty: 'Medium', lcNum: 198 },
+      { slug: 'climbing-stairs',  title: 'Climbing Stairs',                 difficulty: 'Easy',   lcNum: 70  },
+      { slug: 'min-squares',      title: 'Perfect Squares',                 difficulty: 'Medium', lcNum: 279 },
+      { slug: 'house-robber',     title: 'House Robber',                    difficulty: 'Medium', lcNum: 198 },
+      { slug: 'n-digit-numbers',  title: 'N Digit Numbers with Digit Sum S', difficulty: 'Medium', lcNum: null },
     ],
   },
 }

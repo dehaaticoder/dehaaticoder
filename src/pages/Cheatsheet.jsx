@@ -115,6 +115,12 @@ export default function Cheatsheet() {
                         <p className="text-xs text-stone-500 mt-0.5">{p.when}</p>
                       </div>
                     </div>
+                    {p.gaonKiBaat && (
+                      <div className="px-6 py-2.5 border-b border-stone-100 bg-amber-50 flex items-start gap-2">
+                        <span className="text-base shrink-0">🌾</span>
+                        <p className="text-xs text-amber-800 italic">{p.gaonKiBaat}</p>
+                      </div>
+                    )}
                     <div className="px-6 py-3 border-b border-stone-100 flex flex-wrap gap-2">
                       {p.problems.map(prob => (
                         <span key={prob} className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full">{prob}</span>
@@ -126,16 +132,18 @@ export default function Cheatsheet() {
               </div>
             </section>
 
-            {/* Universal Template */}
-            <section>
-              <h2 className="text-xl font-bold text-stone-800 mb-1">{data.standardTemplate.title}</h2>
-              <p className="text-stone-500 text-sm mb-4">
-                Mantra: <span className="font-bold text-green-700">{data.standardTemplate.mantra}</span>
-              </p>
-              <pre className="bg-stone-900 text-green-300 px-6 py-5 rounded-xl text-sm leading-relaxed overflow-x-auto font-mono">
-                {data.standardTemplate.code}
-              </pre>
-            </section>
+            {/* Universal Template (optional) */}
+            {data.standardTemplate && (
+              <section>
+                <h2 className="text-xl font-bold text-stone-800 mb-1">{data.standardTemplate.title}</h2>
+                <p className="text-stone-500 text-sm mb-4">
+                  Mantra: <span className="font-bold text-green-700">{data.standardTemplate.mantra}</span>
+                </p>
+                <pre className="bg-stone-900 text-green-300 px-6 py-5 rounded-xl text-sm leading-relaxed overflow-x-auto font-mono">
+                  {data.standardTemplate.code}
+                </pre>
+              </section>
+            )}
 
             {/* Key Rules */}
             <section>
@@ -154,6 +162,23 @@ export default function Cheatsheet() {
                 ))}
               </div>
             </section>
+
+            {/* Code Gotchas (optional) */}
+            {data.gotchas && (
+              <section>
+                <h2 className="text-xl font-bold text-stone-800 mb-4">Common Code Mistakes</h2>
+                <div className="space-y-4">
+                  {data.gotchas.map((g, i) => (
+                    <div key={i} className="bg-white border border-red-200 rounded-xl overflow-hidden">
+                      <div className="px-5 py-3 border-b border-red-100 bg-red-50">
+                        <p className="text-sm font-semibold text-red-800">{g.title}</p>
+                      </div>
+                      <pre className="bg-stone-900 text-green-300 px-6 py-4 text-xs leading-relaxed overflow-x-auto font-mono">{g.code}</pre>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* TC/SC Guide */}
             {data.complexityGuide && (

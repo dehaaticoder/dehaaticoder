@@ -112,6 +112,9 @@ Answer: 8`,
       { text: 'Guard check if(n<2) placed after dp[0]=1, dp[1]=1 assignments — when n=0 the array has size 1 and dp[1]=1 crashes. Move the guard before all assignments.', quote: 'Darwaza band karne se pehle andar ghus gaye — pehle check karo, phir array bharo.' },
       { text: 'Forgetting that this is just Fibonacci with different base cases — reimplementing unnecessarily complex logic.', quote: 'Naya khana socha, lekin dal chawal hi banta hai — yeh Fibonacci hi hai, bas alag shuruat.' },
     ],
+    realInterviews: [
+      { company: 'Agoda', round: 'R1 Coding', date: 'Jun 2026', note: 'Variant: count ways to reach N with steps 1–5 instead of 1–2' },
+    ],
     relatedProblems: ['min-squares'],
     revisionLevel: 1,
   },
@@ -455,6 +458,291 @@ Answer: 12`,
       },
     ],
     relatedProblems: ['climbing-stairs', 'min-squares'],
+    revisionLevel: 1,
+  },
+
+  'n-digit-numbers': {
+    slug: 'n-digit-numbers',
+    title: 'N Digit Numbers with Digit Sum S',
+    lcNum: null,
+    lcLink: 'https://www.interviewbit.com/problems/n-digit-numbers-with-digit-sum-s/',
+    difficulty: 'Medium',
+    topic: 'dp',
+    companies: ['Amazon', 'Google'],
+    patterns: ['2D DP', 'Memoization', 'Count Ways', 'Digit DP'],
+    description: `Given A digits and a digit sum B, count how many A-digit positive integers have digit sum exactly equal to B. A-digit numbers do not have leading zeros. Return the answer modulo 10^9 + 7.`,
+    constraints: [
+      '1 <= A <= 50',
+      '1 <= B <= 500',
+    ],
+    examples: [
+      { input: 'A = 1, B = 5',  output: '1  (only the number 5)' },
+      { input: 'A = 2, B = 4',  output: '4  (13, 22, 31, 40)' },
+      { input: 'A = 3, B = 2',  output: '3  (101, 110, 200)' },
+    ],
+    gaonKiBaat: 'A gharon ki colony hai. Har ghar mein 0-9 log reh sakte hain. Pehle ghar mein 0 nahi chal sakta (leading zero nahi). Kitne tarike hain total B log baithane ke — yehi count karna hai.',
+    hints: [
+      'Define GetCount(digit, sum) = number of valid "digit"-digit numbers with digit sum = sum.',
+      'The recursion fills digits RIGHT TO LEFT — each call picks the current rightmost digit (0-9), and delegates the left part to a smaller subproblem.',
+      'Base case: when digit == 1 (leftmost / most significant digit), it must be 1-9 to avoid leading zeros. Return 1 if sum is in [1..9], else 0.',
+      'The recurrence: GetCount(digit, sum) = Σ GetCount(digit-1, sum-i) for i = 0..9.',
+      'Two variables (digit, sum) change across calls → 2D memo: dp[digit][sum].',
+    ],
+    intuition: `WHY RIGHT TO LEFT?
+
+Think of GetCount(digit, sum) as: "how many valid digit-digit numbers exist with this remaining sum?"
+
+When we pick a value i (0-9) for the current position, we reduce the problem:
+- digit shrinks by 1 (one fewer position to fill)
+- sum reduces by i (i was consumed by this digit)
+
+The remaining subproblem GetCount(digit-1, sum-i) handles the LEFT part of the number.
+
+Eventually digit reaches 1 — that is the LEFTMOST (most significant) digit. This is where the no-leading-zero constraint lives: the leftmost digit must be 1-9.
+
+WHY IS THE BASE CASE digit == 1, not digit == A?
+
+Because the recursion counts DOWN from A to 1. The outermost call GetCount(A, B) picks the rightmost digit (free to be 0-9). Only when digit == 1 do we reach the leftmost digit, and restrict it to 1-9.
+
+TWO BUGS THAT CANCEL OUT (if you think left-to-right):
+
+If you mentally model the recursion as LEFT TO RIGHT (leftmost first):
+- The outermost call tries d = 0..9 — leading zeros are allowed (BUG)
+- The base case (digit == 1) restricts last digit to 1-9 — trailing zeros are forbidden (BUG)
+
+These two bugs cancel by symmetry (reversing any sequence maps one set to the other). But the CORRECT mental model is RIGHT TO LEFT — then there are no bugs at all.
+
+OVERLAPPING SUBPROBLEMS
+
+GetCount(2, 5) might be reached via many paths:
+- A=3, first digit=0 → GetCount(2, 5)
+- A=3, first digit=... wait, in right-to-left model:
+- A=4, rightmost digit=1 → GetCount(3, 4) → digit 2 → GetCount(2, 4-d) ...
+
+Same (digit=2, sum=5) is computed many times for different choices earlier. Cache it.
+
+TIME AND SPACE COMPLEXITY
+
+Top-down: unique states = A × B. Work per state = O(10) loop = O(1).
+TC = O(A × B). SC = O(A × B) memo + O(A) stack.`,
+    approaches: [
+      {
+        label: 'Brute Force — Pure Recursion (TLE)',
+        idea: 'Try all digit values (0-9) at each position. Recurse on remaining digits with reduced sum. No cache — exponential recomputation.',
+        tc: 'O(10^A)',
+        sc: 'O(A) call stack',
+        code: `int GetCount(int digit, int sumDigit) {
+    if (sumDigit <= 0) return 0;
+
+    if (digit == 1) {
+        // leftmost digit — must be 1-9 (no leading zero)
+        return (sumDigit >= 1 && sumDigit <= 9) ? 1 : 0;
+    }
+
+    int cnt = 0;
+    for (int d = 0; d <= 9; d++) {         // try all values for rightmost digit
+        cnt += GetCount(digit - 1, sumDigit - d);
+    }
+    return cnt;
+}`,
+        pros: ['Direct translation of recurrence — easy to understand'],
+        cons: ['O(10^A) — TLE for A > 10. Same (digit, sum) recomputed from different paths.'],
+      },
+      {
+        label: 'Top Down — Memoization',
+        idea: 'Add 2D dp[digit][sum] cache. Check before computing. Each unique (digit, sum) pair computed only once. Apply modulo during accumulation.',
+        tc: 'O(A × B)',
+        sc: 'O(A × B) dp array + O(A) call stack',
+        code: `static final long MOD = 1_000_000_007L;
+int[][] dp;
+
+public int solve(int A, int B) {
+    dp = new int[A + 1][B + 1];
+    for (int[] row : dp) Arrays.fill(row, -1);
+    return GetCount(A, B);
+}
+
+int GetCount(int digit, int sumDigit) {
+    if (sumDigit <= 0) return 0;
+
+    if (digit == 1) {
+        return (sumDigit >= 1 && sumDigit <= 9) ? 1 : 0;
+    }
+
+    if (dp[digit][sumDigit] != -1) return dp[digit][sumDigit];
+
+    long cnt = 0;
+    for (int d = 0; d <= 9; d++) {
+        cnt = (cnt + GetCount(digit - 1, sumDigit - d)) % MOD;
+    }
+
+    dp[digit][sumDigit] = (int) cnt;
+    return dp[digit][sumDigit];
+}`,
+        pros: ['Natural extension of brute force', 'Easy to write in interview', 'Only computes states actually needed'],
+        cons: ['Recursive stack O(A) on top of memo O(A×B)'],
+      },
+    ],
+    dryRun: `A = 2, B = 4  →  expected answer: 4  (numbers: 13, 22, 31, 40)
+
+GetCount(2, 4):  [rightmost digit choices]
+  d=0 → GetCount(1, 4) = 1   (leftmost=4, number: "40") ✓
+  d=1 → GetCount(1, 3) = 1   (leftmost=3, number: "31") ✓
+  d=2 → GetCount(1, 2) = 1   (leftmost=2, number: "22") ✓
+  d=3 → GetCount(1, 1) = 1   (leftmost=1, number: "13") ✓
+  d=4 → GetCount(1, 0) = 0   (leftmost would be 0 — leading zero, rejected) ✗
+  d=5..9 → GetCount(1, negative) = 0
+
+Answer: 4 ✓
+
+Key: GetCount(1, x) = 1 only when x ∈ [1..9] — this is the leftmost digit, blocking leading zeros.`,
+    mistakes: [
+      { text: 'Using -1 as memo sentinel but also returning 0 for sum==0 — the sumDigit<=0 check fires before memo lookup, so sum=0 is never cached. This is intentional and correct (0-index access would also crash the dp array).', quote: 'Sentinel -1 aur answer 0 — dono alag hain. Sentinel pehle check karo, answer baad mein.' },
+      { text: 'Forgetting modulo during accumulation — cnt overflows for large A and B. Apply modulo at every addition, not just at the end.', quote: 'Paani bharne ke baad bucket overflow karta hai — har addition pe modulo lagao, ant mein nahi.' },
+      { text: 'dp array sized [A+1][B+1] but calling GetCount with sumDigit that can go below 0 — the sumDigit<=0 guard handles this before any array access. Never index dp with a negative sumDigit.', quote: 'Negative index matlab khud gaddha khodna — sumDigit<=0 guard hamesha pehle aata hai.' },
+      { text: 'Mentally modelling the recursion as LEFT TO RIGHT and thinking the base case (digit==1) restricts the rightmost digit — it actually restricts the LEFTMOST digit. The recursion fills right to left.', quote: 'Seedha sochne se ulta nikla — yeh right se left bharta hai, left se right nahi.' },
+      { text: 'Not applying modulo to the return value stored in dp — cnt is long during accumulation. Cast to int only after mod: dp[digit][sumDigit] = (int)(cnt % MOD).', quote: 'Long ko int mein daalne se pehle kaat-chhant karo — (int)(cnt % MOD) sahi tarika hai.' },
+    ],
+    spotCheck: [
+      {
+        q: 'GetCount(digit, sum) = Σ GetCount(digit-1, sum-i) for i = 0..9. What does each term represent?',
+        answer: 'Each term represents choosing digit value i for the current (rightmost) position. After placing i, the left part has (digit-1) positions remaining with sum reduced by i.',
+      },
+      {
+        q: 'Why does digit == 1 restrict the digit to 1-9 and not 0-9?',
+        answer: 'digit == 1 is the LAST call in the recursion — it fills the LEFTMOST (most significant) digit. The leftmost digit of an A-digit number cannot be 0 (no leading zeros). So sum must be 1-9.',
+      },
+      {
+        q: 'For A=2, B=9: why does d=9 at the outer call return 0?',
+        answer: 'd=9 means the rightmost digit is 9. Remaining sum = 9-9 = 0. GetCount(1, 0) → sumDigit <= 0 → returns 0. This means the leftmost digit would need to be 0 — a leading zero — correctly rejected. The valid number "90" IS counted via d=0 at outer call → GetCount(1, 9) = 1.',
+      },
+      {
+        q: 'What are the two DP state variables and why do we need both?',
+        answer: 'digit (how many positions left to fill) and sumDigit (remaining digit sum needed). Same digit count with different remaining sums gives different answers. Both variables together uniquely determine the subproblem.',
+      },
+      {
+        q: 'TC and SC of the memoized solution?',
+        answer: 'TC = O(A × B): unique states = A × B, work per state = O(10) loop = O(1). SC = O(A × B) for dp array + O(A) for recursive stack.',
+      },
+    ],
+    relatedProblems: ['climbing-stairs', 'house-robber'],
+    revisionLevel: 1,
+  },
+
+  'unique-paths': {
+    slug: 'unique-paths',
+    title: 'Unique Paths II (with Obstacles)',
+    lcNum: 63,
+    lcLink: 'https://leetcode.com/problems/unique-paths-ii/',
+    difficulty: 'Medium',
+    topic: 'dp',
+    companies: ['Google', 'Amazon', 'Microsoft', 'Adobe'],
+    patterns: ['2D DP', 'Grid DP', 'Memoization', 'Tabulation'],
+    description: `You are given an m x n integer grid A. A robot starts at the top-left corner (0,0) and tries to reach the bottom-right corner (m-1,n-1). The robot can only move right or down. An obstacle is marked as 1 in the grid; empty cells are 0. Return the number of unique paths from start to end avoiding obstacles.`,
+    constraints: [
+      '1 <= m, n <= 100',
+      'A[i][j] is 0 or 1',
+    ],
+    examples: [
+      { input: 'A = [[0,0,0],[0,1,0],[0,0,0]]', output: '2' },
+      { input: 'A = [[0,1],[0,0]]', output: '1' },
+    ],
+    gaonKiBaat: 'Robot ko gaon se sheher jaana hai — sirf seedha ya neeche ja sakta hai. Beech mein kuch raaste band hain (obstacles). Kitne alag raaste hain? Har junction pe do choice hain — upar se aao ya baaye se. Agar koi raasta band hai toh wahan se 0 ways.',
+    hints: [
+      'At each cell (i,j), the robot could have arrived from (i-1,j) — above, or (i,j-1) — left. So ways(i,j) = ways(i-1,j) + ways(i,j-1).',
+      'If A[i][j] == 1, that cell is blocked — return 0 immediately.',
+      'Base case: (0,0) with no obstacle = 1 way. Out of bounds = 0 ways.',
+      'TRAP: Do NOT short-circuit the first row/column with return 1. An obstacle anywhere in the first row blocks all cells to its right.',
+    ],
+    intuition: `Decision: robot arrives at (i,j). It came from above (i-1,j) or from the left (i,j-1). Both paths are valid unless blocked. So ways(i,j) = ways(i-1,j) + ways(i,j-1).
+
+Obstacle: if A[i][j]==1, no path can pass through — return 0.
+
+Base case: (0,0) = 1 if not blocked. Out of bounds = 0.
+
+Key trap — first row/column: if there is an obstacle at (0,2), then (0,3), (0,4)... are all unreachable even though they are in the first row. You CANNOT return 1 for the entire first row — let the recursion propagate through naturally. It will hit the obstacle and return 0, which correctly blocks all subsequent cells.
+
+Use A[0].length for column bounds (not A.length) — the grid may not be square.`,
+    approaches: [
+      {
+        label: 'Brute Force — Pure Recursion',
+        idea: 'Recurse from (n-1, m-1) back to (0,0). At each cell: if obstacle return 0, if base return 1, else sum paths from above and left.',
+        tc: 'O(2^(N+M))',
+        sc: 'O(N+M) call stack',
+        code: `int countPaths(int[][] A, int i, int j) {
+    if (i < 0 || j < 0) return 0;
+    if (i >= A.length || j >= A[0].length) return 0;
+    if (A[i][j] == 1) return 0;
+    if (i == 0 && j == 0) return 1;
+    return countPaths(A, i-1, j) + countPaths(A, i, j-1);
+}`,
+        pros: ['Simple — direct translation of recurrence'],
+        cons: ['Exponential TC — TLE for large grids'],
+      },
+      {
+        label: 'Top Down — Memoization',
+        idea: 'Same recursion + dp[][] cache. Check cache before computing. Each (i,j) computed only once.',
+        tc: 'O(N×M)',
+        sc: 'O(N×M) dp array + O(N+M) call stack',
+        code: `int uniquePathsWithObstacles(int[][] A) {
+    int[][] dp = new int[A.length][A[0].length];
+    for (int[] row : dp) Arrays.fill(row, -1);
+    return countPaths(A, dp, A.length-1, A[0].length-1);
+}
+
+int countPaths(int[][] A, int[][] dp, int i, int j) {
+    if (i < 0 || j < 0) return 0;
+    if (i >= A.length || j >= A[0].length) return 0;
+    if (A[i][j] == 1) return 0;
+    if (i == 0 && j == 0) return 1;
+    if (dp[i][j] != -1) return dp[i][j];
+    dp[i][j] = countPaths(A, dp, i-1, j) + countPaths(A, dp, i, j-1);
+    return dp[i][j];
+}`,
+        pros: ['Natural — write recursion first, add cache second'],
+        cons: ['Recursive stack O(N+M) on top of dp array'],
+      },
+      {
+        label: 'Bottom Up — Tabulation',
+        idea: 'Fill dp[][] row by row. dp[i][j] = dp[i-1][j] + dp[i][j-1]. Obstacle cells = 0.',
+        tc: 'O(N×M)',
+        sc: 'O(N×M)',
+        code: `int uniquePathsWithObstacles(int[][] A) {
+    int n = A.length, m = A[0].length;
+    int[][] dp = new int[n][m];
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            if (A[i][j] == 1) { dp[i][j] = 0; continue; }
+            if (i == 0 && j == 0) { dp[i][j] = 1; continue; }
+            int fromAbove = i > 0 ? dp[i-1][j] : 0;
+            int fromLeft  = j > 0 ? dp[i][j-1] : 0;
+            dp[i][j] = fromAbove + fromLeft;
+        }
+    }
+    return dp[n-1][m-1];
+}`,
+        pros: ['No recursion — clean iterative solution', 'Handles first row/column obstacle correctly by default'],
+        cons: ['O(N×M) space — can be optimised to O(M) with rolling row'],
+      },
+    ],
+    dryRun: `A = [[0,0,0],
+      [0,1,0],
+      [0,0,0]]
+
+dp[0][0]=1  dp[0][1]=1  dp[0][2]=1
+dp[1][0]=1  dp[1][1]=0  dp[1][2]=1  (obstacle at [1][1])
+dp[2][0]=1  dp[2][1]=1  dp[2][2]=2
+
+Answer: 2`,
+    mistakes: [
+      { text: 'Short-circuiting first row with return 1 — if there is an obstacle at (0,2), cells (0,3)+ are unreachable but your code returns 1 for them.', quote: 'Pehli gali mein darwaza band hai — aage ki sab dukaanein band ho jaati hain. Return 1 mat karo blindly.' },
+      { text: 'Using A.length for column bound instead of A[0].length — grids are not always square. This causes wrong answers on non-square inputs.', quote: 'Kheti lamba hai, chaudai alag hai — A.length sirf rows hai, columns ke liye A[0].length chahiye.' },
+      { text: 'Checking dp[i][j] != -1 before checking the obstacle — a cached value of 0 is valid but -1 init makes it indistinguishable from unvisited. Always check obstacle first.', quote: 'Cache dekh ke khush ho gaye, par rasta band tha — pehle obstacle check karo.' },
+    ],
+    realInterviews: [
+      { company: 'Scaler', round: 'DSA4 Assignment', date: 'Jul 2026', note: 'Solved with top-down memoization in ~15 mins' },
+    ],
+    relatedProblems: ['climbing-stairs', 'n-digit-numbers'],
     revisionLevel: 1,
   },
 }

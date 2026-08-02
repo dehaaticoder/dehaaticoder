@@ -24,6 +24,30 @@ export default function Navbar() {
             Cheatsheets
           </Link>
           <Link
+            to="/dehaaticoder/cheatsheet/oop"
+            className={`transition ${pathname === '/dehaaticoder/cheatsheet/oop' ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
+          >
+            OOP/LLD
+          </Link>
+          <Link
+            to="/dehaaticoder/interviews"
+            className={`transition ${pathname.startsWith('/dehaaticoder/interviews') ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
+          >
+            Interviews
+          </Link>
+          <Link
+            to="/dehaaticoder/practice"
+            className={`transition ${pathname.startsWith('/dehaaticoder/practice') ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
+          >
+            Practice
+          </Link>
+          <Link
+            to="/dehaaticoder/formulas"
+            className={`transition ${pathname.startsWith('/dehaaticoder/formulas') ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
+          >
+            Formulas
+          </Link>
+          <Link
             to="/dehaaticoder/"
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition"
           >

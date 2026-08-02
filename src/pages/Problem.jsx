@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { allProblems } from '../data/problems'
+import { allProblems, problemsByTopic } from '../data/problems'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import visualizers from '../components/visualizers/index'
@@ -14,6 +14,7 @@ const difficultyColors = {
 export default function Problem() {
   const { slug } = useParams()
   const problem = allProblems[slug]
+  const problemCategory = Object.entries(problemsByTopic).find(([, probs]) => slug in probs)?.[0]
   const [hintsRevealed, setHintsRevealed] = useState(0)
   const [showIntuition, setShowIntuition] = useState(false)
   const [showApproaches, setShowApproaches] = useState(false)
@@ -66,6 +67,23 @@ export default function Problem() {
             ))}
           </div>
         </div>
+
+        {/* Real Interview Badge */}
+        {problem.realInterviews && problem.realInterviews.length > 0 && (
+          <div className="bg-purple-50 border border-purple-200 rounded-xl px-6 py-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-purple-600 mb-3">🏢 Asked in Real Interviews</p>
+            <div className="space-y-2">
+              {problem.realInterviews.map((r, i) => (
+                <div key={i} className="flex items-start gap-3 flex-wrap">
+                  <span className="text-xs font-bold bg-purple-100 text-purple-700 px-2 py-1 rounded-full shrink-0">{r.company}</span>
+                  <span className="text-xs bg-stone-100 text-stone-600 px-2 py-1 rounded-full shrink-0">{r.round}</span>
+                  {r.date && <span className="text-xs text-stone-400 py-1 shrink-0">{r.date}</span>}
+                  {r.note && <span className="text-xs text-purple-800 italic py-1">{r.note}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Gaon Ki Baat */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-6 py-4">
@@ -241,7 +259,7 @@ export default function Problem() {
           return (
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-stone-800">Recursion Tree Visualizer</h2>
+                <h2 className="text-xl font-bold text-stone-800">{problemCategory === 'dp' ? 'DP Table Visualizer' : 'Recursion Tree Visualizer'}</h2>
                 <button
                   onClick={() => setVizFullscreen(true)}
                   className="text-sm text-green-600 border border-green-300 px-4 py-1.5 rounded-lg hover:bg-green-50 transition flex items-center gap-2"
@@ -262,7 +280,7 @@ export default function Problem() {
                     onClick={e => e.stopPropagation()}
                   >
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-bold text-stone-800">Recursion Tree Visualizer</h2>
+                      <h2 className="text-lg font-bold text-stone-800">{problemCategory === 'dp' ? 'DP Table Visualizer' : 'Recursion Tree Visualizer'}</h2>
                       <button
                         onClick={() => setVizFullscreen(false)}
                         className="text-stone-400 hover:text-stone-700 text-2xl leading-none transition"

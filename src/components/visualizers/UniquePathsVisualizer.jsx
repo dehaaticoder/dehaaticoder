@@ -1,27 +1,39 @@
 import { useState } from 'react'
 
-const A = [2, 7, 9, 3]
-const N = A.length
-const SVG_W = 700, LEVEL_H = 74, NW = 62, NH = 38
+// 3x3 grid, no obstacles — shows overlapping subproblems clearly
+const ROWS = 3, COLS = 3
+const SVG_W = 700, LEVEL_H = 74, NW = 64, NH = 38
 
+// 9 cell colors (row*COLS + col → color)
 const PAL = [
-  { fill: '#e0e7ff', stroke: '#6366f1', text: '#3730a3' }, // i=0
-  { fill: '#dbeafe', stroke: '#3b82f6', text: '#1e40af' }, // i=1
-  { fill: '#dcfce7', stroke: '#22c55e', text: '#15803d' }, // i=2
-  { fill: '#fef9c3', stroke: '#ca8a04', text: '#78350f' }, // i=3
-  { fill: '#f1f5f9', stroke: '#94a3b8', text: '#64748b' }, // base i>=N
+  { fill: '#f1f5f9', stroke: '#94a3b8', text: '#64748b' }, // (0,0)
+  { fill: '#fee2e2', stroke: '#ef4444', text: '#b91c1c' }, // (0,1)
+  { fill: '#ffedd5', stroke: '#f97316', text: '#c2410c' }, // (0,2)
+  { fill: '#fef9c3', stroke: '#ca8a04', text: '#78350f' }, // (1,0)
+  { fill: '#dcfce7', stroke: '#22c55e', text: '#15803d' }, // (1,1) ← overlaps here!
+  { fill: '#dbeafe', stroke: '#3b82f6', text: '#1e40af' }, // (1,2)
+  { fill: '#e0e7ff', stroke: '#6366f1', text: '#3730a3' }, // (2,0)
+  { fill: '#f3e8ff', stroke: '#a855f7', text: '#6b21a8' }, // (2,1)
+  { fill: '#fce7f3', stroke: '#ec4899', text: '#9d174d' }, // (2,2)
 ]
-const pal = i => PAL[Math.min(i, PAL.length - 1)]
+const pal = (i, j) => PAL[i * COLS + j]
 
-// DP values (bottom-up)
-const ROB = new Array(N + 2).fill(0)
-for (let i = N - 1; i >= 0; i--) ROB[i] = Math.max(A[i] + ROB[i + 2], ROB[i + 1])
+// DP values (top-left start, bottom-right end)
+const DP = Array.from({ length: ROWS }, () => new Array(COLS).fill(0))
+for (let i = 0; i < ROWS; i++) {
+  for (let j = 0; j < COLS; j++) {
+    if (i === 0 || j === 0) DP[i][j] = 1
+    else DP[i][j] = DP[i - 1][j] + DP[i][j - 1]
+  }
+}
 
-function buildTree(i) {
-  const node = { i, children: [] }
-  if (i < N) {
-    node.children.push(buildTree(i + 2)) // take house i → go to i+2
-    node.children.push(buildTree(i + 1)) // skip house i → go to i+1
+// Build recursion tree: paths(i,j) = paths(i-1,j) + paths(i,j-1)
+// Base: i==0 || j==0 → 1 (no children)
+function buildTree(i, j) {
+  const node = { i, j, key: `${i},${j}`, children: [] }
+  if (i > 0 && j > 0) {
+    node.children.push(buildTree(i - 1, j)) // from above
+    node.children.push(buildTree(i, j - 1)) // from left
   }
   return node
 }
@@ -37,10 +49,10 @@ function assignX(node, total) {
 let _uid = 0; const _seen = {}
 function flattenDFS(node, pid = null, side = null) {
   const id = _uid++; node.id = id; node.pid = pid; node.side = side
-  node.isMemo = _seen[node.i] !== undefined
-  if (!node.isMemo) _seen[node.i] = true
+  node.isMemo = _seen[node.key] !== undefined
+  if (!node.isMemo) _seen[node.key] = true
   const r = [node]
-  node.children.forEach((c, idx) => r.push(...flattenDFS(c, id, idx === 0 ? 'take' : 'skip')))
+  node.children.forEach((c, idx) => r.push(...flattenDFS(c, id, idx === 0 ? '↑' : '←')))
   return r
 }
 function assignMemoVis(node, pv = true, pm = false) {
@@ -48,7 +60,7 @@ function assignMemoVis(node, pv = true, pm = false) {
   node.children.forEach(c => assignMemoVis(c, node.memoVisible, node.isMemo))
 }
 
-const _tree = buildTree(0)
+const _tree = buildTree(ROWS - 1, COLS - 1)
 assignDepth(_tree)
 _li = 0; assignX(_tree, leafCount(_tree))
 const nodes = flattenDFS(_tree)
@@ -60,34 +72,37 @@ const edges = nodes.filter(n => n.pid !== null).map(n => {
   return { x1: p.x, y1: p.d * LEVEL_H + 40, x2: n.x, y2: n.d * LEVEL_H + 40, side: n.side, childId: n.id }
 })
 const callCounts = {}
-nodes.forEach(n => { callCounts[n.i] = (callCounts[n.i] || 0) + 1 })
+nodes.forEach(n => { callCounts[n.key] = (callCounts[n.key] || 0) + 1 })
 const maxD = Math.max(...nodes.map(n => n.d))
 const SVG_H = maxD * LEVEL_H + 90
 const memoCallCount = nodes.filter(n => n.memoVisible).length
 
-export default function HouseRobberVisualizer({ fullscreen = false }) {
+export default function UniquePathsVisualizer({ fullscreen = false }) {
   const [memo, setMemo] = useState(false)
   const visIds = new Set(nodes.filter(n => memo ? n.memoVisible : true).map(n => n.id))
+
+  const overlapping = Object.entries(callCounts).filter(([, c]) => c > 1)
 
   return (
     <div className={`font-sans text-sm select-none ${fullscreen ? 'p-8' : 'p-4'}`}>
       <p className="text-xs text-stone-400 mb-3">
-        A = [{A.join(', ')}] &nbsp;|&nbsp; rob(i) = max(A[i] + rob(i+2), rob(i+1))
+        {ROWS}×{COLS} grid — p(i,j) = paths from (0,0) to (i,j). ↑ = from above, ← = from left.
       </p>
 
-      {/* Legend */}
+      {/* Legend: only show cells that appear in the tree */}
       <div className="flex flex-wrap gap-1.5 mb-3 text-xs">
-        {[0, 1, 2, 3].map(i => (
-          <span key={i} className="px-2 py-1 rounded-md border font-mono"
-            style={{ background: PAL[i].fill, borderColor: PAL[i].stroke, color: PAL[i].text }}>
-            rob({i})={ROB[i]} — {callCounts[i]}×
-          </span>
-        ))}
-        <span className="px-2 py-1 rounded-md border font-mono"
-          style={{ background: PAL[4].fill, borderColor: PAL[4].stroke, color: PAL[4].text }}>
-          base (i≥{N}) = 0
-        </span>
-        <span className="text-stone-400 self-center ml-1">— take &nbsp; - - skip</span>
+        {nodes.filter(n => n.isFirst || !n.isMemo).map(n => n.key).filter((k, i, a) => a.indexOf(k) === i).map(key => {
+          const [i, j] = key.split(',').map(Number)
+          const c = pal(i, j)
+          const isBase = i === 0 || j === 0
+          return (
+            <span key={key} className="px-2 py-1 rounded-md border font-mono"
+              style={{ background: c.fill, borderColor: c.stroke, color: c.text }}>
+              p({i},{j})={DP[i][j]} — {callCounts[key]}× {isBase ? '[base]' : ''}
+            </span>
+          )
+        })}
+        <span className="text-stone-400 self-center ml-1">↑ above &nbsp; ← left</span>
       </div>
 
       {/* Toggle */}
@@ -106,7 +121,7 @@ export default function HouseRobberVisualizer({ fullscreen = false }) {
       <div className="overflow-x-auto rounded-xl border border-stone-100 bg-stone-50">
         <svg width={SVG_W} height={SVG_H} style={{ display: 'block', minWidth: SVG_W }}>
           <defs>
-            <marker id="hr-arr" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+            <marker id="up-arr" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
               <path d="M0,0 L0,7 L7,3.5 z" fill="#94a3b8" />
             </marker>
           </defs>
@@ -114,21 +129,22 @@ export default function HouseRobberVisualizer({ fullscreen = false }) {
             if (!visIds.has(e.childId)) return null
             return <line key={i}
               x1={e.x1} y1={e.y1 + NH / 2 + 2} x2={e.x2} y2={e.y2 - NH / 2 - 2}
-              stroke={e.side === 'take' ? '#475569' : '#94a3b8'} strokeWidth={1.5}
-              strokeDasharray={e.side === 'skip' ? '6,3' : ''} markerEnd="url(#hr-arr)" />
+              stroke={e.side === '↑' ? '#475569' : '#94a3b8'} strokeWidth={1.5}
+              strokeDasharray={e.side === '←' ? '6,3' : ''} markerEnd="url(#up-arr)" />
           })}
           {edges.map((e, i) => {
             if (!visIds.has(e.childId)) return null
             return <text key={`l${i}`} x={(e.x1 + e.x2) / 2} y={(e.y1 + e.y2) / 2 + 2}
-              textAnchor="middle" fontSize={8} fill={e.side === 'take' ? '#64748b' : '#94a3b8'}>
+              textAnchor="middle" fontSize={10} fill={e.side === '↑' ? '#64748b' : '#94a3b8'}>
               {e.side}
             </text>
           })}
           {nodes.map(node => {
             if (!visIds.has(node.id)) return null
-            const c = pal(node.i)
+            const c = pal(node.i, node.j)
             const isCached = memo && node.isMemo
             const isRepeat = !memo && node.isMemo
+            const isBase = node.i === 0 || node.j === 0
             const cx = node.x, cy = node.d * LEVEL_H + 40
             return <g key={node.id}>
               <rect x={cx - NW / 2} y={cy - NH / 2} width={NW} height={NH} rx={8}
@@ -136,12 +152,12 @@ export default function HouseRobberVisualizer({ fullscreen = false }) {
                 stroke={isCached ? '#94a3b8' : c.stroke}
                 strokeWidth={isRepeat ? 1.5 : 2}
                 strokeDasharray={isCached || isRepeat ? '4,2' : ''} />
-              <text x={cx} y={cy - 5} textAnchor="middle" fontSize={11} fontWeight={700}
+              <text x={cx} y={cy - 4} textAnchor="middle" fontSize={11} fontWeight={700}
                 fill={isCached ? '#94a3b8' : isRepeat ? c.stroke : c.text}>
-                rob({node.i})
+                p({node.i},{node.j})
               </text>
               <text x={cx} y={cy + 11} textAnchor="middle" fontSize={9} fill={isCached ? '#94a3b8' : '#78716c'}>
-                {isCached ? '✓ cached' : isRepeat ? 'repeat!' : node.i >= N ? '= 0' : `= ${ROB[node.i]}`}
+                {isCached ? '✓ cached' : isRepeat ? 'repeat!' : isBase ? '= 1 [base]' : `= ${DP[node.i][node.j]}`}
               </text>
             </g>
           })}
@@ -150,8 +166,8 @@ export default function HouseRobberVisualizer({ fullscreen = false }) {
 
       <div className="mt-3 bg-stone-900 text-green-400 px-4 py-2.5 rounded-lg text-xs font-mono">
         {memo
-          ? `With memo: ${memoCallCount} calls — each rob(i) computed once, returned from cache on repeat.`
-          : `Without memo: ${nodes.length} calls — rob(2) called ${callCounts[2] || 0}×, rob(3) called ${callCounts[3] || 0}×. Same subproblem recomputed!`}
+          ? `With memo: ${memoCallCount} calls — p(1,1) computed once, reused from cache on second call.`
+          : `Without memo: ${nodes.length} calls — ${overlapping.map(([k, c]) => `p(${k}) called ${c}×`).join(', ')}. Overlapping!`}
       </div>
     </div>
   )

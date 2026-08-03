@@ -30,6 +30,12 @@ export default function Navbar() {
             OOP/LLD
           </Link>
           <Link
+            to="/dehaaticoder/cheatsheet/concurrency"
+            className={`transition ${pathname === '/dehaaticoder/cheatsheet/concurrency' ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
+          >
+            Concurrency
+          </Link>
+          <Link
             to="/dehaaticoder/interviews"
             className={`transition ${pathname.startsWith('/dehaaticoder/interviews') ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
           >

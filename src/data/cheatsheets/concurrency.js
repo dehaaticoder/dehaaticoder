@@ -413,6 +413,86 @@ executor.getActiveCount();       // threads currently executing tasks
 executor.getQueue().size();      // tasks waiting in queue
 executor.getCompletedTaskCount(); // total tasks finished`,
     },
+    {
+      name: 'Pattern 11 — Parallel Reduction (Sum 1M numbers using all CPU cores)',
+      icon: '➕',
+      when: 'Large data aggregation — divide work equally across cores, compute in parallel, combine results',
+      gaonKiBaat: 'Gaon mein 1 lakh daane ginne hain. Ek banda akela ginne baithega — bahut time lagega. Samjhdaar thekedar ne kaam baant diya — 8 log hain toh 8 dher banao, sab ek saath gino, phir saath milao. Yahi hai parallel reduction. Aur iska bada bhai hai MapReduce — jaise Hadoop, Spark kaam karte hain.',
+      problems: [
+        'Scaler Assignment: Sum 1M numbers using number of CPU cores',
+        'Interview: "How would you sum a large array in parallel?"',
+        'Interview: "What is parallel reduction?"',
+        'Real world: DB aggregations, ML feature computation, image processing',
+      ],
+      template: `package oneMillionSumPorblem;
+
+import java.util.*;
+import java.util.concurrent.*;
+
+// ── CALLABLE — partial sum for one chunk ──
+public class Sum implements Callable<Long> {
+    private List<Integer> list;
+
+    Sum(List<Integer> list) { this.list = list; }
+
+    @Override
+    public Long call() throws Exception {
+        long sum = 0;
+        for (int i = 0; i < list.size(); i++) sum += list.get(i);
+        return sum;
+    }
+}
+
+// ── CLIENT ──
+public class client {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+
+        int cores = Runtime.getRuntime().availableProcessors(); // e.g. 8
+        ExecutorService es = Executors.newFixedThreadPool(cores);
+
+        // Build input list 1..1,000,000
+        List<Integer> input = new ArrayList<>();
+        for (int i = 1; i <= 1000000; i++) input.add(i);
+
+        int chunkSize = 1000000 / cores;
+        List<Future<Long>> futures = new ArrayList<>();
+
+        // Submit ALL tasks first → run in PARALLEL
+        for (int i = 0; i < cores; i++) {
+            int start = i * chunkSize;
+            int end = (i == cores - 1) ? 1000000 : start + chunkSize; // last chunk handles remainder
+            futures.add(es.submit(new Sum(input.subList(start, end))));
+        }
+
+        // Collect results AFTER all submitted
+        long sum = 0;
+        for (Future<Long> f : futures) sum += f.get();
+
+        System.out.println(sum); // 500000500000 ✅  (= 1000000 * 1000001 / 2)
+        es.shutdown();
+    }
+}
+
+// ── VERIFY ANSWER ──
+// Sum of 1..N = N*(N+1)/2 = 1000000*1000001/2 = 500000500000
+
+// ── KEY RULES ──
+// 1. Submit ALL futures before calling ANY .get() → true parallelism
+// 2. start = i * chunkSize  (NOT cores * chunkSize — that's always the same!)
+// 3. subList(start, end)    (NOT subList(start, chunkSize) — chunkSize is size, not end index)
+// 4. Last chunk: end = totalSize (handles remainder if totalSize % cores != 0)
+
+// ── SINGLE THREAD vs PARALLEL ──
+// Single thread: 1 loop, 1M additions, time = T
+// 8 cores:       8 loops of 125K each, time = ~T/8
+// 1B numbers → single: 10 sec, parallel 8-core: ~1.25 sec
+
+// ── SHORTCUT — Java parallel stream ──
+long parallelSum = input.parallelStream()
+                        .mapToLong(Integer::longValue)
+                        .sum();
+// Same result — ForkJoinPool.commonPool() handles splitting internally`,
+    },
   ],
 
   rules: [

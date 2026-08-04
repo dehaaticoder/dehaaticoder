@@ -204,6 +204,161 @@ t.start();
 t.join();  // main thread blocks here until t completes
 System.out.println("t is done");  // runs only after t finishes`,
     },
+    {
+      name: 'Pattern 7 — ExecutorService & Thread Pool',
+      icon: '🏊',
+      when: 'Production code — never create raw threads for every task; use a thread pool',
+      gaonKiBaat: 'Har kaam ke liye naya mazdoor rakho — bahut mehenga (1M threads = 51 sec). Thread pool = pehle se rakhe hue mazdoor (fixed), kaam aaya toh de do, kaam khatam toh wapas pool mein. Isse time bhi bachta hai, memory bhi.',
+      problems: ['Interview: "What is a thread pool?"', 'Interview: "Fixed vs Cached pool?"', 'Scaler: executors/client.java — 1M tasks, pool of 5 threads'],
+      template: `import java.util.concurrent.*;
+
+// ── FIXED THREAD POOL ──
+// n threads created UPFRONT — even before any task arrives
+ExecutorService ex = Executors.newFixedThreadPool(5);
+
+// execute() — for Runnable (fire and forget, no return value)
+ex.execute(runnableTask);
+
+// If all 5 threads busy → new tasks go into QUEUE and wait
+// When a thread frees up → picks next task from queue
+
+// ── CACHED THREAD POOL ──
+// 0 threads created upfront — threads created ON DEMAND per task
+ExecutorService ex2 = Executors.newCachedThreadPool();
+// If no free thread → creates new thread immediately (no queue)
+// Idle thread after 60 sec → killed automatically
+
+// ── SHUTDOWN ──
+ex.shutdown();       // graceful: completes running + queued tasks, then stops
+ex.shutdownNow();    // forceful: interrupts all, returns list of pending tasks
+
+// shutdown() is NON-BLOCKING — main thread continues immediately
+// To wait until all tasks finish:
+ex.shutdown();
+ex.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS); // blocks main thread
+
+// ── THREAD STATES ──
+// WAITING  → thread has NO task (sitting idle in pool) — OS ignores it
+// RUNNABLE → thread HAS a task, ready to run — OS considers it for CPU
+// RUNNING  → OS gave it CPU time — executing right now
+
+// KEY: Thread pool assigns tasks to threads
+//      OS scheduler decides WHEN a thread gets CPU time
+//      Thread pool has ZERO control over CPU scheduling`,
+    },
+    {
+      name: 'Pattern 8 — Callable + Future (return value from thread)',
+      icon: '📦',
+      when: 'Use when you need a result back from a thread task — Callable is Runnable that returns a value',
+      gaonKiBaat: 'Runnable = mazdoor ko kaam do, result mat poochho. Callable = mazdoor ko kaam do, aur ek receipt do (Future). Baad mein receipt se result lo. future.get() = receipt check karna — agar kaam nahi hua toh wahan ruko.',
+      problems: ['Interview: "How to get result from a thread?"', 'Interview: "What is Future in Java?"', 'Scaler: callable/numberMultiplier.java'],
+      template: `import java.util.concurrent.*;
+
+// ── CALLABLE ──
+// Like Runnable but: returns a value + can throw checked exception
+public class numberMultiplier implements Callable<Integer> {
+    private int val;
+    numberMultiplier(int val) { this.val = val; }
+
+    @Override
+    public Integer call() throws Exception {
+        Thread.sleep(10000);  // simulate long work
+        return 5 * val;       // returns result
+    }
+}
+
+// ── SUBMIT + FUTURE ──
+ExecutorService ex = Executors.newFixedThreadPool(2);
+numberMultiplier task = new numberMultiplier(5);
+
+Future<Integer> future = ex.submit(task);  // task goes to pool, returns Future immediately
+
+System.out.println("Hello");  // runs IMMEDIATELY — main thread does not block here
+
+int val = future.get();       // BLOCKING — main thread waits here until task completes
+System.out.println(val);      // 25
+
+// future.get(2, TimeUnit.SECONDS) — wait max 2 sec, throw TimeoutException if not done
+
+ex.shutdown();
+
+// ── CALLABLE vs RUNNABLE ──
+// Runnable.run()  → void, no checked exception
+// Callable.call() → returns T, can throw checked exception
+// execute(Runnable) → no return
+// submit(Callable) → returns Future<T>
+
+// ── EXECUTION TIME ──
+// Two tasks running in parallel:
+// Task A takes 3 sec, Task B takes 7 sec
+// Total time = max(3, 7) = 7 sec  (NOT 3+7=10)
+// Both submitted before any .get() — they run simultaneously
+
+// ── C# ANALOGY ──
+// Callable + Future ≈ async/await in C#
+// Difference: await releases thread while waiting
+//             future.get() BLOCKS the thread while waiting`,
+    },
+    {
+      name: 'Pattern 9 — Multithreaded Merge Sort (Callable + ExecutorService)',
+      icon: '🔀',
+      when: 'Classic interview problem — shows recursive parallel decomposition using thread pool',
+      gaonKiBaat: 'DSA mein mergesort ek hi thread pe recursion karta tha — ek ke baad ek. Yahan har recursive call ek naya task ban jaata hai — pool mein jaata hai — alag thread pe chalta hai. Left aur right dono ek saath sort ho rahe hain.',
+      problems: ['Interview: "Implement parallel merge sort"', 'Scaler: mergesort/sorter.java + client.java'],
+      template: `// ── SORTER (Callable) ──
+package mergesort;
+
+public class sorter implements Callable<List<Integer>> {
+    private List<Integer> list;
+    private ExecutorService es;
+
+    sorter(List<Integer> list, ExecutorService es) {
+        this.list = new ArrayList<>(list);  // MUST copy — subList returns a view
+        this.es = es;
+    }
+
+    @Override
+    public List<Integer> call() throws Exception {
+        if (list.size() == 1) return list;  // base case — same as DSA
+
+        int mid = list.size() / 2;
+        List<Integer> leftList  = list.subList(0, mid);
+        List<Integer> rightList = list.subList(mid, list.size());
+
+        sorter leftSorter  = new sorter(leftList, es);   // creates task object (call() NOT invoked yet)
+        sorter rightSorter = new sorter(rightList, es);  // creates task object (call() NOT invoked yet)
+
+        // BOTH submitted before any .get() → run in PARALLEL
+        Future<List<Integer>> leftFuture  = es.submit(leftSorter);   // NOW call() will be invoked
+        Future<List<Integer>> rightFuture = es.submit(rightSorter);  // NOW call() will be invoked
+
+        List<Integer> leftSorted  = leftFuture.get();   // blocks until left done
+        List<Integer> rightSorted = rightFuture.get();  // returns immediately if right already done
+
+        return merge(leftSorted, rightSorted);
+    }
+
+    private List<Integer> merge(List<Integer> left, List<Integer> right) { ... }
+}
+
+// ── CLIENT ──
+List<Integer> arr = List.of(2, 1, 3, 2, 10, 4);
+ExecutorService ex = Executors.newFixedThreadPool(arr.size());
+Future<List<Integer>> result = ex.submit(new sorter(arr, ex));
+System.out.println(result.get());  // [1, 2, 2, 3, 4, 10]
+ex.shutdown();
+
+// ── RECURSION EXPLAINED ──
+// new sorter(list, es)  → just creates object (constructor runs, call() does NOT)
+// es.submit(sorter)     → puts task in pool queue; a free thread calls call()
+// Inside call(), leftSorter and rightSorter are submitted → call() runs again on smaller lists
+// This IS recursion — just each level runs on a different thread, in parallel
+
+// ── DEADLOCK RISK ──
+// With newFixedThreadPool(n), all n threads can block on future.get()
+// while subtasks are stuck in queue with no free thread → deadlock
+// Fix: use newCachedThreadPool() for recursive parallel tasks (creates threads on demand)`,
+    },
   ],
 
   rules: [
@@ -252,6 +407,51 @@ System.out.println("t is done");  // runs only after t finishes`,
       tag: 'gotcha',
       detail: 'ans.multiply(x) does NOT modify ans. It returns a new BigInteger. Always do: ans = ans.multiply(x).',
     },
+    {
+      rule: 'Thread pool assigns tasks. OS scheduler assigns CPU. These are two separate systems.',
+      tag: 'key',
+      detail: 'Thread pool decides which thread gets which task. OS scheduler decides when a thread gets CPU time. Thread pool has zero control over CPU scheduling.',
+    },
+    {
+      rule: 'Idle threads are in WAITING state — OS completely ignores them for CPU',
+      tag: 'key',
+      detail: 'Only RUNNABLE threads (those with a task) compete for CPU. Idle threads sit in pool consuming memory but no CPU cycles.',
+    },
+    {
+      rule: 'Tasks queue up waiting for threads — not the other way around',
+      tag: 'gotcha',
+      detail: 'In a fixed thread pool, when all threads are busy, new tasks go into a queue. Threads wait for tasks (WAITING state), tasks wait for threads (queue). Never confuse the two.',
+    },
+    {
+      rule: 'newFixedThreadPool: threads created upfront. newCachedThreadPool: threads created on demand.',
+      tag: 'key',
+      detail: 'Fixed pool pre-creates n threads — idle threads waste memory if tasks < n. Cached pool creates threads only when a task arrives and no free thread exists. Idle cached threads die after 60 sec.',
+    },
+    {
+      rule: 'Use Fixed pool for CPU-bound tasks, Cached pool for I/O-bound tasks',
+      tag: 'key',
+      detail: 'CPU-bound: pool size = number of cores (more threads = context switching waste). I/O-bound: threads spend time waiting for disk/network — many threads are fine as CPU is mostly idle.',
+    },
+    {
+      rule: 'Callable returns a value; Runnable does not. submit() returns Future; execute() returns void.',
+      tag: 'key',
+      detail: 'Use Runnable + execute() for fire-and-forget tasks. Use Callable + submit() when you need the result back from the thread.',
+    },
+    {
+      rule: 'new sorter(list, es) does NOT call call(). Only es.submit(sorter) triggers call().',
+      tag: 'gotcha',
+      detail: 'Creating the Callable object only runs the constructor. The call() method runs when a pool thread picks up the submitted task. Same as: new Thread(r) does not call run(); t.start() does.',
+    },
+    {
+      rule: 'Submit both futures BEFORE calling .get() on either — otherwise no parallelism',
+      tag: 'gotcha',
+      detail: 'If you call leftFuture.get() before submitting rightFuture, right does not start until left finishes — completely sequential. Submit both first, then get() both.',
+    },
+    {
+      rule: 'Parallel execution time = max(task times), not sum',
+      tag: 'key',
+      detail: 'If left takes 3 sec and right takes 7 sec, and both run in parallel, total = 7 sec. They run simultaneously so you wait for the slowest one.',
+    },
   ],
 
   complexity: [
@@ -261,6 +461,10 @@ System.out.println("t is done");  // runs only after t finishes`,
     { problem: 'Context Switch (OS)', tc: 'O(1)', sc: 'O(1)', note: 'Fixed overhead to save/restore TCB; not in your code but affects wall-clock time' },
     { problem: 'BigInteger factorial(n)', tc: 'O(n · M(n!))', sc: 'O(digits(n!))', note: 'M(k) = cost of multiplying k-digit number; n! has ~n log n digits' },
     { problem: 'Parallel tasks on K cores', tc: 'O(n/K)', sc: 'O(n)', note: 'Ideal case; actual speedup limited by Amdahl\'s Law' },
+    { problem: 'newFixedThreadPool(n)', tc: 'O(n)', sc: 'O(n)', note: 'n threads created upfront at pool creation time' },
+    { problem: 'es.submit(Callable)', tc: 'O(1)', sc: 'O(1)', note: 'Adds task to queue; Future returned immediately' },
+    { problem: 'future.get()', tc: 'O(t)', sc: 'O(1)', note: 't = time for the Callable task to complete; blocks caller' },
+    { problem: 'Multithreaded Merge Sort', tc: 'O(n log n)', sc: 'O(n log n)', note: 'Wall-clock = O(n) with enough threads (each level parallel); space = O(n log n) for sublists across levels' },
   ],
 
   quiz: [
@@ -340,6 +544,61 @@ System.out.println("t is done");  // runs only after t finishes`,
       ],
       answer: 1,
       explanation: 'Each thread has its OWN stack (local variables, method frames). All threads in a process share the HEAP (objects created with new). This shared heap is why race conditions happen.',
+    },
+    {
+      q: 'What is the difference between the Thread Pool and the OS Scheduler?',
+      options: [
+        'They are the same thing',
+        'Thread Pool assigns tasks to threads; OS Scheduler decides when a thread gets CPU time',
+        'OS Scheduler assigns tasks; Thread Pool decides CPU time',
+        'Thread Pool manages CPU cores directly',
+      ],
+      answer: 1,
+      explanation: 'Thread Pool manages which thread gets which task. OS Scheduler manages which RUNNABLE thread gets CPU time. Thread pool has zero control over CPU scheduling — that is entirely the OS\'s job.',
+    },
+    {
+      q: 'You have newFixedThreadPool(3) and submit 10 tasks. What happens to the extra 7 tasks?',
+      options: [
+        'They are dropped silently',
+        'Three new threads are created automatically',
+        'They wait in a queue until a thread becomes free',
+        'An exception is thrown',
+      ],
+      answer: 2,
+      explanation: 'Fixed thread pool has a task queue. When all 3 threads are busy, new tasks queue up and wait. As each thread finishes its task, it picks the next one from the queue.',
+    },
+    {
+      q: 'What is the difference between Callable and Runnable?',
+      options: [
+        'Callable runs faster than Runnable',
+        'Callable.call() returns a value and can throw checked exceptions; Runnable.run() returns void and cannot',
+        'Runnable returns a value; Callable does not',
+        'They are identical — just different names',
+      ],
+      answer: 1,
+      explanation: 'Runnable.run() → void, no checked exception — use with execute() for fire-and-forget. Callable.call() → returns T, can throw checked exception — use with submit() to get a Future back.',
+    },
+    {
+      q: 'You submit left and right tasks, then call leftFuture.get(). Right finishes before left. What happens?',
+      options: [
+        'rightFuture.get() throws an exception because right finished too early',
+        'The main thread blocks on leftFuture.get() until left is done; right\'s result is cached in the Future',
+        'The main thread switches to wait for right instead',
+        'Both futures are cancelled',
+      ],
+      answer: 1,
+      explanation: 'leftFuture.get() blocks the main thread until left completes — regardless of whether right is done. Right\'s result is cached in the Future object. Once left finishes, rightFuture.get() returns immediately.',
+    },
+    {
+      q: 'When does call() get invoked in: sorter s = new sorter(list, es); Future f = es.submit(s);',
+      options: [
+        'When new sorter(list, es) is called',
+        'When the Future f is declared',
+        'When a pool thread picks up the task after es.submit(s)',
+        'When future.get() is called',
+      ],
+      answer: 2,
+      explanation: 'new sorter() only runs the constructor — call() is NOT invoked. es.submit(s) puts the task in the pool queue. A free pool thread picks it up and executes call(). future.get() just waits for the result.',
     },
   ],
 }

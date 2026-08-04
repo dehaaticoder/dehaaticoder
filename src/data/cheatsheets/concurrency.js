@@ -208,7 +208,7 @@ System.out.println("t is done");  // runs only after t finishes`,
       name: 'Pattern 7 — ExecutorService & Thread Pool',
       icon: '🏊',
       when: 'Production code — never create raw threads for every task; use a thread pool',
-      gaonKiBaat: 'Har kaam ke liye naya mazdoor rakho — bahut mehenga (1M threads = 51 sec). Thread pool = pehle se rakhe hue mazdoor (fixed), kaam aaya toh de do, kaam khatam toh wapas pool mein. Isse time bhi bachta hai, memory bhi.',
+      gaonKiBaat: 'Socho gaon mein kheth pe kaam hai. Har baar naya mazdoor Bombay se bulao — train ticket, waqt, sab lagega (1M threads = 51 sec). Thread pool = gaon ka thekedar jiske paas 5 kaarigar hamesha tayyar baithe hain. Kaam aaya → ek kaarigar bhejo → kaam khatam → waapis baith jao. OS scheduler = sarpanch jo decide karta hai kaun pehle khet mein jaayega.',
       problems: ['Interview: "What is a thread pool?"', 'Interview: "Fixed vs Cached pool?"', 'Scaler: executors/client.java — 1M tasks, pool of 5 threads'],
       template: `import java.util.concurrent.*;
 
@@ -250,7 +250,7 @@ ex.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS); // blocks main thread
       name: 'Pattern 8 — Callable + Future (return value from thread)',
       icon: '📦',
       when: 'Use when you need a result back from a thread task — Callable is Runnable that returns a value',
-      gaonKiBaat: 'Runnable = mazdoor ko kaam do, result mat poochho. Callable = mazdoor ko kaam do, aur ek receipt do (Future). Baad mein receipt se result lo. future.get() = receipt check karna — agar kaam nahi hua toh wahan ruko.',
+      gaonKiBaat: 'Dukaan pe bete ko bheja gehoon laane ke liye. Runnable = bhejo aur bhool jao, result nahi chahiye. Callable = bhejo aur ek parchi (Future) haath mein rakho — jab waapis aayega toh parchi pe result likhega. future.get() = dukaan ke bahar khamba pakad ke khade rehna jab tak woh waapis na aaye. "Hello" print karna = ghar ka doosra kaam karte rehna jab tak beta bazaar mein hai.',
       problems: ['Interview: "How to get result from a thread?"', 'Interview: "What is Future in Java?"', 'Scaler: callable/numberMultiplier.java'],
       template: `import java.util.concurrent.*;
 
@@ -303,7 +303,7 @@ ex.shutdown();
       name: 'Pattern 9 — Multithreaded Merge Sort (Callable + ExecutorService)',
       icon: '🔀',
       when: 'Classic interview problem — shows recursive parallel decomposition using thread pool',
-      gaonKiBaat: 'DSA mein mergesort ek hi thread pe recursion karta tha — ek ke baad ek. Yahan har recursive call ek naya task ban jaata hai — pool mein jaata hai — alag thread pe chalta hai. Left aur right dono ek saath sort ho rahe hain.',
+      gaonKiBaat: 'Gehoon ka dher hai, chalanna hai (sort karna). DSA = ek banda akele sab chaalta hai — ek ke baad ek. Multithreaded = baap ne dher ko beech se tod diya — ek beta baayein dher leke baitha, doosra daayein dher leke — dono ek saath chaalna shuru. Phir dono ke sorted gehoon milao. Aur woh dono bete? Unhone bhi apna apna dher todke chote bhai-behenon ko de diya — sab ek saath kaam kar rahe hain. Yahi hai parallel recursion.',
       problems: ['Interview: "Implement parallel merge sort"', 'Scaler: mergesort/sorter.java + client.java'],
       template: `// ── SORTER (Callable) ──
 package mergesort;

@@ -359,6 +359,60 @@ ex.shutdown();
 // while subtasks are stuck in queue with no free thread → deadlock
 // Fix: use newCachedThreadPool() for recursive parallel tasks (creates threads on demand)`,
     },
+    {
+      name: 'Pattern 10 — ThreadPoolExecutor (Custom Thread Pool)',
+      icon: '⚙️',
+      when: 'Production systems — when Fixed and Cached pools are not enough and you need full control',
+      gaonKiBaat: 'Fixed pool = 5 kaarigar hamesha rakho, chahe kaam ho ya na ho. Cached pool = jitna kaam utne kaarigar, koi seema nahi. ThreadPoolExecutor = apna custom setup — 3 pakke kaarigar (core), zyada kaam aaya toh 7 tak temporary rakho (max), temporary wale 60 sec bekar baithe toh ghar bhejo, aur waiting room mein sirf 10 log baith sakte hain (queue). Queue bhari aur max bhi poora? Sarpanch decide karta hai kya karein (rejection policy).',
+      problems: ['Interview: "How to create a custom thread pool?"', 'Interview: "What are rejection policies?"', 'Interview: "Difference between core and max pool size?"'],
+      template: `import java.util.concurrent.*;
+
+// ThreadPoolExecutor — full control over every parameter
+ThreadPoolExecutor executor = new ThreadPoolExecutor(
+    3,                                    // corePoolSize    — always-alive threads (even if idle)
+    7,                                    // maximumPoolSize — max threads under peak load
+    60L,                                  // keepAliveTime   — idle non-core threads die after this
+    TimeUnit.SECONDS,                     // unit            — time unit for keepAliveTime
+    new LinkedBlockingQueue<>(10),        // workQueue       — holds tasks when all core threads busy
+    Executors.defaultThreadFactory(),     // threadFactory   — how threads are created (optional)
+    new ThreadPoolExecutor.AbortPolicy()  // rejectionPolicy — what to do when queue full + max reached
+);
+
+// ── HOW IT SCALES ──
+// Tasks arrive:
+// 1. core threads free?        → assign to core thread
+// 2. core full, queue not full → task goes into queue
+// 3. queue full, max not hit   → create new (non-core) thread
+// 4. queue full + max hit      → REJECTION POLICY kicks in
+
+// ── REJECTION POLICIES ──
+new ThreadPoolExecutor.AbortPolicy();         // DEFAULT — throws RejectedExecutionException
+new ThreadPoolExecutor.CallerRunsPolicy();    // caller's thread runs the task (slows producer)
+new ThreadPoolExecutor.DiscardPolicy();       // silently drops the new task
+new ThreadPoolExecutor.DiscardOldestPolicy(); // drops oldest queued task, retries new one
+
+// ── QUEUE TYPES ──
+new LinkedBlockingQueue<>()       // unbounded — queue never full (maximumPoolSize never used!)
+new LinkedBlockingQueue<>(100)    // bounded — queue holds 100 tasks max
+new ArrayBlockingQueue<>(100)     // bounded, array-backed, slightly faster
+new SynchronousQueue<>()          // no buffer — task handed directly to thread (like cachedPool)
+
+// ── REAL WORLD EXAMPLE ──
+// Web server handling HTTP requests:
+ThreadPoolExecutor webPool = new ThreadPoolExecutor(
+    10,                              // 10 core threads always ready
+    50,                              // spike to 50 under heavy load
+    30L, TimeUnit.SECONDS,           // temporary threads die after 30 sec idle
+    new ArrayBlockingQueue<>(200),   // queue up to 200 requests
+    new ThreadPoolExecutor.CallerRunsPolicy() // if overloaded, slow down the caller
+);
+
+// ── MONITORING ──
+executor.getPoolSize();          // current number of threads
+executor.getActiveCount();       // threads currently executing tasks
+executor.getQueue().size();      // tasks waiting in queue
+executor.getCompletedTaskCount(); // total tasks finished`,
+    },
   ],
 
   rules: [

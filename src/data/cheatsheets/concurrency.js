@@ -493,6 +493,75 @@ long parallelSum = input.parallelStream()
                         .sum();
 // Same result — ForkJoinPool.commonPool() handles splitting internally`,
     },
+    {
+      name: 'Pattern 12 — Thread-Safe Collections',
+      icon: '🔒',
+      when: 'Multiple threads reading/writing the same collection — regular ArrayList/HashMap will corrupt data',
+      gaonKiBaat: 'Socho gaon ki ek register book hai jisme sab log entries karte hain. Agar 10 log ek saath likhne lage — pages phat jayenge, entries overwrite hongi (ArrayList = corruption). CopyOnWriteArrayList = jab bhi koi likhne aaye, pehle poori book ki nakal banao, nakal mein likho, phir replace karo — padhne waale kabhi nahi rukenge. SynchronizedList = ek chowkidar — ek time pe sirf ek aadmi andar, baaki bahar wait karo.',
+      problems: [
+        'Interview: "Which List is thread-safe in Java?"',
+        'Interview: "Difference between CopyOnWriteArrayList and synchronizedList?"',
+        'Interview: "Why is ArrayList not thread-safe?"',
+        'Real world: shared cache, event listeners, concurrent request handling',
+      ],
+      template: `// ── PROBLEM — ArrayList is NOT thread safe ──
+List<Integer> list = new ArrayList<>();
+// Two threads calling list.add() simultaneously → data corruption, wrong size, exceptions
+
+// ══════════════════════════════════════════
+// OPTION 1 — CopyOnWriteArrayList (read-heavy)
+// ══════════════════════════════════════════
+List<Integer> list = new CopyOnWriteArrayList<>();
+list.add(1);   // thread safe — creates full copy of array on every write
+list.get(0);   // lock-free read — very fast
+
+// How it works internally:
+// add() → copies entire array → adds to copy → replaces original
+// Reads always see a consistent snapshot — never blocked
+
+// Best when: many reads, rare writes (e.g. event listener lists, config caches)
+// Cost: every write = O(n) copy → expensive if writes are frequent
+
+// ══════════════════════════════════════════
+// OPTION 2 — Collections.synchronizedList()
+// ══════════════════════════════════════════
+List<Integer> list = Collections.synchronizedList(new ArrayList<>());
+list.add(1);   // thread safe — acquires lock before every operation
+list.get(0);   // also locks — readers block writers and vice versa
+
+// How it works internally:
+// Every method wrapped with: synchronized(mutex) { ... }
+// One thread at a time — others wait
+
+// Best when: equal mix of reads and writes
+// Cost: every read AND write acquires lock → higher contention
+
+// ⚠️ Iteration must be manually synchronized:
+synchronized (list) {
+    for (Integer i : list) { ... }  // without this → ConcurrentModificationException
+}
+
+// ══════════════════════════════════════════
+// OPTION 3 — Vector (legacy — avoid)
+// ══════════════════════════════════════════
+List<Integer> list = new Vector<>();  // synchronized like option 2, but old API
+
+// ══════════════════════════════════════════
+// SAME CONCEPT — other collections
+// ══════════════════════════════════════════
+// HashMap  → ConcurrentHashMap       (fine-grained locking, best for maps)
+// HashSet  → CopyOnWriteArraySet     (same as CopyOnWriteArrayList for sets)
+// Queue    → ConcurrentLinkedQueue   (lock-free, best for producer-consumer)
+// Deque    → ConcurrentLinkedDeque
+
+Map<String, Integer> map = new ConcurrentHashMap<>();  // most common in production
+
+// ── SUMMARY ──
+// Mostly reads, rare writes  → CopyOnWriteArrayList
+// Frequent reads + writes    → Collections.synchronizedList()
+// Map                        → ConcurrentHashMap (always prefer over synchronizedMap)
+// Never use                  → Vector, Hashtable (legacy, outdated)`,
+    },
   ],
 
   rules: [

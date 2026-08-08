@@ -22,7 +22,7 @@ export default function Roadmap() {
       <Navbar />
 
       {/* Header */}
-      <div className="max-w-5xl mx-auto px-6 pt-16 pb-10 text-center">
+      <div className="max-w-6xl mx-auto px-6 pt-16 pb-10 text-center">
         <h1 className="text-4xl font-bold text-stone-900 mb-4">DSA Learning Roadmap</h1>
         <p className="text-stone-500 text-lg max-w-2xl mx-auto">
           Follow this path from the basics to advanced. Each topic builds on the previous one.
@@ -31,7 +31,7 @@ export default function Roadmap() {
       </div>
 
       {/* Legend */}
-      <div className="max-w-5xl mx-auto px-6 mb-10 flex items-center gap-6 justify-center text-sm text-stone-500">
+      <div className="max-w-6xl mx-auto px-6 mb-10 flex items-center gap-6 justify-center text-sm text-stone-500">
         {difficultyOrder.map(level => (
           <div key={level} className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${difficultyColors[level].dot}`}></span>
@@ -45,7 +45,7 @@ export default function Roadmap() {
       </div>
 
       {/* Topics by difficulty */}
-      <div className="max-w-5xl mx-auto px-6 pb-24 space-y-16">
+      <div className="max-w-6xl mx-auto px-6 pb-24 space-y-16">
         {grouped.map(({ level, items }) => (
           <div key={level}>
             <div className="flex items-center gap-3 mb-6">

@@ -57,13 +57,13 @@ export default function Cheatsheet() {
       <Navbar />
 
       {/* Breadcrumb */}
-      <div className="max-w-5xl mx-auto px-6 pt-8 text-sm text-stone-400">
+      <div className="max-w-7xl mx-auto px-6 pt-8 text-sm text-stone-400">
         <Link to="/dehaaticoder/roadmap" className="hover:text-green-600">Roadmap</Link>
         <span className="mx-2">›</span>
         <span className="text-stone-700 font-medium capitalize">{data.title} Cheatsheet</span>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 pt-6 pb-24 space-y-8">
+      <div className="max-w-7xl mx-auto px-6 pt-6 pb-24 space-y-8">
 
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">

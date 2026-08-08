@@ -41,7 +41,7 @@ export default function Topic() {
       <Navbar />
 
       {/* Breadcrumb */}
-      <div className="max-w-5xl mx-auto px-6 pt-8">
+      <div className="max-w-7xl mx-auto px-6 pt-8">
         <div className="text-sm text-stone-400">
           <Link to="/dehaaticoder/roadmap" className="hover:text-green-600">Roadmap</Link>
           <span className="mx-2">›</span>
@@ -50,7 +50,7 @@ export default function Topic() {
       </div>
 
       {/* Hero */}
-      <div className="max-w-5xl mx-auto px-6 pt-8 pb-12">
+      <div className="max-w-7xl mx-auto px-6 pt-8 pb-12">
         <div className="flex items-center gap-4 mb-4">
           <span className="text-5xl">{topic.icon}</span>
           <div>
@@ -71,7 +71,7 @@ export default function Topic() {
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-6 pb-24 space-y-14">
+      <div className="max-w-7xl mx-auto px-6 pb-24 space-y-14">
 
         {/* What is it */}
         <section>

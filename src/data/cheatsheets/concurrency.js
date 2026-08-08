@@ -100,7 +100,7 @@ public class Main {
       icon: '🧵',
       when: 'Use when you want to define a task and run it on a thread — preferred approach',
       gaonKiBaat: 'Runnable = kaam ka description (task). Thread = kaam karne wala mazdoor. Mazdoor ko kaam batao aur kaho "shuru kar" — alag alag mazdoor alag alag kaam le sakte hain.',
-      problems: ['Scaler Q1 — Adder, Subtractor tasks', 'Print 1–100 each on a separate thread', 'IndividualNumberPrinter'],
+      problems: ['Q1 — Adder, Subtractor tasks', 'Print 1–100 each on a separate thread', 'IndividualNumberPrinter'],
       template: `// STEP 1: Define the task (implement Runnable)
 public class IndividualNumberPrinter implements Runnable {
 
@@ -129,16 +129,29 @@ public class Main {
 }
 
 // WHY Runnable over extending Thread?
-// - Your class can still extend another class (Java = single inheritance)
-// - Cleaner separation: task logic vs threading mechanism
-// - Same task object can be shared across multiple threads`,
+//
+// 1. Thread is a CLASS → Java allows only single inheritance
+//    If you extend Thread, you can NEVER extend any other class.
+//    If you implement Runnable (interface), your class is still free to extend anything.
+//    class MyTask extends Animal implements Runnable { } // ✅ works
+//    class MyTask extends Thread { }                    // ❌ can't extend Animal now
+//
+// 2. Cleaner separation: task logic vs threading mechanism
+//    Runnable = WHAT to do (recipe)
+//    Thread   = WHO does it (cook)
+//    Keeping them separate is better design.
+//
+// 3. Same Runnable object can be shared across multiple threads
+//    Runnable task = new MyTask();
+//    new Thread(task).start(); // thread 1
+//    new Thread(task).start(); // thread 2 — same task, different threads ✅`,
     },
     {
       name: 'Pattern 5 — Java Thread via extends Thread',
       icon: '🧵',
       when: 'Use when the task IS the thread — class directly extends Thread',
       gaonKiBaat: 'Thread extend karna matlab mazdoor khud hi apna kaam jaanta hai. Runnable implement karna matlab ek alag form pe kaam likha aur mazdoor ko diya. Dono kaam karte hain, par Runnable zyada flexible hai.',
-      problems: ['BigFactorial Scaler assignment', 'When class-specific state and thread behaviour are tightly coupled'],
+      problems: ['BigFactorial assignment', 'When class-specific state and thread behaviour are tightly coupled'],
       template: `// Extend Thread directly — class IS the thread
 import java.math.BigInteger;
 
@@ -209,7 +222,7 @@ System.out.println("t is done");  // runs only after t finishes`,
       icon: '🏊',
       when: 'Production code — never create raw threads for every task; use a thread pool',
       gaonKiBaat: 'Socho gaon mein kheth pe kaam hai. Har baar naya mazdoor Bombay se bulao — train ticket, waqt, sab lagega (1M threads = 51 sec). Thread pool = gaon ka thekedar jiske paas 5 kaarigar hamesha tayyar baithe hain. Kaam aaya → ek kaarigar bhejo → kaam khatam → waapis baith jao. OS scheduler = sarpanch jo decide karta hai kaun pehle khet mein jaayega.',
-      problems: ['Interview: "What is a thread pool?"', 'Interview: "Fixed vs Cached pool?"', 'Scaler: executors/client.java — 1M tasks, pool of 5 threads'],
+      problems: ['Interview: "What is a thread pool?"', 'Interview: "Fixed vs Cached pool?"', 'executors/client.java — 1M tasks, pool of 5 threads'],
       template: `import java.util.concurrent.*;
 
 // ── FIXED THREAD POOL ──
@@ -251,7 +264,7 @@ ex.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS); // blocks main thread
       icon: '📦',
       when: 'Use when you need a result back from a thread task — Callable is Runnable that returns a value',
       gaonKiBaat: 'Dukaan pe bete ko bheja gehoon laane ke liye. Runnable = bhejo aur bhool jao, result nahi chahiye. Callable = bhejo aur ek parchi (Future) haath mein rakho — jab waapis aayega toh parchi pe result likhega. future.get() = dukaan ke bahar khamba pakad ke khade rehna jab tak woh waapis na aaye. "Hello" print karna = ghar ka doosra kaam karte rehna jab tak beta bazaar mein hai.',
-      problems: ['Interview: "How to get result from a thread?"', 'Interview: "What is Future in Java?"', 'Scaler: callable/numberMultiplier.java'],
+      problems: ['Interview: "How to get result from a thread?"', 'Interview: "What is Future in Java?"', 'callable/numberMultiplier.java'],
       template: `import java.util.concurrent.*;
 
 // ── CALLABLE ──
@@ -304,7 +317,7 @@ ex.shutdown();
       icon: '🔀',
       when: 'Classic interview problem — shows recursive parallel decomposition using thread pool',
       gaonKiBaat: 'Gehoon ka dher hai, chalanna hai (sort karna). DSA = ek banda akele sab chaalta hai — ek ke baad ek. Multithreaded = baap ne dher ko beech se tod diya — ek beta baayein dher leke baitha, doosra daayein dher leke — dono ek saath chaalna shuru. Phir dono ke sorted gehoon milao. Aur woh dono bete? Unhone bhi apna apna dher todke chote bhai-behenon ko de diya — sab ek saath kaam kar rahe hain. Yahi hai parallel recursion.',
-      problems: ['Interview: "Implement parallel merge sort"', 'Scaler: mergesort/sorter.java + client.java'],
+      problems: ['Interview: "Implement parallel merge sort"', 'mergesort/sorter.java + client.java'],
       template: `// ── SORTER (Callable) ──
 package mergesort;
 
@@ -419,7 +432,7 @@ executor.getCompletedTaskCount(); // total tasks finished`,
       when: 'Large data aggregation — divide work equally across cores, compute in parallel, combine results',
       gaonKiBaat: 'Gaon mein 1 lakh daane ginne hain. Ek banda akela ginne baithega — bahut time lagega. Samjhdaar thekedar ne kaam baant diya — 8 log hain toh 8 dher banao, sab ek saath gino, phir saath milao. Yahi hai parallel reduction. Aur iska bada bhai hai MapReduce — jaise Hadoop, Spark kaam karte hain.',
       problems: [
-        'Scaler Assignment: Sum 1M numbers using number of CPU cores',
+        'Sum 1M numbers using number of CPU cores',
         'Interview: "How would you sum a large array in parallel?"',
         'Interview: "What is parallel reduction?"',
         'Real world: DB aggregations, ML feature computation, image processing',

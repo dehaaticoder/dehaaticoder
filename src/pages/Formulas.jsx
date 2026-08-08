@@ -12,13 +12,13 @@ export default function Formulas() {
     <div className="min-h-screen">
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-6 pt-8 text-sm text-stone-400">
+      <div className="max-w-6xl mx-auto px-6 pt-8 text-sm text-stone-400">
         <Link to="/dehaaticoder/roadmap" className="hover:text-green-600">Roadmap</Link>
         <span className="mx-2">›</span>
         <span className="text-stone-700 font-medium">Formulas</span>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 pt-6 pb-24">
+      <div className="max-w-6xl mx-auto px-6 pt-6 pb-24">
 
         {/* Header */}
         <div className="mb-8">

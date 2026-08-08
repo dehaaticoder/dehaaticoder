@@ -41,7 +41,7 @@ export default function Problem() {
       <Navbar />
 
       {/* Breadcrumb */}
-      <div className="max-w-5xl mx-auto px-6 pt-8 text-sm text-stone-400">
+      <div className="max-w-7xl mx-auto px-6 pt-8 text-sm text-stone-400">
         <Link to="/dehaaticoder/roadmap" className="hover:text-green-600">Roadmap</Link>
         <span className="mx-2">›</span>
         <Link to={`/dehaaticoder/topic/${problem.topic}`} className="hover:text-green-600 capitalize">{problem.topic}</Link>
@@ -49,7 +49,7 @@ export default function Problem() {
         <span className="text-stone-700 font-medium">{problem.title}</span>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 pt-6 pb-24 space-y-10">
+      <div className="max-w-7xl mx-auto px-6 pt-6 pb-24 space-y-10">
 
         {/* Header */}
         <div>

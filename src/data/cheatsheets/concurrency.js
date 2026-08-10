@@ -575,6 +575,210 @@ Map<String, Integer> map = new ConcurrentHashMap<>();  // most common in product
 // Map                        → ConcurrentHashMap (always prefer over synchronizedMap)
 // Never use                  → Vector, Hashtable (legacy, outdated)`,
     },
+    {
+      name: 'Pattern 13 — Race Condition & Critical Section',
+      icon: '⚠️',
+      when: 'Two or more threads access shared mutable data simultaneously',
+      gaonKiBaat: 'Race condition = do log ek hi cheez ko ek saath pakadne ki koshish kar rahe hain. Jaise do log ek hi last samosa uthane ki koshish karein — dono check karte hain "samosa hai?" haan — dono uthate hain — result galat. Critical section = woh code jo shared data touch karta hai, wahan pe only ek hi thread ek time pe honi chahiye.',
+      problems: ['Interview: "What is a race condition?"', 'Interview: "What is a critical section?"', 'Interview: "What is a dirty read?"'],
+      template: `// PROBLEM — two threads share Value.x
+// Thread-1: reads x=5, adds 1 → wants to write 6
+// Thread-2: reads x=5 (STALE!), adds 1 → writes 6
+// Result: x=6 instead of 7 → dirty read
+
+// Critical section = code that accesses shared mutable state
+// Must be protected so only ONE thread runs it at a time
+
+public class Value { public int x = 0; }
+
+// Race condition — NO protection
+public class Adder implements Callable<Void> {
+    private Value v;
+    public Void call() {
+        for (int i = 1; i <= 100; i++) {
+            v.x = v.x + 1;  // ← critical section — NOT protected
+        }
+        return null;
+    }
+}
+
+// After running Adder + Subtracter concurrently:
+// Expected: v.x = 0
+// Actual: v.x = some random number (race condition)`,
+    },
+    {
+      name: 'Pattern 14 — ReentrantLock (Explicit Lock)',
+      icon: '🔐',
+      when: 'Need explicit control over locking — must protect critical section manually',
+      gaonKiBaat: 'ReentrantLock = ek physical lock aur key. Jab thread andar jaana chahti hai, pehle lock.lock() se key leti hai. Kaam karne ke baad lock.unlock() se key wapis rakh deti hai. Agar koi aur thread key pakde hua hai, baaki threads Entry Set mein wait karti hain.',
+      problems: ['Interview: "What is a mutex?"', 'Interview: "What is ReentrantLock?"', 'Interview: "What is the Entry Set?"'],
+      template: `import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+Lock lock = new ReentrantLock();
+
+public class Adder implements Callable<Void> {
+    private Value v;
+    private Lock lock;
+
+    public Void call() {
+        for (int i = 1; i <= 100; i++) {
+            lock.lock();           // acquire lock — others blocked here
+            try {
+                v.x = v.x + 1;    // critical section — safe now
+            } finally {
+                lock.unlock();     // ALWAYS unlock in finally — never forget!
+            }
+        }
+        return null;
+    }
+}
+
+// ⚠️ DANGER — if you forget unlock():
+lock.lock();
+v.x = v.x + 1;
+// exception here → unlock() never called → DEADLOCK!
+// All other threads wait forever in Entry Set
+
+// Fix: always use try-finally with ReentrantLock
+// Or use synchronized (auto-unlocks even on exception)
+
+// Entry Set = where BLOCKED threads wait when lock is taken
+// When lock released → one thread from Entry Set gets the lock`,
+    },
+    {
+      name: 'Pattern 15 — synchronized Block',
+      icon: '🔒',
+      when: 'Protect only part of a method — auto-locks and auto-unlocks on any object',
+      gaonKiBaat: 'synchronized block = ReentrantLock ka safe version. Lock khud lagata hai, khud kholata hai — bhulne ka chance nahi. Aur tum choose karte ho kaunse object pe lock lagana hai.',
+      problems: ['Interview: "synchronized block vs ReentrantLock?"', 'Interview: "What object does synchronized lock on?"'],
+      template: `// synchronized block — auto lock/unlock on chosen object
+public class AdderSync implements Callable<Void> {
+    private Value v;
+
+    public Void call() {
+        for (int i = 1; i <= 100; i++) {
+            synchronized (v) {      // locks the object 'v'
+                v.x = v.x + 1;     // only ONE thread here at a time
+            }                       // auto-unlocked here, even on exception
+        }
+        return null;
+    }
+}
+
+// Key differences vs ReentrantLock:
+// ✅ Auto-unlocks — impossible to forget (no deadlock from forgetting)
+// ✅ Simpler syntax
+// ❌ Less flexible — no tryLock(), no timeout, no condition variables
+
+// Lock object can be anything:
+synchronized (this)    { }  // lock on current object
+synchronized (v)       { }  // lock on shared object v
+synchronized (MyClass.class) { }  // lock on class (for static data)
+
+// Both threads must lock on SAME object to be mutually exclusive:
+// Thread-1: synchronized(v) → acquires lock on v
+// Thread-2: synchronized(v) → BLOCKED until Thread-1 releases`,
+    },
+    {
+      name: 'Pattern 16 — synchronized Method',
+      icon: '🛡️',
+      when: 'Entire method accesses shared state — lock on this (the instance)',
+      gaonKiBaat: 'synchronized method = class apni data khud protect karti hai. Bank ki tarah — tum account access karte ho, bank ke andar lock laga hua hai. Tumhe bahar se lock nahi laana padta.',
+      problems: ['Interview: "synchronized method vs synchronized block?"', 'Interview: "What does synchronized method lock on?"', 'Interview: "What is encapsulation of synchronization?"'],
+      template: `// synchronized method — locks on 'this' (the instance)
+public class Value2 {
+    private int x;  // private! caller cannot bypass the lock
+
+    public synchronized void increment() {
+        x = x + 1;  // equivalent to: synchronized(this) { x = x + 1; }
+    }
+
+    public synchronized void decrement() {
+        x = x - 1;
+    }
+
+    public int getX() { return x; }  // safe to read after threads finish
+}
+
+// Callers need NO lock — Value2 protects itself:
+public class AdderSyncMethod implements Callable<Void> {
+    private Value2 v;
+    public Void call() {
+        for (int i = 1; i <= 100; i++) {
+            v.increment();  // no synchronized here — lock is inside Value2
+        }
+        return null;
+    }
+}
+
+// WHY private x matters:
+// If x were public, caller could do: v.x = v.x + 1 (bypasses lock!)
+// private forces all access through synchronized methods
+
+// Static synchronized method → locks on Class object (Value2.class)
+// Used when shared data is static (belongs to class, not instance)
+public static synchronized void staticMethod() {
+    // locks Value2.class — all instances affected
+}`,
+    },
+    {
+      name: 'Pattern 17 — Producer-Consumer Problem',
+      icon: '🏭',
+      when: 'One set of threads produces data, another set consumes it — shared buffer/queue',
+      gaonKiBaat: 'Producer-Consumer = chef aur waiter. Chef (producer) dishes banata hai aur counter pe rakhta hai. Waiter (consumer) counter se dish uthata hai aur deliver karta hai. Counter ki limit hai — chef wait karta hai agar counter full ho, waiter wait karta hai agar counter empty ho.',
+      problems: ['Interview: "What is the Producer-Consumer problem?"', 'Interview: "submit() vs execute() for exception visibility?"', 'Interview: "What is busy waiting?"'],
+      template: `// Shared Store (the buffer/queue)
+public class Store {
+    private List<Integer> items = new ArrayList<>();
+    private int maxStoreSize;
+
+    // Problem WITHOUT synchronization:
+    // Two producers both check size < max → both pass → size exceeds limit
+    // Two consumers both check size > 0 → both pass → IndexOutOfBoundsException
+
+    public synchronized void addItem(int x) {
+        if (items.size() < maxStoreSize) {
+            items.add(x);
+        }
+        // ⚠️ Busy waiting: if full, silently skips and loops back
+        // Fix: use wait() instead of if-skip (Pattern 18 — Concurrency-4)
+    }
+
+    public synchronized void remove() {
+        if (items.size() > 0) {
+            items.remove(items.size() - 1);
+        }
+        // ⚠️ Busy waiting: if empty, silently skips and loops back
+    }
+}
+
+// Producer — Runnable (fire-and-forget, execute() shows exceptions)
+public class Publisher implements Runnable {
+    private Store store;
+    public void run() {
+        while (true) { store.addItem(1); }
+    }
+}
+
+// Consumer — Runnable
+public class Consumer implements Runnable {
+    private Store store;
+    public void run() {
+        while (true) { store.remove(); }
+    }
+}
+
+// Client — CachedThreadPool (NOT fixed — infinite loops would deadlock fixed pool)
+ExecutorService es = Executors.newCachedThreadPool();
+Store store = new Store(10);
+for (int i = 0; i < 10; i++) es.execute(new Publisher(store));
+for (int i = 0; i < 15; i++) es.execute(new Consumer(store));
+
+// submit() vs execute() for exceptions:
+// submit(Callable) → exception stored in Future, hidden until .get()
+// execute(Runnable) → exception printed to console immediately`,
+    },
   ],
 
   rules: [
@@ -668,6 +872,46 @@ Map<String, Integer> map = new ConcurrentHashMap<>();  // most common in product
       tag: 'key',
       detail: 'If left takes 3 sec and right takes 7 sec, and both run in parallel, total = 7 sec. They run simultaneously so you wait for the slowest one.',
     },
+    {
+      rule: 'Race condition = check-then-act is not atomic',
+      tag: 'gotcha',
+      detail: 'Thread-1 checks size < max (true), context switch happens, Thread-2 also checks (true), both add → size exceeds limit. The check and the act must be atomic — use synchronized.',
+    },
+    {
+      rule: 'Critical section must be protected — only one thread at a time',
+      tag: 'key',
+      detail: 'Critical section = any code that reads or writes shared mutable state. Without protection, two threads can interleave their reads/writes and corrupt data (dirty read).',
+    },
+    {
+      rule: 'ReentrantLock: always unlock in finally — or use synchronized',
+      tag: 'gotcha',
+      detail: 'If an exception occurs between lock() and unlock(), the lock is never released — all other threads wait forever (deadlock). Use try-finally, or switch to synchronized which auto-unlocks.',
+    },
+    {
+      rule: 'synchronized method locks on this; static synchronized locks on Class object',
+      tag: 'key',
+      detail: 'Instance synchronized method → locks the specific object (v). Static synchronized method → locks Value.class — affects ALL instances. Use static synchronized only when shared data is static.',
+    },
+    {
+      rule: 'Make shared data private when using synchronized methods',
+      tag: 'gotcha',
+      detail: 'If x is public, a caller can do v.x = v.x + 1 directly — bypassing the lock entirely. private forces all access through the synchronized methods, guaranteeing protection.',
+    },
+    {
+      rule: 'synchronized solves race condition but causes busy waiting when condition fails',
+      tag: 'gotcha',
+      detail: 'With an if-guard inside synchronized, a thread that fails the check releases the lock and immediately loops back — spinning in a tight loop. Threads waste CPU. Fix: use wait/notify (Concurrency-4).',
+    },
+    {
+      rule: 'Use CachedThreadPool for Producer-Consumer — never FixedThreadPool with infinite loops',
+      tag: 'gotcha',
+      detail: 'FixedThreadPool with infinite-loop tasks fills all threads permanently. New tasks queue up forever — deadlock. CachedThreadPool creates threads on demand, so infinite-loop tasks do not block new tasks.',
+    },
+    {
+      rule: 'execute() shows exceptions immediately; submit() hides them inside Future',
+      tag: 'key',
+      detail: 'execute(Runnable) → uncaught exception handler prints to console. submit(Callable/Runnable) → exception stored silently in Future, only thrown when you call future.get(). If you never call get(), exception disappears.',
+    },
   ],
 
   complexity: [
@@ -681,6 +925,9 @@ Map<String, Integer> map = new ConcurrentHashMap<>();  // most common in product
     { problem: 'es.submit(Callable)', tc: 'O(1)', sc: 'O(1)', note: 'Adds task to queue; Future returned immediately' },
     { problem: 'future.get()', tc: 'O(t)', sc: 'O(1)', note: 't = time for the Callable task to complete; blocks caller' },
     { problem: 'Multithreaded Merge Sort', tc: 'O(n log n)', sc: 'O(n log n)', note: 'Wall-clock = O(n) with enough threads (each level parallel); space = O(n log n) for sublists across levels' },
+    { problem: 'lock.lock() / lock.unlock()', tc: 'O(1)', sc: 'O(1)', note: 'Atomic CAS operation; threads not getting lock go to Entry Set (BLOCKED state)' },
+    { problem: 'synchronized block/method', tc: 'O(1)', sc: 'O(1)', note: 'Same as ReentrantLock internally; JVM uses monitorenter/monitorexit bytecode' },
+    { problem: 'Producer-Consumer (N producers, M consumers)', tc: 'O(1) per op', sc: 'O(capacity)', note: 'Each add/remove is O(1); store capacity bounds memory; throughput limited by lock contention' },
   ],
 
   quiz: [
@@ -815,6 +1062,72 @@ Map<String, Integer> map = new ConcurrentHashMap<>();  // most common in product
       ],
       answer: 2,
       explanation: 'new sorter() only runs the constructor — call() is NOT invoked. es.submit(s) puts the task in the pool queue. A free pool thread picks it up and executes call(). future.get() just waits for the result.',
+    },
+    {
+      q: 'Two threads both read x=5 and both add 1. What is the final value of x?',
+      options: [
+        '7 — both additions are applied',
+        '6 — one addition is lost due to race condition',
+        '5 — no change because threads cancelled each other',
+        'Depends on OS — could be 6 or 7',
+      ],
+      answer: 1,
+      explanation: 'Race condition: Thread-1 reads x=5, Thread-2 reads x=5 (stale), Thread-1 writes 6, Thread-2 writes 6. One increment is lost. Final x=6 not 7. This is a dirty read caused by non-atomic read-modify-write.',
+    },
+    {
+      q: 'What is the Entry Set in the context of locks?',
+      options: [
+        'A list of threads that have finished execution',
+        'The queue where BLOCKED threads wait when another thread holds the lock',
+        'A list of all methods marked as synchronized',
+        'The thread pool task queue',
+      ],
+      answer: 1,
+      explanation: 'When a thread tries to acquire a lock that is already held, it moves to the Entry Set (BLOCKED state). When the lock is released, one thread from the Entry Set is chosen to acquire it.',
+    },
+    {
+      q: 'What happens if you forget lock.unlock() and an exception occurs inside the critical section?',
+      options: [
+        'The JVM automatically releases the lock',
+        'The program terminates immediately',
+        'The lock is never released — all other threads wait forever (deadlock)',
+        'The exception is silently swallowed',
+      ],
+      answer: 2,
+      explanation: 'ReentrantLock does NOT auto-release on exception. If unlock() is skipped, the lock stays acquired forever — other threads in the Entry Set wait indefinitely = deadlock. Always use try-finally: lock.lock(); try { ... } finally { lock.unlock(); }',
+    },
+    {
+      q: 'synchronized method vs synchronized block — which locks on "this"?',
+      options: [
+        'synchronized block always locks on this',
+        'synchronized method locks on this; synchronized block locks on whatever object you specify',
+        'Both always lock on this',
+        'Neither — they use a separate hidden lock',
+      ],
+      answer: 1,
+      explanation: 'synchronized method → equivalent to synchronized(this) { entire method }. synchronized block → you choose the lock object: synchronized(v), synchronized(this), synchronized(MyClass.class), etc. Block gives more flexibility.',
+    },
+    {
+      q: 'Why must x be private when using synchronized methods to protect it?',
+      options: [
+        'Private fields run faster than public fields',
+        'synchronized only works on private fields',
+        'If x is public, callers can do v.x++ directly — bypassing the synchronized method and the lock',
+        'No reason — private vs public does not matter for synchronization',
+      ],
+      answer: 2,
+      explanation: 'synchronized methods protect access through those methods. But if x is public, any caller can write v.x = v.x + 1 directly — this is NOT synchronized. Making x private forces all access through the protected methods.',
+    },
+    {
+      q: 'You have 5 Publishers and 5 Consumers with newFixedThreadPool(5). Publishers have while(true) loops. What happens?',
+      options: [
+        'All 10 tasks run concurrently — no problem',
+        'Publishers fill all 5 threads forever — Consumers never get a thread (deadlock)',
+        'FixedThreadPool automatically creates more threads when needed',
+        'Consumers run first, then Publishers',
+      ],
+      answer: 1,
+      explanation: '5 Publishers with infinite loops fill all 5 threads permanently. Consumers are submitted to the task queue but no thread ever becomes free to pick them up — deadlock. Use CachedThreadPool for Producer-Consumer with infinite loops.',
     },
   ],
 }

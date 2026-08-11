@@ -912,6 +912,36 @@ for (int i = 0; i < 15; i++) es.execute(new Consumer(store));
       tag: 'key',
       detail: 'execute(Runnable) → uncaught exception handler prints to console. submit(Callable/Runnable) → exception stored silently in Future, only thrown when you call future.get(). If you never call get(), exception disappears.',
     },
+    {
+      rule: 'Lock only works when multiple threads share the SAME object instance',
+      tag: 'gotcha',
+      detail: 'If each thread creates its own instance, there is no shared state — locks do nothing. ReservationSystem must be a singleton so all threads hit the same availableSeats. Lock protects shared state; if state is not shared, there is nothing to protect.',
+    },
+    {
+      rule: 'synchronized can be applied to both instance methods and static methods',
+      tag: 'key',
+      detail: 'Instance synchronized → locks on this (the specific object). Static synchronized → locks on ClassName.class (one lock for ALL instances). Use static synchronized when shared data is a static variable.',
+    },
+    {
+      rule: 'Use static synchronized for app-wide shared counters — live viewers, total bookings, flash sale stock',
+      tag: 'key',
+      detail: 'Static data belongs to the class, not any one instance. Examples: total users online, total items sold in a flash sale, total trades executed today. If this were instance data, each object would have its own copy — no sharing, no protection needed.',
+    },
+    {
+      rule: 'Fine-grained locking (per resource) is faster than coarse-grained (one global lock)',
+      tag: 'key',
+      detail: 'Train booking: lock per seat type (1AC, 2AC) → 1AC and 2AC bookings run simultaneously. One global lock → all bookings serialized even for unrelated seat types. ConcurrentHashMap uses segment-level locking for the same reason.',
+    },
+    {
+      rule: 'Non-synchronized methods ignore all locks — they always run freely',
+      tag: 'gotcha',
+      detail: 'synchronized(obj) only blocks other threads trying to enter synchronized methods/blocks on the same obj. A non-synchronized method on the same object runs without any lock check — even if another thread holds the lock on that object.',
+    },
+    {
+      rule: 'Two threads on DIFFERENT objects never block each other — each object has its own lock',
+      tag: 'key',
+      detail: 'obj1.fun1() locks obj1. obj2.fun1() locks obj2. Different objects = different locks = no blocking. This is why singleton matters for locking — you need the SAME object to be shared.',
+    },
   ],
 
   complexity: [
@@ -1062,6 +1092,61 @@ for (int i = 0; i < 15; i++) es.execute(new Consumer(store));
       ],
       answer: 2,
       explanation: 'new sorter() only runs the constructor — call() is NOT invoked. es.submit(s) puts the task in the pool queue. A free pool thread picks it up and executes call(). future.get() just waits for the result.',
+    },
+    {
+      q: 'synchronized keyword can be applied to which of the following?',
+      options: [
+        'Instance methods only',
+        'Static methods only',
+        'Both instance methods and static methods',
+        'It cannot be used in multithreaded applications',
+      ],
+      answer: 2,
+      explanation: 'synchronized can be applied to instance methods (locks on this), static methods (locks on ClassName.class), and blocks (locks on any object you choose). It is the core tool for thread safety in Java.',
+    },
+    {
+      q: 'obj1.fun1() and obj2.fun1() are both synchronized. Can they run concurrently?',
+      options: [
+        'No — synchronized methods can never run concurrently',
+        'Yes — they lock on different objects (obj1 vs obj2) so they do not block each other',
+        'No — they share the same class-level lock',
+        'Yes — but only if they are static methods',
+      ],
+      answer: 1,
+      explanation: 'Instance synchronized methods lock on "this" — the specific object instance. obj1.fun1() locks obj1; obj2.fun1() locks obj2. Different objects = different locks = no blocking. Only threads on the SAME object block each other.',
+    },
+    {
+      q: 'A non-synchronized method fun3() exists on obj2. Can it run while another thread holds the lock on obj2?',
+      options: [
+        'No — if obj2 is locked, no method can run on it',
+        'Yes — non-synchronized methods never acquire a lock and always run freely',
+        'Only if fun3() is static',
+        'Only if the lock is a ReentrantLock, not synchronized',
+      ],
+      answer: 1,
+      explanation: 'synchronized lock is only enforced when entering a synchronized method/block. Non-synchronized methods completely ignore all locks — they run freely regardless of what other threads are doing. This is why private data matters — public fields bypass the lock entirely.',
+    },
+    {
+      q: 'You have a flash sale with 1000 items. When should you use static synchronized?',
+      options: [
+        'Never — use instance synchronized always',
+        'When the item count is per-user (instance variable)',
+        'When the item count is shared across the entire application (static variable)',
+        'static synchronized is not needed — regular synchronized is enough',
+      ],
+      answer: 2,
+      explanation: 'Flash sale stock is one number for the entire app — belongs to the class, not any instance. If it were an instance variable, each object would have its own 1000 — overselling guaranteed. static synchronized locks ClassName.class, protecting the single shared static counter.',
+    },
+    {
+      q: 'Two threads: Thread-1 books 1AC, Thread-2 books 2AC. With per-seat-type locks, what happens?',
+      options: [
+        'Thread-2 waits for Thread-1 to finish — one global lock',
+        'Both run simultaneously — 1AC and 2AC have separate locks',
+        'Both crash — cannot have multiple locks',
+        'Thread-1 always runs first — locks are sequential',
+      ],
+      answer: 1,
+      explanation: 'Per-seat-type locking: Thread-1 acquires the 1AC lock, Thread-2 acquires the 2AC lock — completely independent. They run simultaneously. Only two threads booking the SAME seat type block each other. This is fine-grained locking — better throughput than one global lock.',
     },
     {
       q: 'Two threads both read x=5 and both add 1. What is the final value of x?',

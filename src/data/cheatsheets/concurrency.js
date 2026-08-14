@@ -779,6 +779,113 @@ for (int i = 0; i < 15; i++) es.execute(new Consumer(store));
 // submit(Callable) → exception stored in Future, hidden until .get()
 // execute(Runnable) → exception printed to console immediately`,
     },
+    {
+      name: 'Pattern 18 — Semaphore (Counting Semaphore)',
+      icon: '🚦',
+      when: 'Control how many threads can enter a critical section simultaneously (N > 1)',
+      gaonKiBaat: 'Semaphore = restaurant manager with N tables. Jab customer aata hai (acquire), manager check karta hai — koi table hai? Agar hai → table deta hai (counter -1). Agar nahi → please wait. Jab customer jaata hai (release) → counter +1, agle customer ko signal. Counter hi sab kuch hai.',
+      problems: ['Interview: "What is a semaphore?"', 'Interview: "Semaphore vs Mutex?"', 'LeetCode 1226: Dining Philosophers'],
+      template: `import java.util.concurrent.Semaphore;
+
+// Semaphore = counter with two operations:
+// acquire() → counter - 1 (blocks if counter = 0)
+// release() → counter + 1 (wakes a waiting thread)
+
+Semaphore s = new Semaphore(4); // 4 threads allowed simultaneously
+
+// Thread entering critical section:
+s.acquire(); // counter: 4 → 3
+try {
+    // do work — up to 4 threads here at once
+} finally {
+    s.release(); // counter: 3 → 4
+}
+
+// Semaphore(1) = Mutex — exactly one thread at a time
+// Semaphore(0) = all threads block — used as a signal
+
+// Key rule: every acquire() must have exactly ONE release()
+// Double release → counter exceeds limit → IndexOutOfBoundsException
+// Missing release → counter stays 0 → threads block forever → deadlock`,
+    },
+    {
+      name: 'Pattern 19 — Producer-Consumer with Semaphore',
+      icon: '🔄',
+      when: 'Producers and consumers share a bounded buffer — solve without busy waiting',
+      gaonKiBaat: 'Do semaphore use karte hain. publisherSema = kitni jagah baaki hai store mein. consumerSema = kitne items available hain consume karne ke liye. Publisher pehle check karta hai jagah hai? (acquire publisherSema) → add karo → consumer ko signal karo (release consumerSema). Consumer pehle check karta hai item hai? (acquire consumerSema) → remove karo → publisher ko jagah signal karo (release publisherSema).',
+      problems: ['Interview: "Producer-Consumer problem"', 'Interview: "Semaphore vs synchronized for Producer-Consumer"', 'LeetCode 1188: Design Bounded Blocking Queue'],
+      template: `// publisherSema(maxSize): publisher can add up to maxSize items before blocking
+// consumerSema(0): consumer starts blocked — store is empty initially
+Semaphore publisherSema = new Semaphore(10);
+Semaphore consumerSema = new Semaphore(0);
+
+// Publisher
+public void run() {
+    while (true) {
+        publisherSema.acquire(); // wait if store is full
+        store.addItem(1);
+        consumerSema.release();  // signal consumer: item is ready
+    }
+}
+
+// Consumer
+public void run() {
+    while (true) {
+        consumerSema.acquire(); // wait if store is empty
+        store.removeItem();
+        publisherSema.release(); // signal publisher: slot is free
+    }
+}
+
+// Store — MUST protect ArrayList with lock (Semaphore controls count, not thread safety)
+private Lock lock = new ReentrantLock();
+
+public void addItem(int item) {
+    lock.lock();
+    try {
+        if (items.size() < maxStoreSize) { items.add(item); }
+    } finally { lock.unlock(); }
+}
+
+// ⚠️ ArrayList is NOT thread-safe — multiple producers hitting it simultaneously
+// causes race conditions even with Semaphore controlling flow
+// Fix: synchronize the Store methods (synchronized or ReentrantLock)`,
+    },
+    {
+      name: 'Pattern 20 — Mutex vs Semaphore (Ownership)',
+      icon: '🔑',
+      when: 'Choosing between mutual exclusion (Mutex) and signaling between threads (Semaphore)',
+      gaonKiBaat: 'Mutex = apni chabi. Jo lock kare wahi unlock kare. Agar Thread-A ne lock kiya, Thread-B unlock nahi kar sakti. Semaphore = shared signal. Koi bhi release() call kar sakta hai — ownership nahi hoti. Isliye Producer-Consumer mein semaphore use karte hain — publisher signal deta hai consumer ko, consumer signal deta hai publisher ko.',
+      problems: ['Interview: "Mutex vs Semaphore"', 'Interview: "What is ownership in locks?"', 'Interview: "When to use synchronized vs ReentrantLock?"'],
+      template: `// MUTEX — has ownership
+// Thread that acquired MUST be the one to release
+// ReentrantLock enforces this in Java
+Lock mutex = new ReentrantLock();
+mutex.lock();   // Thread-A acquires
+mutex.unlock(); // Thread-A MUST release — Thread-B cannot
+
+// BINARY SEMAPHORE — no ownership
+// Any thread can release(), regardless of who acquired
+Semaphore binarySema = new Semaphore(1); // behaves like mutex but NO ownership
+binarySema.acquire(); // Thread-A acquires
+binarySema.release(); // Thread-B can release — valid!
+
+// This is exactly Producer-Consumer:
+// Publisher acquires publisherSema, Consumer releases publisherSema
+// Different threads — only works with Semaphore, not Mutex
+
+// ── synchronized vs ReentrantLock ──
+// Use synchronized when:   simple mutual exclusion, less boilerplate
+// Use ReentrantLock when:  need fairness (true), tryLock(), timeout, multiple conditions
+
+Lock fairLock = new ReentrantLock(true);  // fair — threads get lock in order they waited
+lock.tryLock(5, TimeUnit.SECONDS);        // attempt with timeout — avoid indefinite blocking
+
+// Rule: lock.lock() BEFORE try block — not inside
+lock.lock();       // ← correct position
+try { ... }
+finally { lock.unlock(); }`,
+    },
   ],
 
   rules: [
@@ -941,6 +1048,36 @@ for (int i = 0; i < 15; i++) es.execute(new Consumer(store));
       rule: 'Two threads on DIFFERENT objects never block each other — each object has its own lock',
       tag: 'key',
       detail: 'obj1.fun1() locks obj1. obj2.fun1() locks obj2. Different objects = different locks = no blocking. This is why singleton matters for locking — you need the SAME object to be shared.',
+    },
+    {
+      rule: 'Semaphore is a counter — acquire() decrements, release() increments',
+      tag: 'key',
+      detail: 'new Semaphore(N) → N threads allowed simultaneously. acquire() blocks when counter = 0. release() wakes a waiting thread. Semaphore(1) = Mutex. Semaphore(0) = signal — all threads block until release() is called.',
+    },
+    {
+      rule: 'Double release() causes IndexOutOfBoundsException; missing release() causes deadlock',
+      tag: 'gotcha',
+      detail: 'Every acquire() must have exactly ONE corresponding release(). Double release → counter exceeds store limit → more threads enter than allowed → list overflow. Missing release → counter stays 0 → waiting thread blocks forever → deadlock.',
+    },
+    {
+      rule: 'Semaphore controls concurrency count — it does NOT make data structures thread-safe',
+      tag: 'gotcha',
+      detail: 'Semaphore controls HOW MANY threads enter. ArrayList is still not thread-safe — multiple producers can simultaneously call items.add() causing corruption. Always protect the data structure separately with synchronized or ReentrantLock.',
+    },
+    {
+      rule: 'Mutex has ownership — only the locker can unlock. Semaphore has no ownership — any thread can release.',
+      tag: 'key',
+      detail: 'ReentrantLock (Mutex): Thread-A locks → only Thread-A can unlock. Semaphore: Thread-A acquires → Thread-B can release. Producer-Consumer relies on this — Publisher signals Consumer by releasing consumerSema even though Publisher never acquired it.',
+    },
+    {
+      rule: 'Internal lock is correct when one class owns the data; external lock when multiple classes share a critical section',
+      tag: 'key',
+      detail: 'Store owns the ArrayList → internal ReentrantLock is correct. All Publisher/Consumer threads call Store methods on the SAME Store instance → they all compete on the same internal lock. External lock needed only when multiple classes must synchronize on a shared resource they all hold a reference to.',
+    },
+    {
+      rule: 'Use synchronized for simple cases; use ReentrantLock for fairness, tryLock, timeout, or multiple conditions',
+      tag: 'key',
+      detail: 'synchronized: less code, auto-unlocks on exception. ReentrantLock: new ReentrantLock(true) for fairness, tryLock() to avoid indefinite blocking, newCondition() for wait/notify equivalent. Start with synchronized — upgrade to ReentrantLock only when you need the extra features.',
     },
   ],
 
@@ -1213,6 +1350,61 @@ for (int i = 0; i < 15; i++) es.execute(new Consumer(store));
       ],
       answer: 1,
       explanation: '5 Publishers with infinite loops fill all 5 threads permanently. Consumers are submitted to the task queue but no thread ever becomes free to pick them up — deadlock. Use CachedThreadPool for Producer-Consumer with infinite loops.',
+    },
+    {
+      q: 'new Semaphore(0) — what happens when a thread calls acquire()?',
+      options: [
+        'Thread runs immediately — 0 means unlimited',
+        'Thread blocks immediately — counter is 0, nothing to acquire',
+        'Thread throws InterruptedException',
+        'Thread acquires and counter goes to -1',
+      ],
+      answer: 1,
+      explanation: 'Semaphore(0) means counter = 0. acquire() blocks when counter = 0 — thread waits until another thread calls release(). This is used in Producer-Consumer for consumerSema — Consumer starts blocked until Publisher adds an item and calls consumerSema.release().',
+    },
+    {
+      q: 'Publisher calls consumerSema.release() twice after adding one item. What happens?',
+      options: [
+        'Nothing — release() is always safe to call multiple times',
+        'Consumer runs twice for one item — can cause IndexOutOfBoundsException on remove',
+        'Deadlock — semaphore counter overflows',
+        'Second release() is ignored automatically',
+      ],
+      answer: 1,
+      explanation: 'Double release() increments consumerSema counter by 2. Consumer can now acquire twice — trying to remove 2 items when only 1 was added. Second remove on empty list → IndexOutOfBoundsException. Rule: every acquire() must have exactly ONE corresponding release().',
+    },
+    {
+      q: 'You use Semaphore(5) with 5 Publisher threads. The Store uses ArrayList without synchronization. What can go wrong?',
+      options: [
+        'Nothing — Semaphore guarantees thread safety',
+        'All 5 publishers can call items.add() simultaneously — ArrayList corruption or wrong size',
+        'Semaphore automatically synchronizes ArrayList operations',
+        'Only 1 publisher runs at a time — no issue',
+      ],
+      answer: 1,
+      explanation: 'Semaphore controls HOW MANY threads enter — it does NOT protect the ArrayList. All 5 publishers can simultaneously call items.add() on a non-thread-safe ArrayList → ConcurrentModificationException or corrupted state. Fix: use synchronized or ReentrantLock on Store methods separately.',
+    },
+    {
+      q: 'Which statement about Mutex vs Semaphore ownership is correct?',
+      options: [
+        'Both Mutex and Semaphore require the same thread to acquire and release',
+        'Mutex has ownership — only the locker can unlock. Semaphore has no ownership — any thread can release.',
+        'Semaphore has ownership; Mutex does not',
+        'Ownership only matters for static synchronized methods',
+      ],
+      answer: 1,
+      explanation: 'Mutex (ReentrantLock): Thread-A locks → only Thread-A can unlock. Semaphore: Thread-A acquires → Thread-B can release — perfectly valid. Producer-Consumer relies on this: Publisher releases consumerSema to signal Consumer, even though Publisher never acquired consumerSema.',
+    },
+    {
+      q: 'When should you use ReentrantLock instead of synchronized?',
+      options: [
+        'Always — ReentrantLock is strictly better',
+        'Never — synchronized is always sufficient',
+        'When you need fairness, tryLock(), timeout, or multiple conditions',
+        'Only when working with static methods',
+      ],
+      answer: 2,
+      explanation: 'synchronized is simpler and auto-unlocks on exception — prefer it for basic mutual exclusion. Switch to ReentrantLock when you need: new ReentrantLock(true) for fairness (threads get lock in order they waited), tryLock() to avoid blocking, tryLock(timeout) for bounded wait, or newCondition() for multiple wait sets.',
     },
   ],
 }

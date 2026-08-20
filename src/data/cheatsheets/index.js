@@ -3,6 +3,7 @@ import { dpCheatsheet } from './dp'
 import { oopCheatsheet } from './oop'
 import { concurrencyCheatsheet } from './concurrency'
 import { systemDesignCheatsheet } from './systemdesign'
+import { genericsCheatsheet } from './generics'
 
 export const cheatsheets = {
   backtracking: backtrackingCheatsheet,
@@ -10,4 +11,5 @@ export const cheatsheets = {
   oop: oopCheatsheet,
   concurrency: concurrencyCheatsheet,
   systemdesign: systemDesignCheatsheet,
+  generics: genericsCheatsheet,
 }

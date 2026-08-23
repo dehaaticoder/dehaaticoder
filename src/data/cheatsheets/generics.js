@@ -422,5 +422,56 @@ ArrayDeque<Integer> dq = new ArrayDeque<>();       // double-ended queue
 // Key-value, fast lookup      → HashMap
 // Key-value + sorted keys     → TreeMap`,
     },
+    {
+      name: 'Pattern 9 — MCQ Practice (Interview & Assignment Style)',
+      icon: '🧠',
+      when: 'Test your understanding — these exact patterns appear in Scaler assignments and interviews',
+      gaonKiBaat: 'Yeh woh sawaal hain jo interview mein seedha pooche jaate hain. Har ek ka answer yaad karo aur reason samjho — ratta nahi, logic chahiye.',
+      problems: ['Interview: "Which is thread-safe?"', 'Interview: "Underlying data structure of TreeSet?"', 'Interview: "Does Map extend Collection?"'],
+      template: `// Q: Which does NOT implement List interface?
+// Options: Vector, Stack, ArrayList, PriorityQueue
+// Answer: PriorityQueue — implements Queue, not List
+// Rule: Vector → List ✅  Stack extends Vector → List ✅  PriorityQueue → Queue ❌
+
+// Q: Which is thread-safe?
+// Options: ArrayList, HashMap, Hashtable, LinkedList
+// Answer: Hashtable
+// Rule: Old Java (pre-1.2) → thread-safe: Vector, Hashtable, Stack
+//        New Java → NOT thread-safe: ArrayList, HashMap, LinkedList
+
+// Q: Which requires elements to implement Comparable?
+// Options: HashSet, ArrayDeque, TreeSet, Stack
+// Answer: TreeSet — maintains sorted order, needs compareTo()
+// Rule: Anything with "Tree" needs Comparable (TreeSet, TreeMap)
+//        HashSet needs equals() + hashCode() — NOT Comparable
+
+// Q: Underlying data structure of HashSet and TreeSet?
+// HashSet  → backed by HashMap   → Hashtable
+// TreeSet  → backed by TreeMap   → Red-Black Tree (self-balancing BST)
+// Rule: Hash* → hashtable   Tree* → Red-Black Tree
+
+// Q: Vector vs ArrayList vs LinkedList — true/false?
+// "Vector and ArrayList are dynamic arrays but Vector is thread-safe" → TRUE
+// "ArrayList memory is contiguous, LinkedList is not"                 → TRUE
+// ArrayList → array (contiguous), LinkedList → DLL nodes (scattered)
+
+// Q: Does Map extend Collection?
+// Answer: NO — Map is a completely separate hierarchy
+// Map has its own: HashMap, TreeMap, LinkedHashMap, Hashtable
+
+// Q: What goes in <> for: public static <___> int compare(T a, T b) { return a.compareTo(b); }
+// Answer: T extends Comparable
+// Why: compareTo() belongs to Comparable — T must extend it to call the method
+// Note: Use 'extends' even for interfaces in generics — 'implements' is COMPILE ERROR
+
+// Q: HashMap vs Hashtable — key differences?
+// HashMap   → NOT thread-safe, allows 1 null key, faster
+// Hashtable → thread-safe (synchronized), NO null keys, slower (legacy)
+// Prefer ConcurrentHashMap over Hashtable for thread-safe modern code
+
+// Q: ascending vs descending in compareTo — quick trick:
+// "lower first" (ascending)  → this.field - o.field   or Integer.compare(this.x, o.x)
+// "higher first" (descending) → o.field - this.field   or Integer.compare(o.x, this.x)`,
+    },
   ],
 };

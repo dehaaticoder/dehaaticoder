@@ -199,6 +199,127 @@ Pair<Integer, Double> p; // ✅ use wrapper classes
 // T extends Comparable → Comparable`,
     },
     {
+      name: 'Pattern 8a — Comparable<T> and When It Triggers',
+      icon: '⚖️',
+      when: 'Sort custom objects — and understand when compareTo is actually called',
+      gaonKiBaat: 'Comparable ek tarah ka sorting contract hai. Tum Java ko bata rahe ho "yaar, do objects mein se kaun pehle aayega". But yeh contract tab hi kaam karta hai jab koi use kare — PriorityQueue har add() pe use karta hai, List sirf tab jab explicitly sort karo.',
+      problems: ['Interview: "How does PriorityQueue know how to sort custom objects?"', 'Interview: "When is compareTo called?"', 'Interview: "Comparable vs Comparator?"'],
+      template: `// Implement Comparable in custom class
+public class Order implements Comparable<Order> {
+    String orderId;
+    boolean isExpress;
+
+    @Override
+    public int compareTo(Order o) {
+        // express (true) should come first — return -1 means "I am smaller"
+        if (this.isExpress && !o.isExpress) return -1;
+        if (!this.isExpress && o.isExpress) return 1;
+        return 0;
+    }
+}
+
+// PriorityQueue — calls compareTo on EVERY add()
+PriorityQueue<Order> pq = new PriorityQueue<>();
+pq.add(order1); // first element — no comparison needed
+pq.add(order2); // compareTo called immediately to place correctly
+pq.poll();      // returns highest priority (smallest by compareTo)
+
+// List — compareTo called only when you explicitly sort
+List<Order> list = new ArrayList<>();
+list.add(order1); // no compareTo called — just appended
+list.add(order2); // no compareTo called — just appended
+Collections.sort(list); // NOW compareTo is triggered
+
+// Without Comparable in PriorityQueue → ClassCastException at runtime on 2nd add()
+// Without Comparable in List → ClassCastException only when Collections.sort() called
+
+// String comparison in compareTo:
+// this.name.compareTo(o.name)          → alphabetical (case-sensitive)
+// this.name.compareToIgnoreCase(o.name) → alphabetical (case-insensitive)
+// Double.compare(this.price, o.price)  → ascending by price
+// Double.compare(o.price, this.price)  → descending by price (swap args)
+
+// Multi-field sort — primary + secondary:
+public int compareTo(Item o) {
+    if (Double.compare(this.price, o.price) == 0)
+        return Double.compare(this.quantity, o.quantity); // secondary
+    return Double.compare(this.price, o.price);           // primary
+}`,
+    },
+    {
+      name: 'Pattern 8b — LinkedList as Bounded Recently Viewed Queue',
+      icon: '📋',
+      when: 'Maintain a fixed-size list of recently viewed items — remove oldest when limit exceeded',
+      gaonKiBaat: 'LinkedList mein add() aur removeFirst() dono O(1) hain — isliye yeh recently viewed ke liye perfect hai. Har baar ek nayi cheez aati hai, add karo — agar size 10 se zyada ho gayi, sabse purani nikal do. Simple aur fast.',
+      problems: ['Interview: "How would you implement a recently viewed list?"', 'Interview: "Why LinkedList over ArrayList here?"'],
+      template: `public class RecentlyViewedItems {
+    private LinkedList<Item> rvi = new LinkedList<>();
+    private static final int MAX_SIZE = 10;
+
+    public void addRecentlyViewedItem(Item item) {
+        rvi.add(item);           // add to end — O(1)
+        if (rvi.size() > MAX_SIZE) {
+            rvi.removeFirst();   // remove oldest — O(1)
+        }
+        // No while loop needed — add one at a time, size exceeds by 1 max
+    }
+
+    public LinkedList<Item> getRvi() { return rvi; }
+}
+
+// Why LinkedList over ArrayList?
+// removeFirst() on LinkedList → O(1) — just update head pointer
+// remove(0) on ArrayList    → O(n) — shifts all elements left
+
+// Test: add 12 items → list holds items 3-12 (oldest 1,2 removed)`,
+    },
+    {
+      name: 'Pattern 8c — toString, equals, hashCode — When and Why',
+      icon: '🔍',
+      when: 'Use custom objects in HashSet/HashMap, or print them meaningfully',
+      gaonKiBaat: 'Teen alag kaam, teen alag methods. toString() sirf dikhane ke liye hai — println mein. equals() bolta hai "yeh dono same hain kya?" — contains(), remove() mein use hota hai. hashCode() bolta hai "kis bucket mein dhundho?" — HashSet/HashMap mein pehle yeh chalta hai, phir equals(). Teeno mein se ek bhi miss karo toh gadbad pakki.',
+      problems: ['Interview: "Why override equals and hashCode together?"', 'Interview: "What happens if only equals is overridden?"', 'Interview: "How does HashSet detect duplicates?"'],
+      template: `// toString() — called by System.out.println(item)
+// Without override → Item@1a2b3c (memory address, useless)
+// With override → Item{id='1', name='Book1', price=125.0}
+@Override
+public String toString() {
+    return "Item{id='" + id + "', name='" + name + "', price=" + price + "}";
+}
+
+// equals() — called by contains(), remove(), equals()
+// Without override → compares memory address (two objects with same data = NOT equal)
+// With override → you define equality (same id = same item)
+@Override
+public boolean equals(Object obj) {
+    if (this == obj) return true;           // same object in memory? definitely equal
+    if (!(obj instanceof Item)) return false; // not an Item? can't be equal
+    Item item = (Item) obj;
+    return this.id.equals(item.id);         // equal if same id
+}
+
+// hashCode() — called FIRST by HashSet/HashMap to find the bucket
+// Rule: if equals() returns true, hashCode() MUST return same value
+// Without override → uses memory address → different objects = different buckets
+//                  → contains()/remove() fail even if data is same
+@Override
+public int hashCode() {
+    return this.id.hashCode(); // String.hashCode() handles the number generation
+}
+
+// HashSet duplicate detection — two steps:
+// Step 1: hashCode() → find bucket (e.g. "3".hashCode() = 51 for both i3 and i4)
+// Step 2: equals()   → confirm match (i3.id.equals(i4.id) → true → duplicate!)
+// Result: i4 NOT added
+
+// For primitive wrappers (Integer, String, Double) — already implemented by Java
+// Only custom classes need manual override
+
+// Always override BOTH equals() and hashCode() — never one without the other
+// hashCode() alone → finds bucket but equals() uses memory address → duplicates added
+// equals() alone   → hashCode() returns different values → wrong bucket → item not found`,
+    },
+    {
       name: 'Pattern 8 — Key Collections',
       icon: '📦',
       when: 'Choose the right collection for the problem',

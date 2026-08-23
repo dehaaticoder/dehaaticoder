@@ -246,6 +246,11 @@ Map (●)
 // LinkedList    → implements both List AND Deque
 // Map           → separate hierarchy, no relation to Collection
 
+// Thread-safety rule:
+// Old Java (pre-1.2) → thread-safe by default: Vector, Hashtable, Stack
+// New Java (Collections framework) → NOT thread-safe: ArrayList, HashMap, LinkedList
+// For thread-safe alternatives: use ConcurrentHashMap, CopyOnWriteArrayList
+
 // Key behaviours:
 // ArrayList   → backed by array,  O(1) get,    O(n) insert/delete
 // LinkedList  → backed by DLL,    O(n) get,    O(1) insert/delete at ends

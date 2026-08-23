@@ -305,6 +305,11 @@ Collections.sort(list); // NOW compareTo is triggered
 // T extends Comparable<T>  ✅ (Comparable is interface but 'extends' used in generics)
 // T implements Comparable  ❌ COMPILE ERROR
 
+// TRICK — how to decide ascending vs descending in compareTo:
+// "lower first" = ascending  → this.field - o.field  (or Integer.compare(this.field, o.field))
+// "higher first" = descending → o.field - this.field  (or Integer.compare(o.field, this.field))
+// Only two possibilities — ascending or descending. Nothing else.
+
 // Multi-field sort — primary + secondary:
 public int compareTo(Item o) {
     if (Double.compare(this.price, o.price) == 0)

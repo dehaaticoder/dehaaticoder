@@ -101,7 +101,12 @@ System.out.println(p.sum()); // 30
 // Bounded on class level (Inventory example):
 public class Inventory<T extends Item> {
     // can call item.getId() — guaranteed T is at least Item
-}`,
+}
+
+// IMPORTANT: In generics bounds, ALWAYS use 'extends' — even for interfaces
+// T extends Comparable  ✅ — even though Comparable is an interface
+// T implements Comparable ❌ — COMPILE ERROR — 'implements' not valid in generics
+// 'extends' in generics means "is a subtype of" — covers both class and interface`,
     },
     {
       name: 'Pattern 5 — Generics Invariance (List<Dog> ≠ List<Animal>)',
@@ -199,6 +204,58 @@ Pair<Integer, Double> p; // ✅ use wrapper classes
 // T extends Comparable → Comparable`,
     },
     {
+      name: 'Pattern 8 (Diagram) — Java Collections Hierarchy',
+      icon: '🗺️',
+      when: 'Quick visual reference — which class implements which interface',
+      gaonKiBaat: 'Collection framework ek family hai — Iterable dada hai, Collection baap hai, aur List/Set/Queue teen bade bete hain. Map poora alag khandan hai — Collection se koi rishta nahi. PriorityQueue Queue ke ghar ka hai, List ke nahi — yahi interview mein faasata hai.',
+      problems: ['Interview: "Which classes implement List?"', 'Interview: "Is PriorityQueue a List?"', 'Interview: "Does Map extend Collection?"'],
+      template: `// Java Collections Framework Hierarchy
+// ● = Interface   ○ = Concrete Class
+
+Iterable (●)
+└── Collection (●)
+    ├── List (●)
+    │   ├── ArrayList (○)
+    │   ├── LinkedList (○)  ← also implements Deque
+    │   └── Vector (○)
+    │       └── Stack (○)
+    │
+    ├── Set (●)
+    │   ├── HashSet (○)
+    │   │   └── LinkedHashSet (○)
+    │   └── SortedSet (●)
+    │       └── TreeSet (○)
+    │
+    └── Queue (●)
+        ├── PriorityQueue (○)  ← NOT a List!
+        └── Deque (●)
+            ├── ArrayDeque (○)
+            └── LinkedList (○)  ← implements both List and Deque
+
+// Map — COMPLETELY SEPARATE hierarchy (does NOT extend Collection)
+Map (●)
+├── HashMap (○)
+│   └── LinkedHashMap (○)
+├── SortedMap (●)
+│   └── TreeMap (○)
+└── Hashtable (○)
+
+// Interview traps:
+// PriorityQueue → Queue, NOT List
+// Stack         → extends Vector → indirectly implements List
+// LinkedList    → implements both List AND Deque
+// Map           → separate hierarchy, no relation to Collection
+
+// Key behaviours:
+// ArrayList   → backed by array,  O(1) get,    O(n) insert/delete
+// LinkedList  → backed by DLL,    O(n) get,    O(1) insert/delete at ends
+// HashSet     → no order,         O(1) add/contains — needs equals()+hashCode()
+// TreeSet     → sorted order,     O(log n)     — needs Comparable or Comparator
+// HashMap     → no order,         O(1) get/put
+// TreeMap     → sorted by key,    O(log n)
+// PriorityQueue → min-heap,       O(log n) add — needs Comparable or Comparator`,
+    },
+    {
       name: 'Pattern 8a — Comparable<T> and When It Triggers',
       icon: '⚖️',
       when: 'Sort custom objects — and understand when compareTo is actually called',
@@ -238,6 +295,10 @@ Collections.sort(list); // NOW compareTo is triggered
 // this.name.compareToIgnoreCase(o.name) → alphabetical (case-insensitive)
 // Double.compare(this.price, o.price)  → ascending by price
 // Double.compare(o.price, this.price)  → descending by price (swap args)
+
+// IMPORTANT: In generics, use 'extends' even for interfaces — 'implements' is not valid
+// T extends Comparable<T>  ✅ (Comparable is interface but 'extends' used in generics)
+// T implements Comparable  ❌ COMPILE ERROR
 
 // Multi-field sort — primary + secondary:
 public int compareTo(Item o) {

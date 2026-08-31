@@ -60,6 +60,12 @@ export default function Navbar() {
             Formulas
           </Link>
           <Link
+            to="/dehaaticoder/resources"
+            className={`transition ${pathname.startsWith('/dehaaticoder/resources') ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
+          >
+            Resources
+          </Link>
+          <Link
             to="/dehaaticoder/"
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition"
           >

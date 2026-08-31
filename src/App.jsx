@@ -7,6 +7,7 @@ import Cheatsheet from './pages/Cheatsheet'
 import Interviews from './pages/Interviews'
 import Practice from './pages/Practice'
 import Formulas from './pages/Formulas'
+import Resources from './pages/Resources'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/dehaaticoder/interviews" element={<Interviews />} />
         <Route path="/dehaaticoder/practice" element={<Practice />} />
         <Route path="/dehaaticoder/formulas" element={<Formulas />} />
+        <Route path="/dehaaticoder/resources" element={<Resources />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

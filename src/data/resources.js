@@ -11,7 +11,7 @@ export const resources = [
       },
       {
         title: 'Scaler Instructor GitHub',
-        desc: 'All class discussion code from Kunal Jindal — Singleton, Builder, and more LLD patterns.',
+        desc: 'All class discussion code from the instructor — Singleton, Builder, and more LLD patterns.',
         url: 'https://github.com/kunaljindal-goku/LLD-Backend-July-26',
         tag: 'GitHub',
       },

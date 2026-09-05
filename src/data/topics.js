@@ -5,7 +5,7 @@ export const topics = [
     icon: '📦',
     difficulty: 'Beginner',
     estimatedTime: '3–4 hrs',
-    problemCount: 5,
+    problemCount: 15,
     description: 'The foundation of everything. Master arrays and you understand memory.',
     gaonKiBaat: 'Think of an array like a row of lockers. Each locker has a number, and you can go directly to any locker if you know its number.',
     tags: ['basics', 'two-pointer', 'sliding-window'],

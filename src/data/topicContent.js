@@ -280,6 +280,7 @@ void reverse(int[] A, int s, int e) {
 }`,
       },
     ],
+    animations: [],
     commonMistakes: [
       'Missing end-- in the reverse helper — only incrementing start++ means end never moves, giving garbage output. Both pointers must move every iteration.',
       'Array size n instead of n*(n+1)/2 when storing all subarrays — n*(n+1)/2 is the total count of subarrays, not n.',

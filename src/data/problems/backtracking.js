@@ -1115,20 +1115,25 @@ List<String> generateParenthesis(int n) {
         cons: [],
       },
     ],
-    dryRun: `n = 2 (for simplicity)
+    dryRun: `n = 2 (for simplicity) — every node has TWO branches: add '(' and add ')'
 
-Generate(open=0, close=0, subAns=[])
-  add '(' → Generate(open=1, close=0, subAns=['('])
-    add '(' → Generate(open=2, close=0, subAns=['(','('])
-      add '(' → open=3 > n=2 → prune ✗
-      add ')' → Generate(open=2, close=1, subAns=['(','(',')'])
-        add '(' → open=3 > n=2 → prune ✗
-        add ')' → Generate(open=2, close=2) → length=4=2*2 → add "(())" ✅
-    add ')' → Generate(open=1, close=1, subAns=['(', ')'])
-      add '(' → Generate(open=2, close=1, subAns=['(',')',('('])
-        add ')' → Generate(open=2, close=2) → add "()()" ✅
+Generate(open=0, close=0, "")
+├── add '(' → Generate(open=1, close=0, "(")
+│   ├── add '(' → Generate(open=2, close=0, "((")
+│   │   ├── add '(' → open=3 > n=2 → PRUNE ✗
+│   │   └── add ')' → Generate(open=2, close=1, "(()")
+│   │       ├── add '(' → open=3 > n=2 → PRUNE ✗
+│   │       └── add ')' → Generate(open=2, close=2, "(())") → length=4 → ADD "(())" ✅
+│   └── add ')' → Generate(open=1, close=1, "()")
+│       ├── add '(' → Generate(open=2, close=1, "()(")
+│       │   ├── add '(' → open=3 > n=2 → PRUNE ✗
+│       │   └── add ')' → Generate(open=2, close=2, "()()") → length=4 → ADD "()()" ✅
+│       └── add ')' → close=2 > open=1 → PRUNE ✗
+└── add ')' → close=1 > open=0 → PRUNE ✗
 
-Output: ["(())", "()()"]`,
+Output: ["(())", "()()"]
+
+KEY: Every node always tries BOTH '(' and ')'. Pruning kills invalid paths early.`,
     mistakes: [
       { text: 'Checking openCnt > A instead of openCnt >= A — off by one, misses valid strings.', quote: 'Ek zyada bracket de diya — off by one ki galti badi mahengi padti hai.' },
       { text: 'Forgetting to unpick (remove last element) when using ArrayList — future calls see wrong state.', quote: 'ArrayList bhoolti nahi — remove nahi kiya toh next call mein bhi rahega.' },
@@ -1136,6 +1141,9 @@ Output: ["(())", "()()"]`,
       { text: 'Adding ")" before "(" in every branch — order does not affect correctness but "(" first is more natural.', quote: 'Ghar banaate waqt darwaza pehle nahi lagate — pehle deewarein, phir darwaza.' },
       { text: 'Writing base case as leftB + rightB == n instead of 2*n — stops at half-built strings, collects invalid results.', quote: 'Aadha kaam karke ghar chale gaye — puri deewar banao, phir darwaza lagao.' },
       { text: 'Using early return (if leftB >= n return) to block only "(", but it also blocks ")" — use conditional branching (if open < n add "(", if close < open add ")") instead of early return when two choices share the same guard check.', quote: 'Ek taraf ka darwaza band kiya toh dono taraf se hawa ruk jaati hai — alag alag rokna padta hai.' },
+      { text: 'Using sb.remove() on StringBuilder — no such method exists. Use sb.deleteCharAt(sb.length() - 1) to remove the last character during backtracking.', quote: 'Hathodi se keel nahi nikalte — sahi auzaar chahiye. StringBuilder mein remove() nahi hota, deleteCharAt() use karo.' },
+      { text: 'Forgetting rightB-- after the second recursive call when manually incrementing — without it, rightB stays incremented and corrupts the next branch.', quote: 'Jo liya woh waapas karo — increment ke baad decrement nahi kiya toh hisaab bigad jaata hai.' },
+      { text: 'Confusing primitive vs reference type in recursion — primitives (int, boolean) are passed by value so changes inside recursive calls do NOT affect the caller. But if you modify the same variable in the SAME method before calling, you must restore it manually (leftB--, rightB--). Reference types (StringBuilder, ArrayList) ARE shared — changes inside recursive calls affect the caller, so you must explicitly undo (deleteCharAt, remove).', quote: 'Apna ghada apne saath lete ho (primitive) — doosre ka ghada share hota hai (reference). Share wale mein jo daala woh sab ko dikhta hai.' },
     ],
     relatedProblems: ['permutations', 'letter-combinations', 'subsets'],
     revisionLevel: 1,

@@ -8,21 +8,27 @@ import { buildSVG, n } from './treeUtils'
 const tree = n('o=0, c=0', 'str="" (n=2)', 'normal', '', '', [
   n('"("', 'o=1, c=0', 'normal', "add '('", 'pick', [
     n('"(("', 'o=2, c=0', 'normal', "add '('", 'pick', [
+      n('PRUNE ✗', 'o=3 > n=2', 'pruned', "add '('", 'pick', []),
       n('"(()"', 'o=2, c=1', 'normal', "add ')'", 'blue', [
+        n('PRUNE ✗', 'o=3 > n=2', 'pruned', "add '('", 'pick', []),
         n('"(())" ✅', 'LEAF — done!', 'leaf', "add ')'", 'blue', []),
       ]),
     ]),
     n('"()"', 'o=1, c=1', 'normal', "add ')'", 'blue', [
       n('"()("', 'o=2, c=1', 'normal', "add '('", 'pick', [
+        n('PRUNE ✗', 'o=3 > n=2', 'pruned', "add '('", 'pick', []),
         n('"()()" ✅', 'LEAF — done!', 'leaf', "add ')'", 'blue', []),
       ]),
+      n('PRUNE ✗', 'c=2 > o=1', 'pruned', "add ')'", 'blue', []),
     ]),
   ]),
+  n('PRUNE ✗', 'c=1 > o=0', 'pruned', "add ')'", 'blue', []),
 ])
 
 const LEGEND = [
   { bg: 'bg-green-100',  border: 'border-green-400',  label: 'Valid combination ✅' },
   { bg: 'bg-stone-100',  border: 'border-stone-300',  label: 'Exploring' },
+  { bg: 'bg-red-100',    border: 'border-red-400',    label: 'Pruned ✗' },
 ]
 
 export default function GenerateParenthesesVisualizer({ fullscreen = false }) {

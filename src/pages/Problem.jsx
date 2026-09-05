@@ -6,9 +6,10 @@ import Footer from '../components/Footer'
 import visualizers from '../components/visualizers/index'
 
 const difficultyColors = {
-  Easy:   'bg-green-100 text-green-700',
-  Medium: 'bg-amber-100 text-amber-700',
-  Hard:   'bg-red-100 text-red-700',
+  VeryEasy: 'bg-blue-100 text-blue-700',
+  Easy:     'bg-green-100 text-green-700',
+  Medium:   'bg-amber-100 text-amber-700',
+  Hard:     'bg-red-100 text-red-700',
 }
 
 export default function Problem() {

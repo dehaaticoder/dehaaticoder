@@ -886,6 +886,57 @@ lock.lock();       // ← correct position
 try { ... }
 finally { lock.unlock(); }`,
     },
+    {
+      name: 'Pattern 21 — ZeroOddEven (3 threads, coordinated output)',
+      icon: '0️⃣',
+      when: 'Print 0 1 0 2 0 3 ... 0 N using 3 threads: zeroThread, oddThread, evenThread',
+      gaonKiBaat: 'Teen dost hain — Zero, Odd, Even. Zero pehle jaata hai, ek baar 0 likhta hai, phir decide karta hai — agli baari odd ki hai ya even ki? Signal deta hai unhe. Jiska signal aaya woh aata hai, apna number likhta hai, aur Zero ko wapas jaane deta hai.',
+      problems: [
+        'ARRISE R2 confirmed: Print 0,1,0,2,0,3... using 3 threads',
+        'LeetCode 1116: Print Zero Even Odd',
+        'Interview: "How do you coordinate 3 threads for ordered output?"',
+      ],
+      template: `// 3 semaphores — one per thread
+// zeroSema(1) = zero thread starts first (open)
+// oddSema(0)  = odd thread blocked until zero signals it
+// evenSema(0) = even thread blocked until zero signals it
+
+Semaphore zeroSema = new Semaphore(1);
+Semaphore oddSema  = new Semaphore(0);
+Semaphore evenSema = new Semaphore(0);
+
+// Thread 1 — printZero
+for (int i = 1; i <= n; i++) {
+    zeroSema.acquire();       // wait for my turn
+    System.out.print("0 ");
+    if (i % 2 == 1) oddSema.release();   // next number is odd → signal odd thread
+    else            evenSema.release();  // next number is even → signal even thread
+}
+
+// Thread 2 — printOdd
+for (int i = 1; i <= n; i += 2) {
+    oddSema.acquire();        // wait for zero to signal me
+    System.out.print(i + " ");
+    zeroSema.release();       // signal zero to print next 0
+}
+
+// Thread 3 — printEven
+for (int i = 2; i <= n; i += 2) {
+    evenSema.acquire();       // wait for zero to signal me
+    System.out.print(i + " ");
+    zeroSema.release();       // signal zero to print next 0
+}
+
+// Client — 3 tasks submitted to a 3-thread pool
+ExecutorService es = Executors.newFixedThreadPool(3);
+ZeroOddEven zoe = new ZeroOddEven(6);
+es.submit(() -> zoe.printZero());
+es.submit(() -> zoe.printOdd());
+es.submit(() -> zoe.printEven());
+es.shutdown();
+
+// Output: 0 1 0 2 0 3 0 4 0 5 0 6`,
+    },
   ],
 
   rules: [
@@ -1460,6 +1511,869 @@ finally { lock.unlock(); }`,
       ],
       answer: 1,
       explanation: 'Semaphore has NO ownership — any thread can call release() regardless of who called acquire(). ReentrantLock (Mutex) has ownership — only the thread that called lock() can call unlock(). This is why Producer-Consumer uses Semaphore: Publisher releases consumerSema even though it never acquired it.',
+    },
+    {
+      q: 'ZeroOddEven problem: 3 semaphores — zeroSema(1), oddSema(0), evenSema(0). Why is zeroSema initialized to 1?',
+      options: [
+        'Because zero thread prints the number 1 first',
+        'Because zero thread must go first — initializing to 1 means it starts open (no waiting)',
+        'Because there is only 1 zero in the sequence',
+        'To allow 1 odd thread and 1 even thread to run simultaneously',
+      ],
+      answer: 1,
+      explanation: 'Semaphore(1) = open — acquire() succeeds immediately without blocking. Semaphore(0) = blocked — acquire() waits until someone calls release(). Zero thread must print first, so zeroSema=1. Odd and even threads must wait for zero to signal them, so oddSema=0 and evenSema=0. Rule: whoever goes first gets 1, everyone else gets 0.',
+    },
+    {
+      q: 'In ZeroOddEven, printZero() releases oddSema or evenSema based on i%2. What does printOdd() do after printing?',
+      options: [
+        'Releases oddSema to allow the next odd number',
+        'Releases evenSema to allow the next even number',
+        'Releases zeroSema to allow zero thread to print the next 0',
+        'Acquires zeroSema to block zero thread',
+      ],
+      answer: 2,
+      explanation: 'After printing an odd number, printOdd() calls zeroSema.release() — this signals the zero thread to go again and print the next 0. The flow is: zero prints 0 → signals odd/even → odd/even prints → signals zero → repeat. Every thread returns control back to zero.',
+    },
+    {
+      q: 'ZeroOddEven: printZero() calls oddSema.acquire() inside its loop. What happens?',
+      options: [
+        'Works correctly — zero thread handles everything',
+        'Deadlock — zero thread acquires zeroSema AND tries to acquire oddSema which starts at 0, blocking itself forever',
+        'Works but output order is wrong',
+        'oddSema starts at 0 so it just skips the acquire',
+      ],
+      answer: 1,
+      explanation: 'Classic deadlock bug. printZero() acquires zeroSema (fine), then calls oddSema.acquire() — but oddSema=0 and nobody releases it (the oddThread is separate and waiting). Zero thread blocks itself forever. Rule: printZero() should only RELEASE oddSema/evenSema, never acquire them. The acquire belongs in printOdd()/printEven().',
+    },
+    {
+      q: 'How many semaphores are needed for ZeroOddEven (3 threads: zero, odd, even)?',
+      options: [
+        '1 semaphore — shared across all 3 threads',
+        '2 semaphores — one for zero, one shared for odd/even',
+        '3 semaphores — one per thread (zeroSema, oddSema, evenSema)',
+        '6 semaphores — one acquire + one release per thread',
+      ],
+      answer: 2,
+      explanation: '3 semaphores — one per thread. Each thread has exactly one waiting point: zero waits on zeroSema, odd waits on oddSema, even waits on evenSema. Rule: number of semaphores = number of distinct waiting points. Initial values: whoever goes first = 1, rest = 0.',
+    },
+    {
+      q: 'ZeroOddEven uses ExecutorService with newFixedThreadPool(3). What happens if you use newFixedThreadPool(1) instead?',
+      options: [
+        'Works correctly — semaphores handle the ordering',
+        'Deadlock — single thread runs printZero(), blocks on oddSema.release() waiting for printOdd() which never starts',
+        'Works but slower — tasks run sequentially',
+        'Prints only zeros — odd and even tasks are rejected',
+      ],
+      answer: 1,
+      explanation: 'Deadlock. With 1 thread: printZero() runs, prints 0, calls oddSema.release() — fine so far. But printOdd() is queued and never starts because the only thread is busy running printZero(). printZero() loops back and calls zeroSema.acquire() — which blocks because nobody released it. Single thread = all 3 methods compete for the same thread = deadlock. Always use newFixedThreadPool(3) for 3 concurrent tasks.',
+    },
+    {
+      q: 'What is the difference between ZeroOddEven (task class) and the Runnable wrappers (ZeroPrinter, OddPrinter, EvenPrinter)?',
+      options: [
+        'ZeroOddEven is the task — it implements Runnable and is submitted to ExecutorService',
+        'ZeroOddEven holds business logic and shared state; Runnable wrappers are the actual tasks submitted to ExecutorService',
+        'They are the same thing — ZeroOddEven can be used directly with es.submit()',
+        'Runnable wrappers hold the semaphores; ZeroOddEven only prints',
+      ],
+      answer: 1,
+      explanation: 'ZeroOddEven = plain class with business logic (semaphores + print methods). It has no idea about threads. Runnable wrappers = tasks that say "when a thread picks me up, call this method on zoe". The lambda () -> zoe.printZero() IS a Runnable — compiler creates an anonymous Runnable from it. Separation: business logic in ZeroOddEven, threading concern in Runnable/lambda.',
+    },
+    {
+      q: 'es.submit(() -> zoe.printZero()) — the lambda implements which interface?',
+      options: [
+        'Callable — because it returns a Future',
+        'Runnable — because printZero() returns void, so the lambda has no return value',
+        'Thread — because it runs on a thread',
+        'Supplier — because it supplies work to the executor',
+      ],
+      answer: 1,
+      explanation: 'printZero() returns void → lambda has no return value → compiler infers Runnable (not Callable). es.submit(Runnable) returns Future<?> but the Future holds no result — calling get() just blocks until the task finishes. If printZero() returned a value, the lambda would be inferred as Callable.',
+    },
+    {
+      q: 'Why do ZeroPrinter, OddPrinter, EvenPrinter all receive the same zoe object in their constructor?',
+      options: [
+        'To avoid creating multiple ZeroOddEven objects which is expensive',
+        'So all 3 threads share the same semaphores — without the same zoe, each thread would have its own semaphores and coordination would break',
+        'Because Java requires the same object to be passed to all Runnables',
+        'To allow threads to call each other\'s methods directly',
+      ],
+      answer: 1,
+      explanation: 'Semaphores live inside zoe. If each Runnable had its own ZeroOddEven instance, each would have its own independent semaphores — Thread-1 releasing oddSema would not wake Thread-2 waiting on a different oddSema. Shared object = shared semaphores = working coordination. This is the core principle: shared mutable state must live in ONE place accessible to all threads.',
+    },
+
+    // ── SCENARIO-BASED / CROSS-CONCEPT ──
+
+    {
+      q: 'SCENARIO: Someone changes Semaphore zeroSema = new Semaphore(2) in ZeroOddEven. What happens?',
+      options: [
+        'Works correctly — more permits means faster execution',
+        'Two zero threads could run simultaneously, printing "0 0" before odd/even gets a chance — output order breaks',
+        'Compile error — Semaphore only accepts 0 or 1',
+        'printOdd() and printEven() both get signaled at the same time',
+      ],
+      answer: 1,
+      explanation: 'Semaphore(2) means 2 threads can acquire simultaneously. Two iterations of the printZero loop could run at once — printing "0 0" before any odd/even thread runs. The ordered interleaving breaks. Always Semaphore(1) for the thread that must run exactly once per turn.',
+    },
+    {
+      q: 'SCENARIO: Developer creates ZeroOddEven zoe1 = new ZeroOddEven(6) for ZeroPrinter, and ZeroOddEven zoe2 = new ZeroOddEven(6) for OddPrinter. What happens?',
+      options: [
+        'Works correctly — both objects have the same logic',
+        'Deadlock — zoe1.oddSema and zoe2.oddSema are different objects; ZeroPrinter releases zoe1.oddSema but OddPrinter is waiting on zoe2.oddSema forever',
+        'Output is duplicated — prints the sequence twice',
+        'Race condition — both threads print 0 at the same time',
+      ],
+      answer: 1,
+      explanation: 'Two separate ZeroOddEven instances = two separate sets of semaphores. ZeroPrinter calls zoe1.oddSema.release() → but OddPrinter is blocked on zoe2.oddSema.acquire() → nobody releases zoe2.oddSema → OddPrinter waits forever → deadlock. Shared coordination REQUIRES the same object. This is why all Runnable wrappers receive the same zoe.',
+    },
+    {
+      q: 'SCENARIO: n=5. printEven() loop is for(int i=2; i<=n; i+=2). How many times does printEven() actually print?',
+      options: [
+        '5 times — once per number',
+        '3 times — prints 2, 4, and then i=6 exceeds n=5 so stops',
+        '2 times — prints 2 and 4',
+        '2 times — prints 2 and 4; but evenSema is acquired 3 times causing a hang',
+      ],
+      answer: 2,
+      explanation: 'i starts at 2, increments by 2: i=2 (print), i=4 (print), i=6 (6>5, loop exits). So printEven() runs 2 times. printZero() loop runs 5 times (i=1 to 5). For i=1,3,5 it signals oddSema (3 times). For i=2,4 it signals evenSema (2 times). Counts match — no hang. Always trace the loop bounds before assuming.',
+    },
+    {
+      q: 'CROSS: Producer-Consumer uses 2 semaphores (publisherSema, consumerSema). ZeroOddEven uses 3 semaphores. What determines the count?',
+      options: [
+        'Always equal to the number of threads',
+        'Always equal to the number of print statements',
+        'Equal to the number of distinct waiting points — one semaphore per thread that needs to be signaled',
+        'Equal to the number of shared variables',
+      ],
+      answer: 2,
+      explanation: 'Number of semaphores = number of distinct waiting points. Producer-Consumer: Publisher waits (publisherSema) + Consumer waits (consumerSema) = 2. ZeroOddEven: zero waits (zeroSema) + odd waits (oddSema) + even waits (evenSema) = 3. Not about thread count — a system with 10 threads might need only 2 semaphores if they share the same waiting logic.',
+    },
+    {
+      q: 'SCENARIO: Developer submits only 2 tasks — printZero() and printOdd() — skips printEven(). n=4. What happens?',
+      options: [
+        'Prints: 0 1 0 3 — even numbers are skipped cleanly',
+        'Deadlock — printZero() calls evenSema.release() for i=2,4 but nobody ever acquires evenSema, so zeroSema is never released back',
+        'Works for n=3 but hangs at i=2 (first even)',
+        'Prints: 0 1 0 2 0 3 0 4 but 2 and 4 are printed by printZero itself',
+      ],
+      answer: 1,
+      explanation: 'For i=2 (even): printZero() releases evenSema → waits on zeroSema for next turn → but nobody is running printEven() to acquire evenSema and release zeroSema → zeroSema stays at 0 → printZero() blocks forever → deadlock. Missing a thread in coordinated output = guaranteed hang at the first signal that nobody consumes.',
+    },
+    {
+      q: 'CROSS: In Producer-Consumer, publisherSema is initialized to capacity (e.g. 10). In ZeroOddEven, zeroSema is initialized to 1. Why different initial values?',
+      options: [
+        'They are the same concept — both represent "how many threads can start immediately"',
+        'Producer-Consumer: multiple publishers can run simultaneously (up to capacity). ZeroOddEven: only 1 zero turn allowed at a time — it is strictly sequential',
+        'Producer-Consumer semaphore counts items; ZeroOddEven semaphore counts threads',
+        'Initial value does not matter — semaphore behavior is the same regardless',
+      ],
+      answer: 1,
+      explanation: 'Initial value = how many threads can proceed without waiting. publisherSema(10): up to 10 publisher threads can add items before blocking — parallel writes up to capacity. zeroSema(1): exactly 1 zero-print happens per round — strictly one at a time. The initial value encodes the allowed concurrency level for that specific waiting point.',
+    },
+    {
+      q: 'SCENARIO: Someone makes ZeroOddEven implement Runnable and overrides run() to call printZero(). They submit one ZeroOddEven object. What is wrong?',
+      options: [
+        'Nothing — ZeroOddEven can implement Runnable',
+        'Only printZero() gets a thread — printOdd() and printEven() never run, causing deadlock at the first oddSema.release()',
+        'Compile error — a class cannot implement Runnable and have other methods',
+        'printOdd() and printEven() run automatically when run() completes',
+      ],
+      answer: 1,
+      explanation: 'Runnable has one run() method. If run() only calls printZero(), then printOdd() and printEven() never get a thread. printZero() calls oddSema.release() → but no thread is waiting on oddSema → oddSema count goes to 1, loop continues → printZero() calls zeroSema.acquire() on next turn → but zeroSema was released by nobody → hang. You need 3 separate tasks (lambdas or Runnable classes) for 3 concurrent threads.',
+    },
+    {
+      q: 'SCENARIO: Developer calls zoe.printZero(), zoe.printOdd(), zoe.printEven() sequentially in main() without any threads. What happens?',
+      options: [
+        'Works correctly — semaphores handle the ordering',
+        'Deadlock — printZero() releases oddSema then loops and calls zeroSema.acquire(); zeroSema=0 because nobody released it (printOdd() hasn\'t run yet)',
+        'Prints correctly but very slowly',
+        'Race condition between the 3 method calls',
+      ],
+      answer: 1,
+      explanation: 'Sequential calls = single thread doing everything. printZero() runs: acquires zeroSema (ok), prints 0, releases oddSema (count=1), loops back, tries zeroSema.acquire() — but zeroSema=0 (nobody released it, printOdd() hasn\'t run). Main thread blocks itself. Semaphore-based coordination REQUIRES concurrent threads — calling methods sequentially on one thread always deadlocks.',
+    },
+    {
+      q: 'CROSS: Can you solve ZeroOddEven using synchronized + wait() + notifyAll() instead of Semaphores?',
+      options: [
+        'No — synchronized only allows 2 threads, not 3',
+        'Yes — use a shared turn variable (ZERO/ODD/EVEN), synchronized block checks turn, wait() if not your turn, notifyAll() after printing',
+        'Yes — but only if you use 3 different lock objects',
+        'No — wait() and notifyAll() only work with 2 threads',
+      ],
+      answer: 1,
+      explanation: 'Yes, wait/notifyAll works. Pattern: shared volatile int turn=0 (0=zero, 1=odd, 2=even). Each thread: synchronized(lock) { while(turn != myTurn) lock.wait(); print(); turn = next; lock.notifyAll(); }. Semaphore approach is cleaner — no shared turn variable, each thread knows its own semaphore. But wait/notifyAll is valid and tests your knowledge of the older Java concurrency model.',
+    },
+    {
+      q: 'SCENARIO: oddSema is initialized to 1 instead of 0 in ZeroOddEven. What is the first thing that goes wrong?',
+      options: [
+        'Nothing — oddSema=1 just means odd thread can start immediately which is fine',
+        'OddThread starts immediately and prints 1 before ZeroThread prints 0 — output becomes "1 0 2 0 3..." instead of "0 1 0 2..."',
+        'Compile error — only zeroSema can be initialized to 1',
+        'EvenThread is starved — it never gets a signal',
+      ],
+      answer: 1,
+      explanation: 'oddSema(1) = oddThread is immediately unblocked. printOdd() acquires oddSema without waiting and prints 1 — BEFORE printZero() even runs. Output starts with 1 instead of 0. Rule: initial value 1 = "this thread goes first". Setting the wrong semaphore to 1 changes which thread goes first. Always trace: who should go first? That semaphore gets 1. Everyone else gets 0.',
+    },
+
+    // ── PROBLEM VARIANTS — HOW MANY SEMAPHORES? ──
+
+    {
+      q: 'PROBLEM VARIANT: Print 1 2 3 4 ... 200 using 2 threads. Thread-Odd prints 1,3,5... Thread-Even prints 2,4,6... Output must be in order 1 2 3 4... How many semaphores and initial values?',
+      options: [
+        '1 semaphore(1) — shared, both threads acquire and release the same one',
+        '2 semaphores — oddSema(1), evenSema(0). Odd goes first, signals even, even signals odd back',
+        '2 semaphores — oddSema(0), evenSema(0). Main thread releases one to start',
+        '3 semaphores — same as ZeroOddEven',
+      ],
+      answer: 1,
+      explanation: '2 semaphores. Who goes first? Odd (prints 1) → oddSema(1). Even waits → evenSema(0). Flow: oddThread acquires oddSema → prints 1 → releases evenSema. evenThread acquires evenSema → prints 2 → releases oddSema. Repeat. Compare ZeroOddEven (3 semaphores): had a separate controller thread printing 0 before each number. Here no controller — 2 threads signal each other directly. Fewer threads = fewer semaphores.',
+    },
+    {
+      q: 'PROBLEM VARIANT: Print A B C A B C A B C... using 3 threads. Thread-A prints A, Thread-B prints B, Thread-C prints C. Always in order A→B→C→A... How many semaphores and initial values?',
+      options: [
+        '1 semaphore — all 3 threads share it',
+        '3 semaphores — aSema(1), bSema(0), cSema(0). A goes first, signals B, B signals C, C signals A back',
+        '2 semaphores — abSema(0), bcSema(0). A runs freely and signals B',
+        '3 semaphores — aSema(0), bSema(0), cSema(1). C goes first',
+      ],
+      answer: 1,
+      explanation: '3 semaphores, same count as ZeroOddEven but simpler — no odd/even branching. aSema(1) because A starts. bSema(0), cSema(0). A acquires aSema → prints A → releases bSema. B acquires bSema → prints B → releases cSema. C acquires cSema → prints C → releases aSema. Cycle. Rule: N threads in fixed rotation → N semaphores. First thread gets 1, rest get 0. Each thread releases the NEXT thread\'s semaphore.',
+    },
+    {
+      q: 'PROBLEM VARIANT: method1(), method2(), method3() must execute exactly once in order on 3 separate threads. Thread-1 runs method1, Thread-2 runs method2, Thread-3 runs method3. How many semaphores?',
+      options: [
+        '3 semaphores — one per method, all at 0',
+        '2 semaphores — s1(0), s2(0). method1 runs freely, releases s1. method2 waits on s1, releases s2. method3 waits on s2.',
+        '1 semaphore(1) — passed down from method to method',
+        '0 semaphores — just call them in order from main',
+      ],
+      answer: 1,
+      explanation: 'N methods in one-shot order → N-1 semaphores. method1 needs no gate (it runs first freely) → no semaphore for method1. method2 must wait for method1 → s1(0). method3 must wait for method2 → s2(0). method1 runs → releases s1. method2 unblocks → runs → releases s2. method3 unblocks → runs → done. Contrast with ABC rotation (repeating): ABC needs N semaphores. One-shot ordering needs N-1.',
+    },
+    {
+      q: 'PROBLEM VARIANT: Print 1-99 using 3 threads in round-robin. Thread-1 prints 1,4,7... Thread-2 prints 2,5,8... Thread-3 prints 3,6,9... Output must be 1 2 3 4 5 6... How many semaphores?',
+      options: [
+        '1 semaphore — all 3 threads compete for it',
+        '3 semaphores — t1Sema(1), t2Sema(0), t3Sema(0). Same rotation pattern as ABC printing',
+        '2 semaphores — one for T1, one shared for T2 and T3',
+        '99 semaphores — one per number',
+      ],
+      answer: 1,
+      explanation: '3 semaphores — same structure as ABC rotation. t1Sema(1) because Thread-1 prints 1 first. t2Sema(0), t3Sema(0). T1 acquires t1Sema → prints → releases t2Sema. T2 acquires t2Sema → prints → releases t3Sema. T3 acquires t3Sema → prints → releases t1Sema. Repeat. The "what to print" changes (numbers vs letters) but the semaphore structure is identical to ABC rotation. Pattern is the same: N threads, strict rotation, N semaphores.',
+    },
+    {
+      q: 'PROBLEM VARIANT: FizzBuzz using 4 threads. Controller thread checks each number i. Based on i, it signals: Thread-Number, Thread-Fizz, Thread-Buzz, or Thread-FizzBuzz. How many semaphores minimum?',
+      options: [
+        '2 semaphores — one for Fizz, one for Buzz',
+        '5 semaphores — controllerSema(1), numberSema(0), fizzSema(0), buzzSema(0), fizzBuzzSema(0)',
+        '4 semaphores — one per printing thread, controller needs none',
+        '1 semaphore(4) — shared pool',
+      ],
+      answer: 1,
+      explanation: '5 semaphores. Controller starts open → controllerSema(1). 4 printing threads each have a semaphore at 0. Controller: acquires controllerSema → checks i → releases the correct one (numberSema/fizzSema/buzzSema/fizzBuzzSema). That printing thread: acquires its semaphore → prints → releases controllerSema. This is ZeroOddEven generalized: 1 controller + N outcome threads = N+1 semaphores. ZeroOddEven had 1 controller (zero) + 2 outcomes (odd/even) = 3 semaphores.',
+    },
+    {
+      q: 'PROBLEM VARIANT: Print "0 1 2 0 3 4 0 5 6..." using 2 threads. Thread-Zero always prints 0 before each pair. Thread-Number prints 2 consecutive numbers. How many semaphores?',
+      options: [
+        '3 semaphores — zero needs 2, number thread needs 1',
+        '2 semaphores — zeroSema(1), numSema(0). Zero goes first, prints 0, signals number thread. Number thread prints i and i+1, signals zero.',
+        '1 semaphore — shared between both',
+        '4 semaphores — one per print call',
+      ],
+      answer: 1,
+      explanation: '2 semaphores. zeroSema(1) because zero goes first. numSema(0) because number thread waits. Flow: zero acquires zeroSema → prints 0 → releases numSema. Number thread acquires numSema → prints i, then i+1 → releases zeroSema. Repeat. Compare ZeroOddEven: needed 3 semaphores because zero had to signal DIFFERENT threads (odd vs even) based on a condition. Here there is only ONE other thread → no branching needed → 2 semaphores is enough.',
+    },
+    {
+      q: 'PROBLEM VARIANT: Thread-A and Thread-B must exchange values. Both must ARRIVE at the exchange point before either can proceed. A has valueA, B has valueB. After exchange both move forward. How many semaphores?',
+      options: [
+        '1 semaphore(1) — first thread to arrive holds it, second takes it',
+        '2 semaphores — arrivedA(0), arrivedB(0). A releases arrivedA and waits on arrivedB. B releases arrivedB and waits on arrivedA.',
+        '1 semaphore(2) — both acquire when 2 permits available',
+        '3 semaphores — arrive, exchange, leave',
+      ],
+      answer: 1,
+      explanation: '2 semaphores — arrivedA(0), arrivedB(0). A arrives → releases arrivedA → waits on arrivedB. B arrives → releases arrivedB → waits on arrivedA. When both have arrived, both semaphores are at 1, both threads unblock and can read each other\'s value. This is the rendezvous pattern. N threads must all meet before any proceeds → N semaphores (one per thread), all at 0. Each thread releases its own, waits on the others.',
+    },
+    {
+      q: 'PROBLEM VARIANT: 5 Dining Philosophers. Each needs left fork AND right fork to eat. 5 forks on the table, one between each pair. Model each fork as Semaphore(1). How many semaphores?',
+      options: [
+        '2 semaphores — leftFork(1), rightFork(1) shared by all',
+        '5 semaphores — fork[0] to fork[4], each Semaphore(1). Philosopher i acquires fork[i] and fork[(i+1)%5].',
+        '10 semaphores — 2 per philosopher',
+        '1 semaphore(5) — pool of 5 forks',
+      ],
+      answer: 1,
+      explanation: '5 semaphores — one per fork, each Semaphore(1) because exactly 1 philosopher can hold each fork at a time. Philosopher i: acquires fork[i] (left) then fork[(i+1)%5] (right). If all 5 pick up left fork simultaneously → each holds 1 fork, waiting for right → circular wait → DEADLOCK. Fix: philosopher 4 picks right fork first, breaking the cycle. Key insight: semaphore count = number of independent shared resources, not threads.',
+    },
+    {
+      q: 'CROSS PATTERN: Match each problem to its semaphore count. (1) OddEven 2 threads alternating, (2) ABC rotation 3 threads, (3) N one-shot ordered methods, (4) ZeroOddEven controller+2, (5) FizzBuzz controller+4.',
+      options: [
+        '(1)=1, (2)=2, (3)=N, (4)=3, (5)=4',
+        '(1)=2, (2)=3, (3)=N-1, (4)=3, (5)=5',
+        '(1)=2, (2)=3, (3)=N, (4)=4, (5)=5',
+        '(1)=1, (2)=3, (3)=N-1, (4)=2, (5)=4',
+      ],
+      answer: 1,
+      explanation: 'Formula summary — (1) OddEven: 2 threads signal each other = 2 semaphores. (2) ABC rotation: N threads in loop = N semaphores. (3) N one-shot ordered methods: first runs freely = N-1 semaphores. (4) ZeroOddEven: 1 controller + 2 output threads = 3 semaphores. (5) FizzBuzz: 1 controller + 4 output threads = 5 semaphores. Master rule: continuous rotation = N. One-shot ordering = N-1. Controller + M workers = M+1.',
+    },
+    {
+      q: 'DESIGN: Print "A1 B2 A3 B4 A5..." — Thread-A prints letters (A,A,A...), Thread-B prints numbers (1,2,3...). Must strictly alternate, A always starts. How many semaphores?',
+      options: [
+        '1 semaphore(1) — both threads share it and alternate acquiring',
+        '2 semaphores — aSema(1), bSema(0). A acquires aSema → prints letter → releases bSema. B acquires bSema → prints number → releases aSema.',
+        '2 semaphores — aSema(0), bSema(1). B goes first',
+        '1 semaphore(0) — main thread releases it to kick off A',
+      ],
+      answer: 1,
+      explanation: '2 semaphores. aSema(1) because A starts. bSema(0) because B waits. A acquires aSema → prints A → releases bSema. B acquires bSema → prints 1 → releases aSema. A prints A → releases bSema. B prints 2... Output: A 1 A 2 A 3... This is the simplest 2-thread alternation — same skeleton as OddEven. The semaphore structure depends only on: how many distinct waiting points and who goes first. What gets printed is irrelevant to the semaphore design.',
+    },
+  ],
+
+  patterns2: [
+    {
+      name: 'Pattern 22 — OddEven (2 threads alternating)',
+      icon: '🔢',
+      when: 'Two threads must alternate strictly — one prints odd, one prints even',
+      gaonKiBaat: 'Do dost hain — ek odd bolega, ek even. Dono ek doosre ka intezaar karte hain. Jab odd bolta hai, even ka darwaza kholta hai. Jab even bolta hai, odd ka darwaza kholta hai.',
+      problems: ['Print 1 2 3 4 5 6... using 2 threads', 'Thread-A prints odd, Thread-B prints even, strictly alternating'],
+      template: `// APPROACH: 2 semaphores
+// oddSema(1)  — odd thread goes first (starts open)
+// evenSema(0) — even thread waits (starts closed)
+//
+// FLOW:
+// printOdd:  acquire oddSema  → print → release evenSema
+// printEven: acquire evenSema → print → release oddSema
+//
+// KEY: try-finally in EACH iteration — if thread crashes, other is not stuck forever
+
+import java.util.concurrent.Semaphore;
+
+public class OddEven {
+    private int n;
+    private Semaphore oddSema  = new Semaphore(1); // odd goes first
+    private Semaphore evenSema = new Semaphore(0); // even waits
+
+    public OddEven(int n) { this.n = n; }
+
+    public void printOdd() {
+        for (int i = 1; i <= n; i += 2) {
+            try {
+                oddSema.acquire();
+                System.out.println(i);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); return;
+            } finally {
+                evenSema.release(); // signal even to go
+            }
+        }
+    }
+
+    public void printEven() {
+        for (int i = 2; i <= n; i += 2) {
+            try {
+                evenSema.acquire();
+                System.out.println(i);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); return;
+            } finally {
+                oddSema.release(); // signal odd to go
+            }
+        }
+    }
+}
+
+// CLIENT:
+// ExecutorService es = Executors.newFixedThreadPool(2);
+// OddEven oe = new OddEven(10);
+// es.submit(() -> { try { oe.printOdd(); } catch (Exception e) {} });
+// es.submit(() -> { try { oe.printEven(); } catch (Exception e) {} });
+// es.shutdown();`,
+    },
+    {
+      name: 'Pattern 23 — PrintNThreads (N threads, ordered output)',
+      icon: '🔗',
+      when: 'N threads must print in strict order — thread-1 first, thread-2 second, ..., thread-N last',
+      gaonKiBaat: 'N log queue mein khade hain. Pehla unlock hota hai, kaam karta hai, doosre ka darwaza kholta hai. Ek chain reaction.',
+      problems: ['Print 1 to N using N threads, each thread prints exactly one number in order'],
+      template: `// APPROACH: N semaphores (array)
+// semas[0] = Semaphore(1)    — thread 0 goes first
+// semas[1..N-1] = Semaphore(0) — all others wait
+//
+// FLOW: thread i → acquire semas[i] → print i+1 → release semas[i+1]
+// Last thread does NOT release (no next semaphore)
+//
+// KEY: loop variable not effectively final inside lambda
+//      → capture in local variable BEFORE submit
+
+import java.util.concurrent.Semaphore;
+
+public class PrintNThreads {
+    private Semaphore[] semas;
+    private int n;
+
+    public PrintNThreads(int n) {
+        this.n = n;
+        this.semas = new Semaphore[n];
+        for (int i = 0; i < n; i++)
+            semas[i] = new Semaphore(i == 0 ? 1 : 0);
+    }
+
+    void print(int i) throws InterruptedException {
+        semas[i].acquire();
+        try {
+            System.out.println(i + 1);
+        } finally {
+            if (i + 1 < n) semas[i + 1].release();
+        }
+    }
+}
+
+// CLIENT:
+// PrintNThreads p = new PrintNThreads(10);
+// ExecutorService es = Executors.newFixedThreadPool(10);
+// for (int i = 0; i < 10; i++) {
+//     int num = i; // capture before lambda — loop var not effectively final
+//     es.submit(() -> { try { p.print(num); } catch (Exception e) {} });
+// }
+// es.shutdown();`,
+    },
+    {
+      name: 'Pattern 24 — BlockingQueue (Producer-Consumer)',
+      icon: '📦',
+      when: 'Bounded queue shared between producers and consumers — producer waits when full, consumer waits when empty',
+      gaonKiBaat: 'Ek dabba hai jisme max 5 cheezein aa sakti hain. Producer cheez daalta hai, consumer uthata hai. Dabba bhar gaya toh producer ruk ja. Dabba khaali ho gaya toh consumer ruk ja.',
+      problems: ['Implement BlockingQueue from scratch', 'Producer-Consumer problem with bounded buffer'],
+      template: `// APPROACH: ReentrantLock + 2 Conditions
+// notFull  — producer waits here when queue IS full
+// notEmpty — consumer waits here when queue IS empty
+//
+// WHY ReentrantLock not synchronized?
+// → Need 2 separate Conditions — signal ONLY producers OR ONLY consumers
+// → synchronized has only 1 wait set — notifyAll wakes both unnecessarily
+//
+// WHY while not if?
+// → Spurious wakeups — must re-check condition after waking up
+
+import java.util.*;
+import java.util.concurrent.locks.*;
+
+public class BlockingQueue {
+    private List<Integer> items;
+    private int capacity;
+    private ReentrantLock lock;
+    private Condition notFull;
+    private Condition notEmpty;
+
+    public BlockingQueue(int capacity) {
+        this.capacity = capacity;
+        this.items = new ArrayList<>(capacity);
+        this.lock = new ReentrantLock();
+        this.notFull  = lock.newCondition();
+        this.notEmpty = lock.newCondition();
+    }
+
+    public void put(int item) throws InterruptedException {
+        lock.lock();
+        try {
+            while (items.size() == capacity) notFull.await();
+            items.add(item);
+            notEmpty.signal(); // wake ONE consumer
+        } finally { lock.unlock(); }
+    }
+
+    public int take() throws InterruptedException {
+        lock.lock();
+        try {
+            while (items.isEmpty()) notEmpty.await();
+            int item = items.get(0);
+            items.remove(0);
+            notFull.signal(); // wake ONE producer
+            return item;
+        } finally { lock.unlock(); }
+    }
+}
+
+// PRODUCTION CLIENT PATTERN:
+// AtomicInteger counter = new AtomicInteger(0);
+// es.submit(() -> {
+//     while (!Thread.currentThread().isInterrupted()) {
+//         b.put(counter.incrementAndGet());
+//     }
+// });
+// Graceful shutdown: es.shutdown() → awaitTermination(5s) → shutdownNow() → awaitTermination(2s)`,
+    },
+    {
+      name: 'Pattern 25 — Fixed Window Rate Limiter',
+      icon: '🪟',
+      when: 'Limit requests to N per time window (per second, minute, hour)',
+      gaonKiBaat: 'Ek khidki hai — jaise 1 minute ki. Us minute mein sirf 5 log andar aa sakte hain. Minute khatam — naya khidki, fir 5 log. Simple lekin boundary pe burst ka problem hai.',
+      problems: ['Implement rate limiter — max 5 requests per second', 'API throttling'],
+      template: `// APPROACH: counter + windowStart + windowDuration
+// Reset counter when window expires
+// synchronized — only one thread checks/updates at a time
+//
+// BURST PROBLEM: 5 req end of window + 5 req start of next = 10 in 2 sec
+// → Use TokenBucket for production
+
+public class FixedWindowRateLimiter {
+    private int limit;
+    private int currReqCount;
+    private long windowStart;
+    private long windowDuration; // in milliseconds
+
+    public FixedWindowRateLimiter(int limit, long windowDuration) {
+        this.limit = limit;
+        this.windowStart = System.currentTimeMillis();
+        this.windowDuration = windowDuration;
+        this.currReqCount = 0;
+    }
+
+    public synchronized boolean allowRequest() {
+        long now = System.currentTimeMillis();
+        if (now - windowStart > windowDuration) {
+            windowStart = now; // reset window
+            currReqCount = 0;  // reset counter
+        }
+        if (currReqCount < limit) {
+            currReqCount++;
+            return true;
+        }
+        return false;
+    }
+}
+
+// CLIENT:
+// FixedWindowRateLimiter limiter = new FixedWindowRateLimiter(5, 1000); // 5 req/sec
+// ExecutorService es = Executors.newFixedThreadPool(10);
+// for (int i = 0; i < 10; i++) {
+//     es.submit(() -> {
+//         boolean allowed = limiter.allowRequest();
+//         System.out.println(Thread.currentThread().getName() + " — Allowed: " + allowed);
+//     });
+// }
+// es.shutdown();
+// Expected: 5 true, 5 false`,
+    },
+    {
+      name: 'Pattern 26 — Token Bucket Rate Limiter',
+      icon: '🪣',
+      when: 'Production rate limiting — handles bursts gracefully, smoother than fixed window',
+      gaonKiBaat: 'Ek dabba hai jisme tokens hain — jaise prepaid recharge. Har second kuch tokens aate hain. Har request ek token leta hai. Tokens khatam — request reject. Agar bahut der se request nahi aayi toh tokens jama ho jaate hain (capacity tak).',
+      problems: ['Implement Token Bucket rate limiter', 'Rate limiter that allows burst but controls sustained rate'],
+      template: `// APPROACH: lazy refill — calculate tokens earned since last request ON DEMAND
+// No background timer needed — calculate when request arrives
+//
+// FORMULA:
+// secondsPassed = (now - lastRefillTime) / 1000.0
+// tokensEarned  = secondsPassed * refillRate
+// tokens = min(capacity, tokens + tokensEarned)
+//
+// WHY double not int for tokens?
+// → refillRate=1/sec, request every 500ms → 0.5 tokens earned
+// → int would round to 0 → token never refills → bug
+//
+// HOW TO SET PARAMS:
+// 5 req/sec   → new TokenBucketRateLimiter(5, 5)
+// 100 req/hr  → new TokenBucketRateLimiter(100, 100.0/3600)
+// 1000 req/day → new TokenBucketRateLimiter(1000, 1000.0/86400)
+// Rule: refillRate = allowedRequests / windowInSeconds
+
+public class TokenBucketRateLimiter {
+    private double capacity;
+    private double currTokenCount;
+    private double refillRate; // tokens per second
+    private long lastRefillTime;
+
+    public TokenBucketRateLimiter(double capacity, double refillRate) {
+        this.capacity = capacity;
+        this.currTokenCount = capacity; // bucket starts full
+        this.refillRate = refillRate;
+        this.lastRefillTime = System.currentTimeMillis();
+    }
+
+    public synchronized boolean allowRequest() {
+        long now = System.currentTimeMillis();
+        double secondsPassed = (now - lastRefillTime) / 1000.0;
+        double tokensEarned  = secondsPassed * refillRate;
+        currTokenCount = Math.min(capacity, currTokenCount + tokensEarned);
+        lastRefillTime = now;
+        if (currTokenCount >= 1) {
+            currTokenCount--;
+            return true;
+        }
+        return false;
+    }
+}
+
+// FixedWindow vs TokenBucket:
+// FixedWindow — simple, burst problem at window boundary
+// TokenBucket — handles burst (saved tokens), smoother, production preferred`,
+    },
+    {
+      name: 'Pattern 27 — Connection Pool',
+      icon: '🔌',
+      when: 'Reuse expensive DB connections — avoid creating new connection per request',
+      gaonKiBaat: 'Library ki tarah socho. 5 kitaabein hain (connections). Student borrow karta hai, padhta hai, wapas karta hai. Sab 5 books borrow ho gayi — naya student wait karo. Koi wapas kare tab milegi.',
+      problems: ['Implement Connection Pool from scratch', 'Thread-safe DB connection management'],
+      template: `// APPROACH: Queue (available) + Set (used) + synchronized + wait/notifyAll
+// Pre-create all connections at startup (eager initialization)
+// getConnection() — wait if pool full, borrow available or create new
+// releaseConnection() — return to available, notifyAll waiting threads
+//
+// WHY Set not List for usedConnections?
+// → Set.remove() is O(1), List.remove() is O(N)
+//
+// WHY while not if in wait loop?
+// → Spurious wakeups + multiple threads wake on notifyAll — re-check needed
+
+import java.util.*;
+
+public class ConnectionPool {
+    private Queue<Connection> availableConnections;
+    private Set<Connection> usedConnections;
+    private int maxPoolSize;
+    private String url, userName, password;
+
+    public ConnectionPool(int maxPoolSize, String url, String userName, String password) {
+        this.maxPoolSize = maxPoolSize;
+        this.availableConnections = new LinkedList<>();
+        this.usedConnections = new HashSet<>();
+        this.url = url; this.userName = userName; this.password = password;
+        for (int i = 0; i < maxPoolSize; i++)
+            availableConnections.offer(new Connection(userName, url, password, false));
+    }
+
+    public synchronized Connection getConnection() throws InterruptedException {
+        while (availableConnections.isEmpty() && usedConnections.size() == maxPoolSize) {
+            System.out.println(Thread.currentThread().getName() + " WAITING for connection...");
+            wait();
+        }
+        Connection conn;
+        if (!availableConnections.isEmpty()) {
+            conn = availableConnections.poll();
+        } else {
+            conn = new Connection(userName, url, password, false);
+        }
+        conn.setActive(true);
+        usedConnections.add(conn);
+        return conn;
+    }
+
+    public synchronized void releaseConnection(Connection conn) {
+        usedConnections.remove(conn);
+        conn.setActive(false);
+        availableConnections.offer(conn);
+        notifyAll(); // wake all waiting threads
+    }
+}
+
+// CLIENT — always use try-finally to guarantee release:
+// Connection conn = pool.getConnection();
+// try {
+//     // use connection
+// } finally {
+//     pool.releaseConnection(conn); // always released even if exception
+// }
+
+// Production: HikariCP handles all this automatically
+// connectionTimeout, maxLifetime, keepaliveTime settings`,
+    },
+    {
+      name: 'Pattern 28 — LRU Cache',
+      icon: '🗄️',
+      when: 'Cache with fixed capacity — evict least recently used item when full',
+      gaonKiBaat: 'Phone ke recent apps jaisa. 5 apps memory mein hain. 6th khologe toh jo sabse pehle khola tha aur use nahi hua — woh band ho jaayega. Jo recently use hua woh safe hai.',
+      problems: ['Implement LRU Cache', 'get(key) O(1), put(key,value) O(1), evict LRU on full'],
+      template: `// APPROACH: HashMap + Java LinkedList (DLL internally)
+// HashMap — O(1) key lookup → gives Node directly
+// LinkedList — maintains order: HEAD=oldest, TAIL=most recent
+//
+// get(key):
+//   not found → return -1
+//   found → remove from current position → addLast (move to tail) → return value
+//
+// put(key, val):
+//   key exists → update value → move to tail
+//   key not exists + full → removeFirst (evict LRU) → remove from map → add new at tail
+//   key not exists + not full → add at tail → add to map
+//
+// WHY key stored in Node?
+// → During eviction (removeFirst), need key to remove from HashMap too
+
+import java.util.*;
+
+class Node {
+    int key, val;
+    Node prev, next;
+    public Node(int key, int val) { this.key = key; this.val = val; }
+}
+
+public class LRUCache {
+    private int capacity;
+    private HashMap<Integer, Node> map;
+    private LinkedList<Node> list; // HEAD=LRU, TAIL=MRU
+
+    public LRUCache(int capacity) {
+        this.capacity = capacity;
+        this.map = new HashMap<>(capacity);
+        this.list = new LinkedList<>();
+    }
+
+    public int get(int key) {
+        Node node = map.getOrDefault(key, null);
+        if (node == null) return -1;
+        list.remove(node);    // remove from current position
+        list.addLast(node);   // move to tail (most recently used)
+        return node.val;
+    }
+
+    public void put(int key, int val) {
+        if (map.containsKey(key)) {
+            Node node = map.get(key);
+            node.val = val;
+            list.remove(node);
+            list.addLast(node);
+            return;
+        }
+        if (map.size() == capacity) {
+            Node lru = list.removeFirst(); // evict least recently used
+            map.remove(lru.key);
+        }
+        Node newNode = new Node(key, val);
+        list.addLast(newNode);
+        map.put(key, newNode);
+    }
+}
+
+// TEST:
+// LRUCache cache = new LRUCache(2);
+// cache.put(1, 10); cache.put(2, 20);
+// cache.get(1);     → 10, moves 1 to tail
+// cache.put(3, 30); → evicts 2 (LRU), adds 3
+// cache.get(2);     → -1 (evicted)
+// cache.get(1);     → 10
+// cache.get(3);     → 30`,
+    },
+    {
+      name: 'Pattern 29 — When to Use What (Synchronization Tools)',
+      icon: '🧰',
+      when: 'Deciding which concurrency tool to use — interview decision framework',
+      gaonKiBaat: 'Har kaam ke liye alag haathiyaar. Taala lagana hai toh synchronized. Kitne andar aayenge control karna hai toh Semaphore. Sequence chahiye toh Semaphore. Do alag type ke log wait kar rahe hain toh ReentrantLock.',
+      problems: ['Interview: "When would you use Semaphore vs synchronized?"', 'Interview: "Why ReentrantLock over synchronized?"'],
+      template: `// DECISION FRAMEWORK — pick the right tool
+
+// synchronized
+// → Simple locking, ONE wait condition, protect a method/block
+// → Example: FixedWindowRateLimiter, TokenBucketRateLimiter, ConnectionPool
+synchronized void allowRequest() { ... }
+
+// ReentrantLock + Condition
+// → MULTIPLE wait conditions on same lock
+// → Signal specific group (only producers OR only consumers)
+// → Example: BlockingQueue (notFull for producers, notEmpty for consumers)
+ReentrantLock lock = new ReentrantLock();
+Condition notFull  = lock.newCondition(); // producers wait here
+Condition notEmpty = lock.newCondition(); // consumers wait here
+
+// Semaphore
+// → Control ORDER of threads OR limit COUNT entering critical section
+// → Example: ZeroOddEven, OddEven, PrintNThreads
+Semaphore sema = new Semaphore(1); // 1 = first thread goes, 0 = wait
+
+// AtomicInteger
+// → Single counter inside lambda (loop variable not effectively final)
+// → No complex logic needed
+AtomicInteger counter = new AtomicInteger(0);
+es.submit(() -> counter.incrementAndGet()); // safe in lambda
+
+// volatile
+// → Single variable visibility across threads, no atomicity needed
+// → Example: stop flag for infinite loop
+volatile boolean running = true;
+
+// ReadWriteLock
+// → Read-heavy workload — multiple readers OK, writer needs exclusive
+// → Example: cache, config store, DB reads
+int readers = 0; boolean isWriting = false;
+
+// CyclicBarrier
+// → Wait for N threads to reach same point before any proceeds
+// → Example: race start, batch processing phases
+CyclicBarrier barrier = new CyclicBarrier(N, () -> System.out.println("All ready!"));
+
+// CompletableFuture
+// → Async tasks, parallel execution, chaining, no blocking
+// → Example: call 3 APIs in parallel, combine results
+CompletableFuture.allOf(cf1, cf2, cf3).join();
+
+// QUICK RULE:
+// Control ORDER/COUNT of threads → Semaphore
+// One wait condition → synchronized
+// Multiple wait conditions → ReentrantLock
+// Single counter in lambda → AtomicInteger
+// Read-heavy → ReadWriteLock
+// All threads meet at checkpoint → CyclicBarrier
+// Async parallel tasks → CompletableFuture`,
+    },
+    {
+      name: 'Pattern 30 — Distributed Rate Limiter (System Design)',
+      icon: '🌐',
+      when: 'Design rate limiter for millions of users across multiple pods/regions',
+      gaonKiBaat: 'Ek pod ka rate limiter toh hum bana sakte hain — memory mein. Par agar 10 pods hain toh? Har pod apna hisaab rakhega aur galat ho jaayega. Solution: Redis — ek jagah ka counter jo sab pods share karein.',
+      problems: ['Design distributed rate limiter for 1M users', 'How does rate limiting work across multiple pods?'],
+      template: `// SINGLE POD — in-memory (what we implemented)
+// TokenBucketRateLimiter rateLimiter = new TokenBucketRateLimiter(5, 5);
+// Problem: each pod has own counter → 10 pods × 5 req = 50 req allowed instead of 5!
+
+// MULTIPLE PODS — centralized Redis
+//
+// Flow:
+// User Request
+//       ↓
+// API Gateway ← Rate Limiter check happens HERE (not in service)
+//       ↓
+// Redis (shared counter for ALL pods)
+//       ↓ allowed          ↓ rejected
+// Forward to service    Return 429 Too Many Requests
+
+// WHY Redis?
+// → Redis INCR is atomic — no race condition across pods
+// → TTL on key = auto window reset (no manual reset needed)
+// → Single source of truth for all pods
+
+// Redis logic per request:
+// key = "ratelimit:userId:windowStart"
+// count = INCR key          → atomic increment, returns new value
+// if count == 1: EXPIRE key windowDuration  → set TTL only on first request
+// if count <= limit: ALLOW
+// else: REJECT 429
+
+// LAYERED APPROACH (production):
+// Layer 1 — API Gateway: Global limit (protect service — 100k req/sec total)
+// Layer 2 — Per Organization: plan-based (Free=100/hr, Pro=10k/hr, Enterprise=unlimited)
+// Layer 3 — Per User: abuse prevention (100 req/min per user)
+
+// HOW LIMIT IS DECIDED:
+// 1. Load test → find breaking point (e.g. crashes at 50k req/sec)
+// 2. Set global limit at 70% → 35k req/sec (buffer for spikes)
+// 3. Business model → paid users × their plan limit = theoretical max
+// 4. Monitor in production → adjust gradually
+
+// IF Redis goes down:
+// → Fallback to in-memory rate limiting per pod
+// → Alert ops team
+// → Redis should have replicas for HA
+
+// MULTI-REGION:
+// → Redis Cluster per region
+// → Slight inconsistency between regions (acceptable tradeoff for availability)
+
+// INTERVIEW ANSWER FLOW:
+// 1. Clarify: per user or global? per second/minute/hour? reject or queue?
+// 2. Single pod → in-memory TokenBucket
+// 3. Multiple pods → Redis with atomic INCR + TTL
+// 4. Multiple regions → Redis Cluster, eventual consistency
+// 5. API Gateway placement — centralized, not in each service
+// 6. Fallback if Redis down — in-memory per pod`,
     },
   ],
 }

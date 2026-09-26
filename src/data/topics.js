@@ -155,6 +155,30 @@ export const topics = [
     tags: ['memoization', 'tabulation', 'optimization'],
     status: 'available',
   },
+  {
+    slug: 'designpatterns',
+    title: 'Design Patterns',
+    icon: '🏗️',
+    difficulty: 'Advanced',
+    estimatedTime: '6–8 hrs',
+    problemCount: 10,
+    description: 'Creational, structural, and behavioral patterns — reusable solutions to recurring design problems.',
+    gaonKiBaat: 'Design patterns are like tried-and-tested recipes from the village elder. You do not invent from scratch — you adapt a recipe that has worked for years.',
+    tags: ['singleton', 'factory', 'builder', 'registry'],
+    status: 'available',
+  },
+  {
+    slug: 'machinecoding',
+    title: 'Machine Coding',
+    icon: '🚗',
+    difficulty: 'Advanced',
+    estimatedTime: '4–6 hrs',
+    problemCount: 5,
+    description: 'End-to-end LLD coding interviews: requirements → class diagram → working code in 2.5 hours.',
+    gaonKiBaat: 'Machine coding is like building a working chulha in the interview room — not just drawing one on paper. You have 2.5 hours. Make smoke come out.',
+    tags: ['class-diagram', 'inheritance', 'composition', 'interfaces'],
+    status: 'available',
+  },
 ]
 
 export const difficultyOrder = ['Beginner', 'Intermediate', 'Advanced']

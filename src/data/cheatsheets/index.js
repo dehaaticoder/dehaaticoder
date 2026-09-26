@@ -5,6 +5,7 @@ import { concurrencyCheatsheet } from './concurrency'
 import { systemDesignCheatsheet } from './systemdesign'
 import { genericsCheatsheet } from './generics'
 import { designPatternsCheatsheet } from './designpatterns'
+import { machineCodingCheatsheet } from './machinecoding'
 
 export const cheatsheets = {
   backtracking: backtrackingCheatsheet,
@@ -14,4 +15,5 @@ export const cheatsheets = {
   systemdesign: systemDesignCheatsheet,
   generics: genericsCheatsheet,
   designpatterns: designPatternsCheatsheet,
+  machinecoding: machineCodingCheatsheet,
 }

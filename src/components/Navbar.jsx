@@ -30,6 +30,12 @@ export default function Navbar() {
             OOP/LLD
           </Link>
           <Link
+            to="/dehaaticoder/cheatsheet/designpatterns"
+            className={`transition ${pathname === '/dehaaticoder/cheatsheet/designpatterns' ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
+          >
+            Design Patterns
+          </Link>
+          <Link
             to="/dehaaticoder/cheatsheet/machinecoding"
             className={`transition ${pathname === '/dehaaticoder/cheatsheet/machinecoding' ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
           >

@@ -127,6 +127,32 @@ export default function Cheatsheet() {
                       ))}
                     </div>
                     <pre className="bg-stone-900 text-green-300 px-6 py-4 text-xs leading-relaxed overflow-x-auto font-mono">{p.template}</pre>
+
+                    {/* Real World Uses */}
+                    {p.realWorldUses && (
+                      <div className="px-6 py-5 border-t border-stone-100">
+                        <h4 className="text-sm font-bold text-stone-700 mb-4">🌍 Real World Uses</h4>
+                        <div className="space-y-4">
+                          {p.realWorldUses.map(u => (
+                            <div key={u.title} className="border border-stone-200 rounded-xl overflow-hidden">
+                              <div className="bg-stone-50 px-4 py-3 border-b border-stone-200">
+                                <h5 className="font-bold text-stone-800 text-sm">{u.title}</h5>
+                              </div>
+                              <div className="bg-amber-50 border-b border-stone-100 px-4 py-2.5 flex items-start gap-2">
+                                <span className="text-base shrink-0">🌾</span>
+                                <p className="text-xs text-amber-800 italic">{u.dehaatiAnalaogy}</p>
+                              </div>
+                              <div className="px-4 py-3 space-y-2 text-xs">
+                                <p><span className="font-semibold text-stone-600">Problem:</span> <span className="text-stone-700">{u.problem}</span></p>
+                                <p><span className="font-semibold text-red-500">❌ Without Prototype:</span> <span className="text-stone-700">{u.withoutPrototype}</span></p>
+                                <p><span className="font-semibold text-green-600">✅ With Prototype:</span> <span className="text-stone-700">{u.withPrototype}</span></p>
+                                <p className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700"><span className="font-semibold">🐛 Bug without clone:</span> {u.bugWithoutClone}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -152,34 +152,79 @@ DatabaseConfiguration config = new DatabaseConfiguration.Builder()
     {
       name: 'Pattern 3 — Simple Factory',
       icon: '🏭',
-      when: 'Use when object creation logic should be in one place, not scattered across callers',
-      gaonKiBaat: 'Gaon mein jalebi banane wala ek hi hota hai — tu sirf bolta hai "jalebi do" aur woh bana ke deta hai. Tu andar ka process nahi jaanta. Simple Factory wahi hai — ek jagah se object maango, kaise bana yeh chhupa rahega.',
-      problems: ['Notification sender (SMS/Email/Push)', 'Shape creator (Circle/Rectangle)', 'Logger factory'],
+      when: 'Use when object creation logic should be in one place, not scattered across callers. BUT adding new type requires editing the factory — violates OCP.',
+      gaonKiBaat: 'Gaon mein jalebi banane wala ek hi hota hai — tu sirf bolta hai "jalebi do" aur woh bana ke deta hai. Tu andar ka process nahi jaanta. Simple Factory wahi hai — ek jagah se object maango, kaise bana yeh chhupa rahega. Problem yeh hai ki naya item add karna ho (gulab jamun) toh factory wale ko andar jaake code badalna padega — OCP violation.',
+      problems: ['Notification sender (SMS/Email/Push)', 'Audio player (MP3/WAV/FLAC)', 'Document processor (Text/Spreadsheet/Presentation)'],
+      realWorldUses: [
+        {
+          title: '🔔 Notification System',
+          dehaatiAnalaogy: 'Gaon ka dak wala — tu sirf chitthi deta hai "Email bhejo" ya "SMS bhejo". Woh decide karta hai kaun sa tarika use karna hai. Tu andar nahi jaata.',
+          problem: 'Application needs to send notifications via different channels. Caller should not know EmailNotification vs SmsNotification class names.',
+          withoutPrototype: 'Every caller does: if (type == "email") new EmailNotification() else new SmsNotification() — creation logic duplicated everywhere.',
+          withPrototype: 'NotificationFactory.create("email") — one place, all callers use factory. Change creation logic = change only factory.',
+          bugWithoutClone: 'Adding "slack" channel: must find and update every if-else block across entire codebase. Miss one → silent bug where slack falls through to default.',
+        },
+        {
+          title: '🎵 Audio Player (MP3/WAV/FLAC)',
+          dehaatiAnalaogy: 'Music system mein tu sirf gaana daalta hai — system khud decide karta hai MP3 player chalana hai ya FLAC player. Tu player ka naam nahi jaanta.',
+          problem: 'Audio app supports multiple formats. Caller just knows the format name, not which decoder class to instantiate.',
+          withoutPrototype: 'Caller checks format and creates decoder directly — tightly coupled to every decoder class.',
+          withPrototype: 'AudioPlayerFactory.create("mp3") — caller decoupled from implementation. New format = only factory changes.',
+          bugWithoutClone: 'OCP violation: adding FLAC support requires editing the factory if-else. Every addition = risk of breaking existing MP3/WAV logic.',
+        },
+      ],
       template: `// Simple Factory — static method with if-else
 public class NotificationFactory {
 
-    public static Notification create(String type) {
-        if (type.equals("email")) return new EmailNotification();
-        if (type.equals("sms"))   return new SmsNotification();
-        if (type.equals("push"))  return new PushNotification();
+    public static Notification create(String type, String recipient, String message) {
+        if (type.equals("email")) return new EmailNotification(recipient, message);
+        if (type.equals("sms"))   return new SmsNotification(recipient, message);
+        if (type.equals("push"))  return new PushNotification(recipient, message);
         throw new IllegalArgumentException("Unknown type: " + type);
     }
 }
 
 // Caller — doesn't know how object is created
-Notification n = NotificationFactory.create("email");
-n.send("Hello!");
+Notification n = NotificationFactory.create("email", "dhiraj@gmail.com", "Hello!");
+n.send();
 
-// Problem with Simple Factory:
-// Adding "slack" notification → must edit NotificationFactory (violates OCP)
-// Solution → Factory Method or Registry Pattern`,
+// ❌ OCP Violation:
+// Adding "slack" notification → must edit NotificationFactory if-else
+// Every new type = open this file and add another if block
+// Solution → Abstract Factory (family) or Registry (plugin-style)`,
     },
     {
       name: 'Pattern 4 — Abstract Factory',
       icon: '🏗️🏭',
-      when: 'Use when you need a FAMILY of related objects from the same provider — ensures consistency',
+      when: 'Use when you need a FAMILY of related objects from the same provider — ensures consistency. Simple Factory returns ONE object. Abstract Factory returns a WHOLE FAMILY.',
       gaonKiBaat: 'Gaon mein ek hi dukan se chai bhi lo aur samosa bhi lo — dono Sharma ji ki dukan ke hain, ek saath theek lagte hain. Agar chai Sharma ji ki aur samosa Gupta ji ka liya toh mismatch ho sakta hai. Abstract Factory wahi consistency deta hai — ek hi provider se poora set lo.',
-      problems: ['AI provider (chat client + vector client must be same provider)', 'UI themes (button + dialog must match)', 'Database drivers (connection + statement)'],
+      problems: ['AI provider (chat client + vector client must be same provider)', 'UI themes (button + dialog must match)', 'Audio (decoder + player + processor must match format)', 'Notification (notification + template + sender must match channel)'],
+      realWorldUses: [
+        {
+          title: '🤖 AI Chat Service (OpenAI / Anthropic / Gemini)',
+          dehaatiAnalaogy: 'Ek hi contractor se poora kaam lo — raj mistri bhi unka, plumber bhi unka, electrician bhi unka. Mix karo toh kaam nahi chalega — ek dusre ki baat nahi sunenge.',
+          problem: 'ChatService needs AiChatClient + AiVectorClient. Both must be from same provider — OpenAI chat + Anthropic vector = incompatible API formats.',
+          withoutPrototype: 'Caller creates chat client and vector client separately, manually ensuring they match — easy to accidentally mix providers.',
+          withPrototype: 'new ChatService(new OpenAiClientFactory()) — factory guarantees both clients are OpenAI. Switch to Anthropic = one line change.',
+          bugWithoutClone: 'OpenAI chat response format is JSON. Anthropic vector uses different embedding dimensions. Mixing = runtime crash when vector search results fed into OpenAI chat context.',
+        },
+        {
+          title: '🎵 Audio Processing (MP3 / FLAC)',
+          dehaatiAnalaogy: 'MP3 cassette player mein FLAC tape mat daalo — format match nahi karta. Ek hi factory se decoder, player aur processor lo — sab ek hi format ke honge.',
+          problem: 'Audio app needs Decoder + Player + Processor. All three must handle same format — MP3 decoder output is incompatible with FLAC processor input.',
+          withoutPrototype: 'Caller creates MP3Decoder + FLACProcessor — compiles fine but crashes at runtime when incompatible byte streams are passed between components.',
+          withPrototype: 'new AudioService(new MP3AudioFactory()) — factory guarantees MP3Decoder + MP3Player + MP3Processor. All compatible.',
+          bugWithoutClone: 'FLAC uses lossless compression. MP3 processor expects lossy format headers. Mixing = garbled audio or ArrayIndexOutOfBoundsException when parsing audio frames.',
+        },
+        {
+          title: '🔔 Notification System (Email / SMS / Push)',
+          dehaatiAnalaogy: 'Email system ka template, sender aur notification — teeno email wale chahiye. SMS wala template Email sender ke saath nahi chalega.',
+          problem: 'NotificationService needs Notification + Template + Sender. All must be same channel — EmailTemplate has HTML content, SmsSender has 160 char limit, mixing = broken messages.',
+          withoutPrototype: 'Developer creates EmailNotification + SmsNotificationTemplate — compiles but SMS template HTML renders as raw text in SMS.',
+          withPrototype: 'new NotificationService(new EmailNotificationFactory()) — factory guarantees entire Email family. Switch to SMS = one factory swap.',
+          bugWithoutClone: 'EmailTemplate generates HTML with images. SmsSender sends raw text — HTML tags appear as literal characters in SMS. User receives "<h1>Welcome</h1>" as SMS text.',
+        },
+      ],
       template: `// Abstract Factory — creates a FAMILY of related objects
 public interface AiClientFactory {
     AiChatClient   getAiChatClient();    // chat from same provider
@@ -215,9 +260,27 @@ ChatService openAiService = new ChatService(new OpenAiClientFactory());`,
     {
       name: 'Pattern 5 — Factory + Registry (Open/Closed)',
       icon: '📋🔌',
-      when: 'Use when new providers must be addable WITHOUT editing existing factory code',
-      gaonKiBaat: 'Gaon mein naya dukandaar aaya — usne apna naam khud register karwaya panchayat mein. Panchayat ko kuch badalna nahi pada. Registry Pattern wahi hai — naya factory khud register karta hai, purana code nahi badalta.',
-      problems: ['AI provider plugins (add Gemini without touching existing code)', 'Payment gateway plugins', 'Notification channel plugins'],
+      when: 'Use when new providers must be addable WITHOUT editing existing factory code. Fixes OCP violation of Simple Factory — new type self-registers, existing code untouched.',
+      gaonKiBaat: 'Gaon mein naya dukandaar aaya — usne apna naam khud register karwaya panchayat mein. Panchayat ko kuch badalna nahi pada. Registry Pattern wahi hai — naya factory khud register karta hai, purana code nahi badalta. Simple Factory mein panchayat ko khud jaake list update karni padti thi — yahan dukandaar khud aata hai.',
+      problems: ['AI provider plugins (add Gemini without touching existing code)', 'Payment gateway plugins', 'Notification channel plugins', 'Database driver plugins'],
+      realWorldUses: [
+        {
+          title: '🤖 AI Provider Plugin System',
+          dehaatiAnalaogy: 'Naya dukandaar gaon mein aaya — khud panchayat ke register mein naam likhwaya. Panchayat wale so rahe the, unhe kuch nahi karna pada. Ab gaon wale us dukaan pe bhi ja sakte hain.',
+          problem: 'AI service supports OpenAI and Anthropic. Team wants to add Gemini. Simple Factory = edit existing if-else = risk breaking OpenAI/Anthropic.',
+          withoutPrototype: 'Add Gemini → open ChatClientFactory.java → add new if block → redeploy entire service → risk regression in existing providers.',
+          withPrototype: 'GeminiClientFactory has static block → self-registers on class load → zero changes to existing code → add import in Main.java → done.',
+          bugWithoutClone: 'Editing Simple Factory if-else for Gemini: developer accidentally changes else branch → OpenAI requests now routed to Anthropic → wrong API keys → all OpenAI calls fail silently.',
+        },
+        {
+          title: '💳 Payment Gateway Plugins (Razorpay / Stripe / PayU)',
+          dehaatiAnalaogy: 'Dukaan mein naya payment machine aaya (PhonePe) — usne khud register kar liya. Cashier ko kuch nahi pata, woh bas "payment karo" bolta hai aur system khud handle kar leta hai.',
+          problem: 'E-commerce platform supports Razorpay. Add Stripe for international users. Add PayU for enterprise. Each addition should not touch existing payment code.',
+          withoutPrototype: 'PaymentFactory has if-else for each gateway. Every new gateway = open this file, add case, test all gateways again.',
+          withPrototype: 'StripeGatewayFactory static block registers itself. PaymentRegistry.get("stripe") returns it. Razorpay untouched.',
+          bugWithoutClone: 'Without registry — adding PayU if-else accidentally shadows Razorpay case due to copy-paste error → Indian payments broken → revenue loss.',
+        },
+      ],
       template: `// Registry — Map replaces if-else
 public class ClientFactoryProvider {
     private static final Map<String, AiClientFactory> registry = new HashMap<>();

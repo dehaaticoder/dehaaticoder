@@ -117,7 +117,46 @@ TextBook t = (TextBook) b;  // ✅ but risky — use instanceof first
 if (b instanceof TextBook) {
     TextBook t2 = (TextBook) b;
     t2.getSubject();
-}`,
+}
+
+// ─── WHEN TO USE PARENT REFERENCE vs CHILD TYPE ───────────────────────────
+//
+// 🌾 Gaon analogy:
+// Sarpanch ko sirf kaam chahiye — "koi bhi mazdoor bhejo, kaam karo" → parent ref
+// Thekedaar ko specifically "Ramesh mistri" chahiye kyunki sirf woh tiles lagata hai
+//   → child type directly
+//
+// Parent reference → treat all subtypes uniformly (only common methods needed)
+abstract class Payment { public abstract void process(); }
+class CreditPayment extends Payment {
+    @Override public void process() { System.out.println("credit"); }
+    public void applyRewards() { }   // specific to CreditPayment
+}
+class UpiPayment extends Payment {
+    @Override public void process() { System.out.println("upi"); }
+    public void checkUpiLimit() { }  // specific to UpiPayment
+}
+
+// ✅ USE PARENT REFERENCE — caller only needs process(), doesn't care which type
+List<Payment> payments = List.of(new CreditPayment(), new UpiPayment());
+for (Payment p : payments) {
+    p.process(); // polymorphism — each runs its own version
+}
+
+// ✅ USE CHILD TYPE — caller specifically needs child-only method
+CreditPayment cp = new CreditPayment();
+cp.process();       // ✅ overridden method
+cp.applyRewards();  // ✅ child-specific — no cast needed
+
+// ❌ SMELL — casting to access child method via parent reference
+Payment p = new CreditPayment();
+if (p instanceof CreditPayment c) {
+    c.applyRewards(); // works but smells — if you know it's CreditPayment, just declare it as one
+}
+
+// ONE LINE RULE:
+// Parent ref  → uniform treatment, don't care which subtype
+// Child type  → need that specific subtype's own behaviour`,
     },
     {
       name: 'Pattern 5 — Static vs Instance',
@@ -401,6 +440,11 @@ TextBook(String subject, int edition, String isbn, String title, String author) 
       rule: 'Enum over String for fixed set of values',
       tag: 'key',
       detail: 'BookType.TextBook vs "TextBook" as String — enum catches typos at compile time. String typos only fail at runtime.',
+    },
+    {
+      rule: 'Parent ref = uniform treatment. Child type = specific behaviour.',
+      tag: 'key',
+      detail: 'List<Payment> for processing all payments (only process() needed). CreditPayment cp = new CreditPayment() when you need applyRewards(). Casting to access child method via parent ref is a design smell.',
     },
     {
       rule: 'Fields follow the reference. Methods follow the object.',

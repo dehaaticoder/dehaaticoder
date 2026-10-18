@@ -235,6 +235,61 @@ if (BookType.TextBook.toString().equals(type) && b instanceof TextBook) {
 // BookType.TextBook       → typo fails at COMPILE time — caught early`,
     },
     {
+      name: 'Pattern 7 — Field Hiding vs Method Override',
+      icon: '🪄',
+      when: 'When parent and child both declare a field with same name — field is HIDDEN (not overridden). Method with same name is OVERRIDDEN.',
+      gaonKiBaat: 'Gaon mein baap ke paas ek zameen hai jiska naam "Khet A" hai. Beta bhi apni ek alag zameen khareed leta hai aur uska naam bhi "Khet A" rakh deta hai. Ab dono ke paas alag-alag "Khet A" hai — bap ka alag, beta ka alag. Jo reference tumhare haath mein hai woh decide karta hai kaun sa "Khet A" milega. Yeh field hiding hai. Method mein aisa nahi hota — wahan beta ki zaroorat pe baap wali copy hi replace ho jaati hai.',
+      problems: ['Payment.type field hidden in CreditPayment', 'Notification.channel hidden in EmailNotification', 'Animal.sound field hidden in Dog'],
+      template: `// Real world: Payment system
+class Payment {
+    String type = "GENERIC";   // parent field
+
+    public String getType() { return type; }  // abstract in real code
+    public void process() {
+        System.out.println("Processing: " + type);
+    }
+}
+
+class CreditPayment extends Payment {
+    String type = "CREDIT";    // hides parent field — NOT overrides
+
+    @Override
+    public void process() {
+        System.out.println("Processing: " + type); // uses OWN type field
+    }
+}
+
+Payment p = new CreditPayment();
+
+// FIELD — decided by reference type (left side)
+System.out.println(p.type);        // "GENERIC" ← parent field, compile sees Payment
+
+// METHOD — decided by actual object (right side)
+p.process();                       // "Processing: CREDIT" ← CreditPayment.process() runs
+
+// Both fields exist in memory for same object!
+CreditPayment cp = (CreditPayment) p;
+System.out.println(cp.type);       // "CREDIT"  ← child field
+System.out.println(((Payment)cp).type); // "GENERIC" ← parent field, same object!
+
+// TRAP: getType() in parent accesses parent's 'type' field
+p.getType(); // "GENERIC" ← even though actual object is CreditPayment
+             // because getType() is NOT overridden, it runs in Payment context
+             // and Payment.type = "GENERIC"
+
+// FIX: use abstract method + override in child
+abstract class Payment2 {
+    public abstract String getType(); // force child to implement
+}
+class CreditPayment2 extends Payment2 {
+    private String type = "CREDIT";
+    @Override
+    public String getType() { return type; } // now polymorphism works correctly
+}
+Payment2 p2 = new CreditPayment2();
+p2.getType(); // "CREDIT" ✅ — method dispatch hits CreditPayment2`,
+    },
+    {
       name: 'Pattern 6 — Constructor Chaining (super)',
       icon: '🔗',
       when: 'Child constructor must call super() to initialize parent fields',
@@ -348,6 +403,21 @@ TextBook(String subject, int edition, String isbn, String title, String author) 
       detail: 'BookType.TextBook vs "TextBook" as String — enum catches typos at compile time. String typos only fail at runtime.',
     },
     {
+      rule: 'Fields follow the reference. Methods follow the object.',
+      tag: 'key',
+      detail: 'Payment p = new CreditPayment(). p.type → Payment\'s type (reference decides). p.process() → CreditPayment\'s process() (object decides). Remember this one line.',
+    },
+    {
+      rule: 'Field hiding — both fields coexist in memory for same object',
+      tag: 'gotcha',
+      detail: 'Parent and child both having a field with same name does NOT override — two separate fields exist. Cast to access each: ((Payment)cp).type vs cp.type on same object return different values.',
+    },
+    {
+      rule: 'Never put public fields in parent expecting child to override — use abstract methods',
+      tag: 'gotcha',
+      detail: 'If getType() is NOT overridden in child, it runs in parent context and accesses parent\'s field — always "GENERIC". Fix: make getType() abstract in parent, override in each child with its own private field.',
+    },
+    {
       rule: 'Abstract class without abstract methods — valid but rare',
       tag: 'gotcha',
       detail: 'You can mark a class abstract even with zero abstract methods — just to prevent instantiation. Real use: BaseEntity with id/createdAt where all methods are shared but object should never exist alone.',
@@ -362,6 +432,7 @@ TextBook(String subject, int edition, String isbn, String title, String author) 
     { problem: 'protected access', tc: 'Class + subclasses', sc: 'No getter needed', note: 'Child can access directly — breaks encapsulation slightly' },
     { problem: 'Runtime polymorphism', tc: 'Decided at runtime', sc: 'By actual object', note: 'Left side = what you can call. Right side = what runs.' },
     { problem: 'Copy constructor', tc: 'Same ID or new?', sc: 'Depends on BRD', note: 'In LMS — new unique ID, increment totalUsers' },
+    { problem: 'Field hiding', tc: 'Reference type wins', sc: 'Both fields in memory', note: 'Fields: left side decides. Methods: right side decides.' },
     { problem: 'super() call', tc: 'First line in child', sc: 'Mandatory', note: 'Java inserts super() if omitted, but only if parent has no-arg constructor' },
   ],
 
@@ -574,6 +645,39 @@ TextBook(String subject, int edition, String isbn, String title, String author) 
       ],
       answer: 1,
       explanation: 'BookType.TextBoook → compile error (caught immediately). "Textboook".equals(type) → compiles fine but search returns empty list at runtime with no error. Enum = compile-time safety. String = runtime failure.',
+    },
+    {
+      q: 'Payment p = new CreditPayment(). Both classes have a field `String type`. Payment.type = "GENERIC", CreditPayment.type = "CREDIT". What does `p.type` return?',
+      options: [
+        '"CREDIT" — actual object is CreditPayment so its field is used',
+        '"GENERIC" — reference type is Payment, field access uses reference type',
+        'Compile error — duplicate field name not allowed',
+        'null — field hiding makes both inaccessible',
+      ],
+      answer: 1,
+      explanation: 'Fields follow the reference (left side), not the object (right side). p is declared as Payment — so p.type accesses Payment\'s type = "GENERIC". To get "CREDIT", cast first: ((CreditPayment)p).type. Both fields coexist in memory for the same object.',
+    },
+    {
+      q: 'Same setup as above — Payment has `getType()` that returns `this.type`. CreditPayment does NOT override getType(). What does `p.getType()` return?',
+      options: [
+        '"CREDIT" — actual object is CreditPayment, so runtime dispatch returns child\'s type',
+        '"GENERIC" — getType() is not overridden, runs in Payment context, accesses Payment\'s type field',
+        'Compile error — getType() not found in CreditPayment',
+        'null — field is hidden so getType() cannot access it',
+      ],
+      answer: 1,
+      explanation: 'getType() is not overridden in CreditPayment, so Payment\'s getType() runs. Inside Payment\'s getType(), `this.type` refers to Payment\'s own type field = "GENERIC". Field hiding means the child field doesn\'t replace the parent field — it just shadows it when accessed through child reference. Fix: make getType() abstract and override in each child.',
+    },
+    {
+      q: 'Why is `private String type` + `@Override getType()` in child better than `public String type` in parent?',
+      options: [
+        'Private is faster to access than public',
+        'With abstract getType() + override — method dispatch runs child\'s version. With public field — field hiding means parent field always wins through parent reference.',
+        'Public fields cause compile errors in child classes',
+        'No difference — both approaches work identically',
+      ],
+      answer: 1,
+      explanation: 'Public field in parent = field hiding. p.type via Payment reference always returns Payment\'s field, not child\'s. Abstract method + override = true polymorphism. p.getType() via Payment reference calls whichever child overrides it — correct value returned. Rule: fields are implementation detail, methods are the contract. Polymorphism works through methods, not fields.',
     },
     {
       q: 'Why is generateUniqueId() marked static in User?',

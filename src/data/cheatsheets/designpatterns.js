@@ -450,6 +450,153 @@ server1.setHostname("api.scaler.com");
 VMInstance server2 = registry.getVMInstance("backend-v3");
 server2.setHostname("web.scaler.com"); // server1 unaffected`,
     },
+    {
+      name: 'Pattern 7 — Adapter',
+      icon: '🔌',
+      when: 'Use when you have an external API or class you cannot modify, but its interface does not match what your system expects. Adapter wraps the incompatible class and makes it speak your language.',
+      gaonKiBaat: 'Gaon mein ek banda hai jo sirf Bhojpuri mein bolta hai, aur dusra sirf English mein sunna chahta hai. Beech mein ek translator aaya — woh Bhojpuri sunke English mein convert karta hai. Adapter wahi translator hai — external API apni bhasha mein bolta hai, Adapter convert karke tumhari interface pe fit kar deta hai. Adapter khud naya kaam nahi karta — sirf convert karta hai.',
+      problems: ['Payment gateway integration (YesBank/ICICI behind common BankApi)', 'Social media posting (Twitter/Facebook behind common SocialMediaClient)', 'Translation APIs (Google/Microsoft behind common TranslationService)', 'Insurance claim status (AutoProtect/TravelGuard behind common ClaimService)'],
+      realWorldUses: [
+        {
+          title: '💳 Payment Gateway Integration',
+          dehaatiAnalaogy: 'Har bank ka ATM machine alag tarah ka card reader use karta tha. Ek universal adapter aaya — tu apna card daalo, adapter bank ke hisaab se signal convert karta hai. Tu bank ka internal kaam nahi jaanta.',
+          problem: 'E-commerce platform needs to integrate YesBank and ICICI. Both have different method names, return types, and parameter formats. Cannot modify the bank SDKs.',
+          withoutPrototype: 'Caller code checks bank type and calls different methods directly — tightly coupled to each bank\'s SDK. Adding a new bank = change everywhere.',
+          withPrototype: 'BankApi interface (Target) with processPayment(). YesBankAdapter wraps YesBankSdk and translates. Caller only knows BankApi — never the bank SDK.',
+          bugWithoutClone: 'YesBank returns "TXN_SUCCESS", ICICI returns "APPROVED". Without Adapter, caller must handle both strings — business logic polluted with provider-specific quirks. Adapter maps them to one common enum.',
+        },
+        {
+          title: '🐦 Social Media Posting (Twitter/Facebook)',
+          dehaatiAnalaogy: 'WhatsApp mein message bhejne ka tarika alag hai, SMS ka alag hai. Tu sirf "message bhejo" bolta hai — adapter decide karta hai andar se kaun sa API call karna hai.',
+          problem: 'Marketing platform posts to Twitter and Facebook. Twitter has tweet(), Facebook has post(). Platform cannot modify either SDK.',
+          withoutPrototype: 'Caller checks platform and calls tweet() or post() — tightly coupled. New platform (Instagram) = change all callers.',
+          withPrototype: 'SocialMediaClient interface with sendMessage(). TwitterAdapter.sendMessage() calls tweet(). FacebookAdapter.sendMessage() calls post(). Caller decoupled.',
+          bugWithoutClone: 'Twitter has 280 char limit, Facebook has none. Without Adapter, validation must go in caller. With Adapter, each adapter handles its own provider quirks internally.',
+        },
+        {
+          title: '🌐 Translation APIs (Google/Microsoft)',
+          dehaatiAnalaogy: 'Ek dukan French mein order leta hai, dusri Spanish mein. Tu sirf "translate karo" bolta hai — adapter andar jaake sahi API call karta hai.',
+          problem: 'App supports Google Translate and Microsoft Translator. Both have different request formats, auth headers, and response structures.',
+          withoutPrototype: 'Direct API calls sprinkled across codebase — every caller builds different HTTP requests for each provider.',
+          withPrototype: 'TranslationService interface with translate(text, from, to). GoogleTranslationAdapter and MicrosoftTranslationAdapter implement it — each builds the correct HTTP request internally.',
+          bugWithoutClone: 'TravelGuard insurance API returns "SUCCESS" for approved claims. ClaimStatus enum has APPROVED, not SUCCESS. Without Adapter: ClaimStatus.valueOf("SUCCESS") throws IllegalArgumentException. Adapter maps "SUCCESS" → ClaimStatus.APPROVED explicitly.',
+        },
+      ],
+      template: `// Target interface — what YOUR system expects
+public interface BankApi {
+    void processPayment(String amount, String currency);
+    String getTransactionStatus(String txnId);
+}
+
+// Adaptee — external SDK you CANNOT modify
+public class YesBankSdk {
+    public void makePayment(double amount, String curr) { /* YesBank logic */ }
+    public String checkTxn(String ref)                  { return "TXN_SUCCESS"; }
+}
+
+// Adapter — written by YOU (the platform), not the bank
+// Extends Adaptee OR holds it as a field (prefer composition)
+public class YesBankAdapter implements BankApi {
+    private YesBankSdk yesBankSdk;  // holds the adaptee
+
+    public YesBankAdapter(YesBankSdk sdk) { this.yesBankSdk = sdk; }
+
+    @Override
+    public void processPayment(String amount, String currency) {
+        yesBankSdk.makePayment(Double.parseDouble(amount), currency); // translate
+    }
+
+    @Override
+    public String getTransactionStatus(String txnId) {
+        String raw = yesBankSdk.checkTxn(txnId);
+        return raw.equals("TXN_SUCCESS") ? "SUCCESS" : "FAILED"; // normalize
+    }
+}
+
+// Caller — only knows BankApi, never YesBank or ICICI
+BankApi bank = new YesBankAdapter(new YesBankSdk());
+bank.processPayment("500.00", "INR");
+bank.getTransactionStatus("TXN-123");
+
+// Adding ICICI? Create IciciBankAdapter — zero changes to caller.`,
+    },
+    {
+      name: 'Pattern 8 — Facade',
+      icon: '🏛️',
+      when: 'Use when multiple subsystems need to be orchestrated in a specific sequence, and you want to hide that complexity behind one simple entry point. Facade has NO business logic — it just wires services together and calls them in order.',
+      gaonKiBaat: 'Gaon mein Amazon se kuch order karo — ek hi button dabao "Place Order". Peeche Inventory check hoti hai, invoice banta hai, email aata hai — teen alag karamchari hain. Tu kisi se seedha baat nahi karta. Facade wahi receptionist hai — ek jagah se bolo, woh sab ko coordinate karta hai. Facade andar koi naya kaam nahi karta — sirf sabko sahi order mein bulata hai.',
+      problems: ['Amazon Place Order (Inventory + Invoice + Email)', 'Image editing pipeline (Load + Filter + Modify + Save + Analytics)', 'Travel booking (Hotels + Flights + Payment + Notification)', 'Data analysis (Fetch + Clean + Analyse + Report)'],
+      realWorldUses: [
+        {
+          title: '🛒 Amazon Place Order',
+          dehaatiAnalaogy: 'Dukan mein seedha counter pe jaate ho — "ek kilo atta do". Counter wala andar jaake stock check karta hai, bill banata hai, deliver ka intejar karta hai. Tu andar nahi jaata. Facade wahi counter hai.',
+          problem: 'Client places order. Internally: InventoryService must update stock, InvoiceService must generate bill, MailService must send confirmation — always in this order.',
+          withoutPrototype: 'Client calls all three services directly in right order — client now knows too much. Change the flow (add SMS step) = change every caller.',
+          withPrototype: 'PlaceOrderFacade.placeOrder(order) — single call, Facade coordinates all three services internally. Client knows nothing about subsystems.',
+          bugWithoutClone: 'Without Facade: client calls InvoiceService before InventoryService — invoice generated for out-of-stock item. Facade enforces order: inventory first → invoice → email. Order is the Facade\'s only job.',
+        },
+        {
+          title: '🖼️ Image Editing Pipeline',
+          dehaatiAnalaogy: 'Photo studio mein — tu photo deta hai, woh load karte hain, filter lagate hain, size badlte hain, save karte hain, analytics track karte hain. Tu sirf "edit karo" bolta hai, andar 5 log kaam karte hain.',
+          problem: 'Image editing has 5 steps: ImageLoader → FilterService → ImageModifier → ImageWriter → AnalyticsService. Client should not orchestrate all 5.',
+          withoutPrototype: 'Client calls all 5 services — tightly coupled to pipeline order. Adding a step = update all callers.',
+          withPrototype: 'ImageEditingFacade.editImage(path, filter, brightness) — one call, Facade calls all 5 in sequence. Manager holds only the Facade and delegates.',
+          bugWithoutClone: 'Manager class had all 5 services directly — test said "Manager should have no dependencies". Fix: Facade holds services, Manager holds only Facade. This enforces separation: Manager is client, Facade is coordinator.',
+        },
+        {
+          title: '✈️ Travel Booking',
+          dehaatiAnalaogy: 'Travel agent se bolo "Delhi se Mumbai, 3 din" — woh hotel book karta hai, flight book karta hai, payment leta hai, confirmation bhejta hai. Tu teen alag websites pe nahi jaata.',
+          problem: 'Travel booking: HotelService + FlightService + PaymentService + NotificationService must all fire in sequence. Client should not manage this.',
+          withoutPrototype: 'Client orchestrates all services. Partial failure (payment fails) = client must handle rollback across multiple services. Too much responsibility.',
+          withPrototype: 'BookingFacade.bookTravel(request) — single entry point. Facade handles sequence + error cases. Client just calls once.',
+          bugWithoutClone: 'Facade has NO business logic — it only calls services in order. If validation or decisions are needed, those belong in the individual services, not the Facade. Mixing business logic in Facade defeats the pattern.',
+        },
+      ],
+      template: `// Services (subsystems) — each does ONE thing
+public class InventoryService  { public void updateInventory(Order o)  { /* ... */ } }
+public class InvoiceService    { public void generateInvoice(Order o)  { /* ... */ } }
+public class MailService       { public void sendEmail(Order o)        { /* ... */ } }
+
+// Facade — holds ALL services, orchestrates in sequence, ZERO business logic
+public class PlaceOrderFacade {
+    private InventoryService inventoryService;
+    private InvoiceService   invoiceService;
+    private MailService      mailService;
+
+    public PlaceOrderFacade() {
+        this.inventoryService = new InventoryService();
+        this.invoiceService   = new InvoiceService();
+        this.mailService      = new MailService();
+    }
+
+    public void placeOrder(Order order) {
+        inventoryService.updateInventory(order);  // step 1
+        invoiceService.generateInvoice(order);    // step 2
+        mailService.sendEmail(order);             // step 3
+        // No business logic here — just coordination
+    }
+}
+
+// Manager — holds ONLY the Facade, delegates everything
+// (Manager is the client-facing class; Facade is the coordinator)
+public class OrderManager {
+    private PlaceOrderFacade facade;
+
+    public OrderManager() { this.facade = new PlaceOrderFacade(); }
+
+    public void processOrder(Order order) {
+        facade.placeOrder(order);  // delegates — Manager has zero service dependencies
+    }
+}
+
+// Client — calls Manager, never knows about services
+OrderManager manager = new OrderManager();
+manager.processOrder(new Order("item-123", "dhiraj@gmail.com"));
+
+// Facade vs Manager:
+// Facade  — holds services (InventoryService, InvoiceService, MailService)
+// Manager — holds only Facade; delegates; is the client-facing entry point`,
+    },
   ],
 
   rules: [
@@ -532,6 +679,36 @@ server2.setHostname("web.scaler.com"); // server1 unaffected`,
       rule: 'type.cast() vs (T) for generic casting',
       tag: 'gotcha',
       detail: 'When you have Class<T> type token, use type.cast(value) not (T) value. type.cast() throws ClassCastException at the right place; (T) gives unchecked warning and fails later.',
+    },
+    {
+      rule: 'Adapter is written by YOU (the platform), not by the external provider',
+      tag: 'key',
+      detail: 'Bank/payment SDK authors do not write adapters for your system. Your platform writes YesBankAdapter that wraps YesBankSdk. Adapter lives in your codebase, not the external library.',
+    },
+    {
+      rule: 'Adapter = prefer composition over inheritance (hold Adaptee as a field)',
+      tag: 'key',
+      detail: 'class YesBankAdapter implements BankApi { private YesBankSdk sdk; } — holds the adaptee. Inheritance (extends YesBankSdk) works but ties you to the class hierarchy and prevents mocking in tests.',
+    },
+    {
+      rule: 'Adapter maps provider-specific quirks internally — caller never sees them',
+      tag: 'gotcha',
+      detail: 'TravelGuard returns "SUCCESS" not "APPROVED". Adapter maps this inside getClaimStatus(). Caller only sees ClaimStatus.APPROVED. Business logic stays clean.',
+    },
+    {
+      rule: 'Facade = no business logic — only orchestration (call services in order)',
+      tag: 'key',
+      detail: 'If you add if-else or validation inside a Facade method, you are doing it wrong. That logic belongs in the individual services. Facade only wires calls together.',
+    },
+    {
+      rule: 'Facade vs Manager: Facade holds services, Manager holds only Facade',
+      tag: 'gotcha',
+      detail: 'Manager is the client-facing class. It holds only the Facade and delegates. Facade holds all the services. If Manager directly holds InventoryService — the test fails and the pattern breaks.',
+    },
+    {
+      rule: 'Facade enforces call ORDER — that is its only real value',
+      tag: 'key',
+      detail: 'PlaceOrderFacade ensures: inventory first → invoice → email. Without Facade, client code can call in wrong order. Facade owns sequence as a single responsibility.',
     },
   ],
 
@@ -667,6 +844,50 @@ server2.setHostname("web.scaler.com"); // server1 unaffected`,
       ],
       answer: 1,
       explanation: 'Without Builder: new DatabaseConfiguration() returns immediately, then you call setters one by one. Between new() and last setter, the object exists with null/default fields — another thread could grab this incomplete object. Builder creates the main object only in build() — all fields set at once, never half-built.',
+    },
+    {
+      q: 'In Adapter pattern, who writes the Adapter class — the external provider or your platform?',
+      options: [
+        'The external provider (YesBank) writes the adapter to match your interface',
+        'Your platform writes the Adapter to wrap the external SDK and match your Target interface',
+        'Both parties write their own adapters and the system picks one at runtime',
+        'The JVM generates adapters automatically using reflection',
+      ],
+      answer: 1,
+      explanation: 'External providers (banks, translation services) know nothing about your BankApi or SocialMediaClient interfaces. YOUR platform writes YesBankAdapter that implements your BankApi and internally calls the YesBankSdk. Adapter lives in your codebase.',
+    },
+    {
+      q: 'TravelGuard insurance API returns "SUCCESS" for approved claims, but your ClaimStatus enum has APPROVED. What happens if you call ClaimStatus.valueOf("SUCCESS")?',
+      options: [
+        'Returns ClaimStatus.APPROVED because Java does case-insensitive matching',
+        'Throws IllegalArgumentException — "SUCCESS" does not match any enum constant',
+        'Returns null — valueOf() returns null for unmatched strings',
+        'Compiles fine but returns a default value of the first enum constant',
+      ],
+      answer: 1,
+      explanation: 'ClaimStatus.valueOf() does exact string match against enum constant names. ClaimStatus has APPROVED, REJECTED — no SUCCESS. The fix is in the Adapter: if (raw.equalsIgnoreCase("SUCCESS")) return ClaimStatus.APPROVED; else return ClaimStatus.valueOf(raw);',
+    },
+    {
+      q: 'What is wrong with putting business logic (validation, decisions) inside a Facade method?',
+      options: [
+        'Facade methods cannot contain if-else statements in Java',
+        'Nothing — Facade is the right place for business rules',
+        'Business logic in Facade mixes coordination with decisions — Facade should only orchestrate. Logic belongs in individual services.',
+        'Facade methods run slower when they contain business logic',
+      ],
+      answer: 2,
+      explanation: 'Facade\'s single responsibility is to wire service calls in order. If Facade checks "is item in stock before invoicing", that is InventoryService\'s job. Mixing logic in Facade makes it a God class that is hard to test and change.',
+    },
+    {
+      q: 'Scaler test says "ImageEditingManager should have no service dependencies". What does this mean for the design?',
+      options: [
+        'Manager should not exist — delete it and only use Facade',
+        'Manager holds only ImageEditingFacade (not the 5 services directly). Facade holds all the services. Manager delegates to Facade.',
+        'Manager should call services statically without holding references',
+        'Services should be passed to Manager at runtime via method parameters, not constructor',
+      ],
+      answer: 1,
+      explanation: 'The Facade pattern enforces: Facade = holds services + coordinates. Manager = holds only Facade + delegates. If Manager held ImageLoader, FilterService etc. directly, the Facade would be pointless. The test enforces this separation explicitly.',
     },
   ],
 }

@@ -631,6 +631,26 @@ manager.processOrder(new Order("item-123", "dhiraj@gmail.com"));
       detail: 'if-else chain in factory must be touched for every new type. Registry Pattern fixes this — new provider self-registers, factory never changes.',
     },
     {
+      rule: 'Registry + self-registering factories → circular static init → StackOverflowError',
+      tag: 'gotcha',
+      detail: `Gotcha: If the Registry references concrete factories (e.g. calls new OpenAiClientFactory() in its own static block), AND the factory's static block also calls Registry.register() → circular dependency → JVM tries to load each class while it is already loading → StackOverflowError.
+
+Root cause: circular static initialization.
+  Registry static block → loads OpenAiClientFactory → OpenAiClientFactory static block → loads Registry → Registry static block → ... (infinite)
+
+Fix: ONE-WAY dependency only.
+  ✅ Factory knows about Registry (factory calls Registry.register() in its static block)
+  ❌ Registry NEVER imports or references any concrete factory
+
+Registry is passive — it just stores what is pushed into it.
+Factory is active — it pushes itself in on class load.
+
+Trigger class loading explicitly in Main/Client:
+  import OpenAiClientFactory; // this line triggers the static block = self-registration
+
+Without this import, the static block never runs and the factory is never registered.`,
+    },
+    {
       rule: 'Abstract Factory = guarantees FAMILY consistency',
       tag: 'key',
       detail: 'If chat is OpenAI and vector is Anthropic — mismatch. Abstract Factory ensures both come from same provider because one factory creates both.',

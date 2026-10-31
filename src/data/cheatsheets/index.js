@@ -6,6 +6,7 @@ import { systemDesignCheatsheet } from './systemdesign'
 import { genericsCheatsheet } from './generics'
 import { designPatternsCheatsheet } from './designpatterns'
 import { machineCodingCheatsheet } from './machinecoding'
+import { umlCheatsheet } from './uml'
 
 export const cheatsheets = {
   backtracking: backtrackingCheatsheet,
@@ -16,4 +17,5 @@ export const cheatsheets = {
   generics: genericsCheatsheet,
   designpatterns: designPatternsCheatsheet,
   machinecoding: machineCodingCheatsheet,
+  uml: umlCheatsheet,
 }

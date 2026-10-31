@@ -82,7 +82,7 @@ System.out.println(logger == same);    // true`,
           problem: 'DB config has 6+ fields — url, username, password, maxConnections, enableCache, isReadOnly. Constructor with 6 params is error-prone — easy to mix up positions.',
           withoutPrototype: 'new DatabaseConfig("admin", "jdbc://...", "secret", true, 10, false) — which is url and which is username? Easy to swap args silently.',
           withPrototype: 'new Builder().setUrl("jdbc://...").setUsername("admin").setMaxConnections(20).build() — self-documenting, each field named explicitly.',
-          bugWithoutClone: 'Silent bug: this.phoneNumbers = builder.phoneNumbers — both share same list. Caller adds phone after build() → object is mutated unexpectedly. Fix: new ArrayList<>(builder.phoneNumbers).',
+          bugWithoutClone: 'Silent bug: if Builder has a List field (e.g. allowedHosts), doing this.allowedHosts = builder.allowedHosts shares the same list. Caller modifies list after build() → object is mutated unexpectedly. Fix: new ArrayList<>(builder.allowedHosts) — always deep copy collection fields in build().',
         },
         {
           title: '🌐 HTTP Request Builder',

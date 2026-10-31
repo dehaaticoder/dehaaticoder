@@ -597,9 +597,311 @@ manager.processOrder(new Order("item-123", "dhiraj@gmail.com"));
 // Facade  — holds services (InventoryService, InvoiceService, MailService)
 // Manager — holds only Facade; delegates; is the client-facing entry point`,
     },
+    {
+      name: 'Pattern 9 — Decorator + Flyweight',
+      icon: '🎨',
+      when: 'Decorator: add behaviour to an object at runtime without subclassing. Flyweight: share immutable objects to save memory when many identical objects exist.',
+      gaonKiBaat: 'Decorator — chai pe adrak daalo, phir elaichi daalo, phir tulsi daalo — ek ke upar ek layer. Base chai wahi hai, ek ek cheez add hoti jaati hai. Flyweight — gaon mein ek hi Ramleela costume set hai — alag alag log pehnte hain, costume naya nahi banta. Ek hi object share karo jo change nahi hota.',
+      problems: ['Notification with logging + retry', 'Coffee with condiments (Milk, Sugar, Cream)', 'Chess piece sharing (Flyweight)', 'Graphic object sharing (Flyweight)'],
+      realWorldUses: [
+        {
+          title: '📧 Notification Decorator (Logging + Retry)',
+          dehaatiAnalaogy: 'Dak wala chitthi deliver karta hai. Uske upar ek sahayak hai jo log karta hai. Uske upar ek aur sahayak hai jo fail hone pe dobara try karta hai. Teen log, ek ek ke upar — andar wala actually kaam karta hai.',
+          problem: 'Email notification needs retry on failure and logging around every send. Adding these directly to EmailNotification violates SRP.',
+          withoutPrototype: 'EmailNotification has retry logic + logging inside send() — one class doing three jobs.',
+          withPrototype: 'LoggingDecorator(RetryDecorator(EmailNotification)) — each layer does one job. Wrap any combination without changing base class.',
+          bugWithoutClone: 'RetryDecorator bug: without while loop, retry count resets each recursive call → infinite retries. Fix: while (cnt < MAX_COUNT) not if.',
+        },
+        {
+          title: '☕ Coffee Condiment Decorator',
+          dehaatiAnalaogy: 'Sada chai — upar adrak (Milk decorator), upar elaichi (Sugar decorator). Har decorator pehle apna kaam karta hai phir neeche wale ko bulata hai. Base coffee wahi rehti hai.',
+          problem: 'Coffee shop has base coffees (Espresso, Latte) and condiments (Milk, Sugar, Cream). Each combination needs a price. Subclassing every combo = class explosion.',
+          withoutPrototype: 'EspressoWithMilkAndSugar, LatteWithCream — exponential subclasses.',
+          withPrototype: 'new Sugar(new Milk(new Espresso())) — each condiment wraps the one below, adds its cost to getCost().',
+          bugWithoutClone: 'Execution is top-down, control returns bottom-up — NOT circular. LoggingDecorator → RetryDecorator → Email → back to Retry → back to Logging.',
+        },
+        {
+          title: '♟️ Chess Piece Flyweight',
+          dehaatiAnalaogy: 'Chess board pe 16 white pawns hain. Sabka colour aur type same hai — sirf position alag hai. Ek hi Pawn object banao, 16 baar share karo, sirf position alag pass karo. Naye 16 object kyun banao?',
+          problem: '10,000 chess games running simultaneously. Each game has 32 pieces. Creating 320,000 piece objects = memory overload.',
+          withoutPrototype: 'new Pawn("white", x, y) × 16 per game × 10,000 games = 160,000 Pawn objects.',
+          withPrototype: 'Flyweight: one WhitePawn object shared across all games. Position passed as extrinsic state at render time. Memory = number of piece TYPES, not instances.',
+          bugWithoutClone: 'Flyweight object must be IMMUTABLE — colour and type never change. If position is stored inside the flyweight, all shared users see the same position → bug. Position is extrinsic — always passed from outside.',
+        },
+      ],
+      template: `// ── DECORATOR PATTERN ──────────────────────────────────────
+
+// Step 1: Component interface
+public interface Notification {
+    void send(String message);
+}
+
+// Step 2: Concrete component (the real worker)
+public class EmailNotification implements Notification {
+    @Override
+    public void send(String message) {
+        System.out.println("Sending email: " + message);
+    }
+}
+
+// Step 3: Abstract decorator — holds a reference to the wrapped component
+public abstract class NotificationDecorator implements Notification {
+    protected Notification wrapped;
+    public NotificationDecorator(Notification wrapped) { this.wrapped = wrapped; }
+}
+
+// Step 4: Concrete decorators — each adds ONE behaviour
+public class LoggingDecorator extends NotificationDecorator {
+    public LoggingDecorator(Notification wrapped) { super(wrapped); }
+
+    @Override
+    public void send(String message) {
+        System.out.println("[LOG] Sending: " + message);
+        wrapped.send(message);                          // delegate down
+        System.out.println("[LOG] Done");
+    }
+}
+
+public class RetryDecorator extends NotificationDecorator {
+    private static final int MAX_COUNT = 5;
+    public RetryDecorator(Notification wrapped) { super(wrapped); }
+
+    @Override
+    public void send(String message) {
+        int cnt = 0;
+        while (cnt < MAX_COUNT) {                       // ← must be while, not if
+            try {
+                wrapped.send(message);
+                return;
+            } catch (Exception e) {
+                cnt++;
+            }
+        }
+        throw new RuntimeException("Failed after " + MAX_COUNT + " retries");
+    }
+}
+
+// Usage — wrap in any order
+Notification n = new LoggingDecorator(new RetryDecorator(new EmailNotification()));
+n.send("Hello!");
+// Execution: Logging → Retry → Email → back to Retry → back to Logging
+
+// ── FLYWEIGHT PATTERN ───────────────────────────────────────
+
+// Intrinsic state (shared, immutable) → lives in flyweight
+// Extrinsic state (changes per use)   → passed as parameter at runtime
+
+public class ChessPiece {
+    private final String colour;  // intrinsic — never changes
+    private final String type;    // intrinsic — never changes
+
+    public ChessPiece(String colour, String type) {
+        this.colour = colour; this.type = type;
+    }
+    public void render(int x, int y) {    // x,y = extrinsic — passed in
+        System.out.println(colour + " " + type + " at (" + x + "," + y + ")");
+    }
+}
+
+// Flyweight factory — returns shared instances
+public class ChessPieceFactory {
+    private static final Map<String, ChessPiece> cache = new HashMap<>();
+
+    public static ChessPiece get(String colour, String type) {
+        String key = colour + "_" + type;
+        return cache.computeIfAbsent(key, k -> new ChessPiece(colour, type));
+    }
+}
+
+// Usage — thousands of render calls, only ~12 ChessPiece objects ever created
+ChessPiece wp = ChessPieceFactory.get("white", "pawn");
+wp.render(0, 1);   // position passed externally — flyweight stays immutable
+wp.render(1, 1);   // same object, different position`,
+    },
+    {
+      name: 'Pattern 10 — Strategy + Observer',
+      icon: '🎯👁️',
+      when: 'Strategy: swap one algorithm at runtime (pick one). Observer: notify many subscribers when state changes (notify all).',
+      gaonKiBaat: 'Strategy — gaon mein teen tarah ke kisan hain: koi per kilo bechta hai, koi per ghanta, koi surge pricing lagata hai. Tu decide karta hai kaun sa use karna hai — ek baar mein sirf ek. Observer — gaon ka horn baja (stock price badla) toh Email wala bhi jaaga, SMS wala bhi jaaga, App wala bhi jaaga — teeno ek saath. Strategy mein ek chunta hai, Observer mein sab sunta hai.',
+      problems: ['PricingStrategy (Distance/Time/Surge)', 'TaskManager Observer (Alert/Email/Slack)', 'WeatherMonitor (Humidity/Temperature/Pressure)', 'StockTradingManager (Email/SMS/App)'],
+      realWorldUses: [
+        {
+          title: '💰 Strategy — Pricing Algorithms',
+          dehaatiAnalaogy: 'Uber mein teen pricing wale hain: distance wala, time wala, surge wala. Tu ek choose karta hai — woh apna formula lagata hai. Dono ka kaam alag — ek ko choose karte hain, dono ek saath nahi chalte.',
+          problem: 'Cab booking needs different pricing: DistancePricing, TimePricing, SurgePricing. Swapping must be easy without changing the core booking logic.',
+          withoutPrototype: 'if-else inside calculateFare() for each pricing type → OCP violation, every new type = edit existing code.',
+          withPrototype: 'PricingStrategy interface with calculateFare(). Inject strategy into CabBooking. Swap at runtime by passing different strategy.',
+          bugWithoutClone: 'Strategy return type must match interface. If interface declares Double (wrapper) but implementation returns double (primitive), reflection-based tests fail — always use wrapper type in interface.',
+        },
+        {
+          title: '📡 Observer — Stock Price Notification',
+          dehaatiAnalaogy: 'Stock price badla — horn baja. EmailService ka kaан khada, SMSService ka kaân khada, AppService ka kaân khada — teeno ek saath sunте hain aur apna apna kaam karte hain. Publisher ko pata nahi kaun sun raha hai — woh sirf horn bajata hai.',
+          problem: 'StockTradingManager must notify EmailService, SmsService, AppService whenever stock price crosses threshold. Services must be decoupled from the manager.',
+          withoutPrototype: 'StockTradingManager directly calls emailService.notify(), smsService.notify() — tightly coupled. Adding new service = edit manager.',
+          withPrototype: 'Publisher abstract class holds List<Observer>. StockTradingManager extends Publisher, calls notifyObservers(). Each service implements Observer. Adding new service = zero changes to manager.',
+          bugWithoutClone: 'Instance initializer block { } registers observers without touching constructor signature — used when test checks constructor params and auto-registration is needed.',
+        },
+        {
+          title: '🌡️ Observer — Weather Monitoring',
+          dehaatiAnalaogy: 'Mausam sensor — temperature 40 degree paar kiya toh alert. Humidity 80% paar kiya toh alert. Har sensor apna threshold check karta hai, phir horn bajata hai. Alag alag sensors, alag alag thresholds.',
+          problem: 'WeatherMonitoringApplication has multiple sensors — each has its own threshold. When exceeded, all registered services must be notified.',
+          withoutPrototype: 'One notifyObservers() — but each sensor has different value type and threshold logic.',
+          withPrototype: 'Publisher has notifyObservers(double value). WeatherMonitoringApplication extends Publisher, checks threshold per sensor type, calls notifyObservers(value) when crossed.',
+          bugWithoutClone: 'OCP is NOT violated by the threshold if-block inside WeatherMonitoringApplication — that is domain logic, not adding new observers. Adding new observer (e.g. SmsService) = zero changes to Publisher or existing observers.',
+        },
+      ],
+      template: `// ── STRATEGY PATTERN ───────────────────────────────────────
+
+// Step 1: Strategy interface — return wrapper type (Double not double)
+public interface PricingStrategy {
+    Double calculateFare(double distance, double time);  // Double, not double
+}
+
+// Step 2: Concrete strategies
+public class DistancePricingStrategy implements PricingStrategy {
+    @Override
+    public Double calculateFare(double distance, double time) { return distance * 10.0; }
+}
+
+public class TimePricingStrategy implements PricingStrategy {
+    @Override
+    public Double calculateFare(double distance, double time) { return time * 2.0; }
+}
+
+public class SurgePricingStrategy implements PricingStrategy {
+    @Override
+    public Double calculateFare(double distance, double time) { return (distance * 10.0 + time * 2.0) * 1.5; }
+}
+
+// Step 3: Context — holds the strategy, delegates to it
+public class CabBooking {
+    private PricingStrategy pricingStrategy;
+
+    public CabBooking(PricingStrategy strategy) { this.pricingStrategy = strategy; }
+
+    public Double calculateFare(double distance, double time) {
+        return pricingStrategy.calculateFare(distance, time);  // delegate
+    }
+}
+
+// Usage — swap strategy at runtime
+CabBooking surge = new CabBooking(new SurgePricingStrategy());
+surge.calculateFare(10.0, 5.0);   // uses surge pricing
+
+// ── OBSERVER PATTERN ────────────────────────────────────────
+
+// Step 1: Observer interface
+public interface Observer {
+    void onStockPriceChange(String stockName, double price);
+}
+
+// Step 2: ObserverRegistry interface — contracts for subscribe/unsubscribe/notify
+public interface ObserverRegistry {
+    void addObserver(Observer o);
+    void removeObserver(Observer o);
+    void notifyObservers(String stockName, double price);
+}
+
+// Step 3: Publisher abstract class — holds list + boilerplate
+// Subclasses inherit list management, just call notifyObservers()
+public abstract class Publisher implements ObserverRegistry {
+    protected List<Observer> observers;
+
+    public Publisher() { this.observers = new ArrayList<>(); }
+
+    @Override public void addObserver(Observer o)    { observers.add(o); }
+    @Override public void removeObserver(Observer o) { observers.remove(o); }
+
+    @Override
+    public void notifyObservers(String stockName, double price) {
+        for (Observer o : observers) o.onStockPriceChange(stockName, price);
+    }
+}
+
+// Step 4: Concrete subject — extends Publisher, auto-registers via instance initializer
+public class StockTradingManager extends Publisher {
+
+    private EmailService emailService = new EmailService();
+    private SmsService   smsService   = new SmsService();
+    private AppService   appService   = new AppService();
+
+    // Instance initializer — runs before constructor, registers without changing signature
+    {
+        addObserver(emailService);
+        addObserver(smsService);
+        addObserver(appService);
+    }
+
+    public void onStockPriceChange(String stockName, double price) {
+        if (price > threshold) {
+            notifyObservers(stockName, price);  // all observers notified
+        }
+    }
+}
+
+// Step 5: Concrete observers — each does ONE thing
+public class EmailService implements Observer {
+    @Override
+    public void onStockPriceChange(String stockName, double price) {
+        System.out.println("Email: " + stockName + " crossed " + price);
+    }
+}
+
+// Adding new observer (SmsService) = ZERO changes to Publisher or StockTradingManager
+// OCP satisfied — open for extension, closed for modification
+
+// Strategy vs Observer:
+// Strategy  = pick ONE algorithm, swap at runtime
+// Observer  = notify MANY subscribers simultaneously`,
+    },
   ],
 
   rules: [
+    {
+      rule: 'Decorator: each decorator holds ONE reference to the component below it — never a list',
+      tag: 'key',
+      detail: 'NotificationDecorator has `protected Notification wrapped`. Execution flows top-down through the chain. Control returns bottom-up. It is NOT circular — each layer calls wrapped.send() once.',
+    },
+    {
+      rule: 'RetryDecorator must use while loop, not if — otherwise retry count resets each call',
+      tag: 'gotcha',
+      detail: 'while (cnt < MAX_COUNT) retries correctly in a loop. Using if means the method returns after one failure — the retry never actually retries. This was a real bug in the Scaler assignment.',
+    },
+    {
+      rule: 'Flyweight: intrinsic state (shared, immutable) lives in object. Extrinsic state (varies per use) passed as method parameter.',
+      tag: 'key',
+      detail: 'ChessPiece stores colour + type (intrinsic — never changes). Position is extrinsic — passed to render(x, y) at call time. Storing position inside flyweight breaks sharing.',
+    },
+    {
+      rule: 'Flyweight object must be IMMUTABLE — if it can be mutated, sharing breaks',
+      tag: 'gotcha',
+      detail: 'If position is stored in ChessPiece and one caller changes it, all 10,000 chess games sharing that object see the mutation. Immutability is not optional in Flyweight.',
+    },
+    {
+      rule: 'Strategy = pick ONE algorithm. Observer = notify MANY simultaneously.',
+      tag: 'key',
+      detail: 'Key distinction for MCQs. Strategy injects one implementation and delegates to it. Observer maintains a list and calls all of them. Never confuse the two.',
+    },
+    {
+      rule: 'Publisher abstract class holds `protected List<Observer>` — subclass just calls notifyObservers()',
+      tag: 'key',
+      detail: 'All list management (add/remove/notify loop) lives in Publisher. Subclasses (TaskManager, StockTradingManager) only call notifyObservers(...) — zero boilerplate repeated.',
+    },
+    {
+      rule: 'Instance initializer block { } registers observers without touching constructor signature',
+      tag: 'gotcha',
+      detail: 'When test checks constructor params and auto-registration is needed, use instance initializer { addObserver(emailService); } — runs before constructor body, after field initialization.',
+    },
+    {
+      rule: 'Strategy interface must declare wrapper type (Double) not primitive (double)',
+      tag: 'gotcha',
+      detail: 'Reflection-based tests check method.getReturnType() == Double.class. Primitive double fails this check. Always declare Double (wrapper) in the interface return type.',
+    },
+    {
+      rule: 'Adding new Observer = zero changes to Publisher or existing observers — OCP satisfied',
+      tag: 'key',
+      detail: 'New SmsService implements Observer, added via addObserver(). Publisher and all existing observers untouched. This is why Observer pattern satisfies Open/Closed Principle.',
+    },
     {
       rule: 'Singleton → volatile + double null check + synchronized on class',
       tag: 'key',

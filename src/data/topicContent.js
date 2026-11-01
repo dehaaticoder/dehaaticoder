@@ -540,4 +540,500 @@ for (int i = 1; i <= m; i++)
       { slug: 'n-digit-numbers',  title: 'N Digit Numbers with Digit Sum S', difficulty: 'Medium', lcNum: null },
     ],
   },
+
+  machinecoding: {
+    intro: `Machine coding and LLD interviews test whether you can go from a vague problem statement to a working, well-designed system — in under 2.5 hours. The key is not just knowing OOP concepts, but following a structured approach every single time.`,
+    whyItWorks: `Most candidates jump straight to coding. Interviewers are judging your thought process — how you gather requirements, how you model the system, and whether your design is extensible. Structure separates a strong hire from an average one.`,
+    teachingFlow: [
+      { step: 'Step 0 — Align',      desc: 'Two lines confirming your understanding of the system. Always do this, even if you know the app.' },
+      { step: 'Step 1 — Requirements', desc: 'Gather 5–8 requirements. Ask 3 clarifying questions. Lead the interview — propose features yourself.' },
+      { step: 'Step 2 — Class Diagram', desc: 'Identify classes via nouns, visualization, or user journey. Define fields + method signatures.' },
+      { step: 'Step 3 — Schema Design', desc: 'Convert classes to tables. Add foreign keys based on relationships. Skip if no DB needed.' },
+      { step: 'Step 4 — Code',         desc: 'For machine coding: end-to-end working code. For LLD round: pseudo-code or key class implementations.' },
+    ],
+    keyInsight: 'Lead the interview. Propose the features yourself — do not let the interviewer dictate them. If you leave it to them, they might give you something you cannot implement.',
+
+    patternsTitle: 'The 3 Clarifying Questions (always ask before designing)',
+    patterns: [
+      {
+        name: 'Question 1 — Entity system or working software?',
+        when: 'Always ask this first.',
+        whyThisPattern: 'Entity system = just class diagram, no algorithm, no APIs. Working software = full implementation with flows and interactions. Your entire approach changes based on this answer.',
+        unpick: false,
+        examples: 'Design a Pen → entity system. Design BookMyShow → working software.',
+        code: `// Entity system: just define classes + relationships
+// No main(), no algorithms, no user flows
+
+abstract class Pen {
+    String name;
+    String brand;
+    double price;
+    boolean isCapOpen;
+    abstract void write();
+    void open()  { isCapOpen = true; }
+    void close() { isCapOpen = false; }
+}
+
+// Working software: full implementation
+// Main class, object creation, method calls, test cases`,
+      },
+      {
+        name: 'Question 2 — Do we persist data?',
+        when: 'Ask after confirming entity vs working software.',
+        whyThisPattern: 'If yes → you must do schema design (tables, foreign keys, relationships). If no → skip schema design entirely. For example, TicTacToe has no DB — game state lives in memory only.',
+        unpick: false,
+        examples: 'BookMyShow → yes, persist bookings. TicTacToe → no, in-memory only.',
+        code: `// If persisting: schema design required
+// User table, Post table, Connection table...
+
+// If not persisting: no schema needed
+// Just classes and in-memory state`,
+      },
+      {
+        name: 'Question 3 — How does user interact?',
+        when: 'Ask before coding.',
+        whyThisPattern: 'Three options: APIs (REST endpoints), command line (command pattern), or hardcoded (main class with test cases). Each requires a different implementation approach.',
+        unpick: false,
+        examples: 'Atlassian interview → hardcoded. Flipkart → APIs. Some companies → command line.',
+        code: `// Hardcoded: write a main/client class
+public class Main {
+    public static void main(String[] args) {
+        Pen p = new GelPen("Parker", "Parker Co", 150.0);
+        p.write();
+    }
+}`,
+      },
+    ],
+
+    commonMistakes: [
+      'Jumping to code without gathering requirements — interviewer is judging your thought process, not just the code.',
+      'Letting the interviewer give you all the features — propose them yourself so you control the complexity.',
+      'Talking about fancy side features (coupons, games in Zomato) instead of the central feature — interviewers will ask you to implement it.',
+      'Putting refillPen() on the abstract Pen class — not all pens are refillable. Fountain pens have no refill. Use an interface instead.',
+      'Using enum for types when different types need different attributes — enums cannot hold extra state. Use subclasses instead.',
+      'Putting likes/comments as columns in the Post table — 1-to-many relationships store the FK on the many side, not the one side.',
+      'Using a single Connection table with a status column — separating ConnectionRequest and Connection gives cleaner queries and single responsibility.',
+    ],
+
+    caseStudies: [
+      {
+        slug: 'pen-design',
+        title: 'Design a Pen',
+        type: 'Entity System',
+        difficulty: 'Beginner',
+        description: 'Classic Amazon interview problem. Design the class hierarchy for physical pens — ball pen, gel pen, fountain pen — with proper OOP relationships.',
+        classes: [
+          {
+            name: 'Pen (abstract)',
+            fields: ['String name', 'String brand', 'double price', 'boolean isCapOpen'],
+            methods: ['abstract void write()', 'void open()', 'void close()'],
+          },
+          {
+            name: 'Refillable (interface)',
+            fields: [],
+            methods: ['void refillPen(Refill refill)'],
+          },
+          {
+            name: 'GelPen extends Pen implements Refillable',
+            fields: ['Refill refill'],
+            methods: ['void write()', 'void refillPen(Refill refill)'],
+          },
+          {
+            name: 'BallPen extends Pen implements Refillable',
+            fields: ['Refill refill'],
+            methods: ['void write()', 'void refillPen(Refill refill)'],
+          },
+          {
+            name: 'FountainPen extends Pen',
+            fields: ['Ink ink'],
+            methods: ['void write()'],
+          },
+          {
+            name: 'Refill',
+            fields: ['int length', 'Ink ink'],
+            methods: [],
+          },
+          {
+            name: 'Ink',
+            fields: ['String color', 'double density', 'InkType type'],
+            methods: [],
+          },
+        ],
+        relationships: [
+          'GelPen, BallPen, FountainPen → Pen : inheritance (is-a)',
+          'GelPen, BallPen → Refillable : realization (implements)',
+          'GelPen, BallPen → Refill : aggregation (weak has-a, hollow diamond on pen side)',
+          'Refill → Ink : composition (strong has-a, filled diamond on refill side)',
+          'FountainPen → Ink : composition (strong has-a, filled diamond on fountain pen side)',
+        ],
+        keyInsight: 'Refill is aggregation (weak) because you can remove and swap refills independently. Ink inside Refill is composition (strong) because ink cannot exist without the refill context.',
+      },
+    ],
+
+    animations: [],
+    problems: [],
+  },
+
+  designpatterns: {
+    intro: `Design patterns are reusable solutions to recurring object-oriented design problems. They are not code — they are blueprints. Each pattern captures a proven approach to a specific structural or behavioral challenge, so you can apply it without reinventing the solution.`,
+    whyItWorks: `Patterns give you a shared vocabulary. When you say "use a Singleton here" or "wrap it in a Decorator", every engineer on the team instantly understands the structure and intent. Patterns also encode known pitfalls — the gotchas that would take you hours to debug on your own are already documented.`,
+    teachingFlow: [
+      { step: 'Creational', desc: 'Singleton, Builder, Factory, Abstract Factory, Prototype — how to create objects cleanly.' },
+      { step: 'Structural', desc: 'Adapter, Facade, Decorator, Flyweight — how to compose objects and hide complexity.' },
+      { step: 'Behavioral', desc: 'Strategy, Observer — how objects communicate and delegate behavior.' },
+      { step: 'Real-world examples', desc: 'Every pattern paired with a production scenario: logger, payment gateway, AI provider, chess game.' },
+      { step: 'Gotchas', desc: 'The bugs each pattern is designed to prevent — and the bugs you can still introduce if you apply it wrong.' },
+    ],
+    keyInsight: 'A pattern is only as good as your understanding of WHY it exists. Know the problem it solves — not just its structure — and you will never apply the wrong pattern.',
+    patternsTitle: 'The 10 Design Patterns',
+    patterns: [
+      {
+        name: 'Pattern 1 — Singleton',
+        when: 'Exactly ONE instance should exist across the entire application.',
+        whyThisPattern: 'Logger, DB connection pool, config manager — if two instances exist, you get split state, duplicate connections, or inconsistent config. Singleton ensures one instance, lazily created, thread-safe via DCL.',
+        examples: 'Logger, Database Connection Pool, Configuration Manager, Thread Pool',
+        gaonKiBaat: 'Gaon mein ek hi Pradhan hota hai. Agar naya Pradhan banana chaahe, toh wahi purana Pradhan milta hai.',
+        code: `public class Logger {
+    private static volatile Logger instance;
+    private Logger() { }
+
+    public static Logger getInstance() {
+        if (instance == null) {
+            synchronized (Logger.class) {
+                if (instance == null) {
+                    instance = new Logger();
+                }
+            }
+        }
+        return instance;
+    }
+
+    public void log(String message) {
+        System.out.println(message);
+    }
+}`,
+      },
+      {
+        name: 'Pattern 2 — Builder',
+        when: 'Object has many fields — especially optional ones — and constructor args become confusing.',
+        whyThisPattern: 'new DB("admin", "jdbc://...", "secret", true, 10, false) — which is url and which is username? Builder names each field explicitly, validates in build(), and prevents half-built objects.',
+        examples: 'DatabaseConfiguration, HTTP Request, Email, SQL Query',
+        gaonKiBaat: 'Gaon mein makaan banane wala pehle neev daalta hai, phir deewaar, phir chhat — ek ek step mein.',
+        code: `public class DatabaseConfiguration {
+    private final String url;
+    private final String username;
+    private final int maxConnections;
+
+    private DatabaseConfiguration(Builder builder) {
+        this.url = builder.url;
+        this.username = builder.username;
+        this.maxConnections = builder.maxConnections;
+    }
+
+    public static class Builder {
+        private String url;
+        private String username;
+        private int maxConnections = 10;
+
+        public Builder setUrl(String url)       { this.url = url; return this; }
+        public Builder setUsername(String u)    { this.username = u; return this; }
+        public Builder setMaxConnections(int n) { this.maxConnections = n; return this; }
+
+        public DatabaseConfiguration build() {
+            if (url == null) throw new RuntimeException("URL required");
+            return new DatabaseConfiguration(this);
+        }
+    }
+}
+
+// Usage
+DatabaseConfiguration config = new DatabaseConfiguration.Builder()
+    .setUrl("jdbc://localhost:5432/mydb")
+    .setUsername("admin")
+    .setMaxConnections(20)
+    .build();`,
+      },
+      {
+        name: 'Pattern 3 — Simple Factory',
+        when: 'Object creation logic should be in one place, not scattered across callers. BUT adding a new type requires editing the factory — violates OCP.',
+        whyThisPattern: 'Every caller was doing if (type == "email") new EmailNotification() ... — creation logic duplicated everywhere. Factory centralises it. Limitation: adding "slack" means editing the if-else chain.',
+        examples: 'Notification sender (SMS/Email/Push), Audio player (MP3/WAV/FLAC)',
+        gaonKiBaat: 'Gaon mein jalebi banane wala ek hi hota hai — tu sirf bolta hai "jalebi do" aur woh bana ke deta hai.',
+        code: `public class NotificationFactory {
+    public static Notification create(String type, String recipient, String message) {
+        if (type.equals("email")) return new EmailNotification(recipient, message);
+        if (type.equals("sms"))   return new SmsNotification(recipient, message);
+        if (type.equals("push"))  return new PushNotification(recipient, message);
+        throw new IllegalArgumentException("Unknown type: " + type);
+    }
+}
+
+// ❌ OCP Violation: adding "slack" → must edit this if-else`,
+      },
+      {
+        name: 'Pattern 4 — Abstract Factory',
+        when: 'You need a FAMILY of related objects from the same provider — consistency guaranteed.',
+        whyThisPattern: 'Simple Factory returns one object. Abstract Factory returns a whole family. OpenAI chat + Anthropic vector = incompatible. Abstract Factory ensures both come from the same provider.',
+        examples: 'AI provider (chat + vector from same provider), UI themes (button + dialog), Audio (decoder + player + processor)',
+        gaonKiBaat: 'Ek hi dukan se chai bhi lo aur samosa bhi lo — dono Sharma ji ke hain, ek saath theek lagte hain.',
+        code: `public interface AiClientFactory {
+    AiChatClient   getAiChatClient();
+    AiVectorClient getAiVectorClient();
+}
+
+public class OpenAiClientFactory implements AiClientFactory {
+    @Override public AiChatClient   getAiChatClient()   { return new OpenAiChatClient(); }
+    @Override public AiVectorClient getAiVectorClient() { return new OpenAiVectorClient(); }
+}
+
+public class ChatService {
+    private final AiChatClient   chatClient;
+    private final AiVectorClient vectorClient;
+
+    public ChatService(AiClientFactory factory) {
+        this.chatClient   = factory.getAiChatClient();   // same provider
+        this.vectorClient = factory.getAiVectorClient(); // same provider — guaranteed
+    }
+}
+
+ChatService openAiService = new ChatService(new OpenAiClientFactory());`,
+      },
+      {
+        name: 'Pattern 5 — Factory + Registry (Open/Closed)',
+        when: 'New providers must be addable WITHOUT editing existing factory code.',
+        whyThisPattern: 'Fixes OCP violation of Simple Factory. New factory self-registers via static block on class load. Existing code never changes. Adding Gemini = zero edits to ClientFactoryProvider.',
+        examples: 'AI provider plugins, Payment gateway plugins, Notification channel plugins',
+        gaonKiBaat: 'Naya dukandaar aaya — usne apna naam khud register karwaya panchayat mein. Panchayat ko kuch badalna nahi pada.',
+        code: `public class ClientFactoryProvider {
+    private static final Map<String, AiClientFactory> registry = new HashMap<>();
+
+    public static void register(String provider, AiClientFactory factory) {
+        registry.put(provider, factory);
+    }
+    public static AiClientFactory getAiClientFactory(String provider) {
+        AiClientFactory f = registry.get(provider);
+        if (f == null) throw new IllegalArgumentException("Unknown: " + provider);
+        return f;
+    }
+}
+
+// Self-registration via static block — runs once when JVM loads this class
+public class GeminiClientFactory implements AiClientFactory {
+    static {
+        ClientFactoryProvider.register("gemini", new GeminiClientFactory());
+    }
+    @Override public AiChatClient   getAiChatClient()   { return new GeminiChatClient(); }
+    @Override public AiVectorClient getAiVectorClient() { return new GeminiVectorClient(); }
+}
+
+// Adding Gemini → ZERO changes to existing code`,
+      },
+      {
+        name: 'Pattern 6 — Prototype + Registry',
+        when: 'Creating an object is expensive and you need many similar copies — clone a template instead of building from scratch.',
+        whyThisPattern: 'Fetching from DB for every user in a 10,000-email campaign = minutes. Clone a template once and customize per clone = milliseconds. Registry stores templates; always returns clones, never the template itself.',
+        examples: 'Email/SMS campaigns, Invoice generation, VM provisioning, Game enemy spawning, Mock objects for tests',
+        gaonKiBaat: 'Gaon mein ek baar achha beej mila — usse baar baar zameen se nahi nikaalte. Uski copy banao aur customize karo.',
+        code: `public interface Prototype<T> { T clone(); }
+
+public class VMInstance implements Prototype<VMInstance> {
+    private String os;
+    private List<String> installedPackages = new ArrayList<>();
+
+    // Copy constructor — deep copy including collections
+    public VMInstance(VMInstance other) {
+        this.os = other.os;
+        this.installedPackages = new ArrayList<>(other.installedPackages); // deep copy!
+    }
+
+    @Override public VMInstance clone() { return new VMInstance(this); }
+}
+
+public class VMInstanceRegistry {
+    private HashMap<String, VMInstance> registry = new HashMap<>();
+
+    public void addVMInstance(String key, VMInstance template) {
+        registry.putIfAbsent(key, template);
+    }
+    public VMInstance getVMInstance(String key) {
+        VMInstance template = registry.get(key);
+        return template == null ? null : template.clone(); // ALWAYS clone
+    }
+}`,
+      },
+      {
+        name: 'Pattern 7 — Adapter',
+        when: 'External API or class cannot be modified, but its interface does not match what your system expects.',
+        whyThisPattern: 'YesBank SDK has makePayment(), your system expects processPayment(). You cannot modify YesBank SDK. Adapter wraps it and translates — caller only sees your BankApi interface.',
+        examples: 'Payment gateway integration, Social media posting (Twitter/Facebook), Translation APIs (Google/Microsoft)',
+        gaonKiBaat: 'Ek banda Bhojpuri mein bolta hai, dusra English mein sunna chahta hai. Adapter woh translator hai.',
+        code: `// Target interface — what YOUR system expects
+public interface BankApi {
+    void processPayment(String amount, String currency);
+    String getTransactionStatus(String txnId);
+}
+
+// Adaptee — external SDK you CANNOT modify
+public class YesBankSdk {
+    public void makePayment(double amount, String curr) { }
+    public String checkTxn(String ref) { return "TXN_SUCCESS"; }
+}
+
+// Adapter — written by YOU, holds the adaptee as a field (prefer composition)
+public class YesBankAdapter implements BankApi {
+    private YesBankSdk yesBankSdk;
+
+    public YesBankAdapter(YesBankSdk sdk) { this.yesBankSdk = sdk; }
+
+    @Override
+    public void processPayment(String amount, String currency) {
+        yesBankSdk.makePayment(Double.parseDouble(amount), currency); // translate
+    }
+    @Override
+    public String getTransactionStatus(String txnId) {
+        String raw = yesBankSdk.checkTxn(txnId);
+        return raw.equals("TXN_SUCCESS") ? "SUCCESS" : "FAILED"; // normalize
+    }
+}
+
+BankApi bank = new YesBankAdapter(new YesBankSdk());
+bank.processPayment("500.00", "INR");`,
+      },
+      {
+        name: 'Pattern 8 — Facade',
+        when: 'Multiple subsystems need to be orchestrated in sequence, and you want to hide that complexity behind one simple entry point.',
+        whyThisPattern: 'Client was calling InventoryService, InvoiceService, MailService in order — too much knowledge. Facade centralises the sequence. NO business logic in Facade — it only wires calls together.',
+        examples: 'Amazon Place Order (Inventory + Invoice + Email), Image editing pipeline, Travel booking',
+        gaonKiBaat: 'Amazon se order karo — ek hi button dabao. Peeche Inventory, Invoice, Email — teen alag karamchari. Facade wahi receptionist hai.',
+        code: `public class InventoryService  { public void updateInventory(Order o)  { } }
+public class InvoiceService    { public void generateInvoice(Order o)  { } }
+public class MailService       { public void sendEmail(Order o)        { } }
+
+// Facade — holds all services, orchestrates in sequence, ZERO business logic
+public class PlaceOrderFacade {
+    private InventoryService inventoryService = new InventoryService();
+    private InvoiceService   invoiceService   = new InvoiceService();
+    private MailService      mailService      = new MailService();
+
+    public void placeOrder(Order order) {
+        inventoryService.updateInventory(order); // step 1
+        invoiceService.generateInvoice(order);   // step 2
+        mailService.sendEmail(order);            // step 3
+    }
+}
+
+// Manager — holds ONLY the Facade (not the services directly)
+public class OrderManager {
+    private PlaceOrderFacade facade = new PlaceOrderFacade();
+    public void processOrder(Order order) { facade.placeOrder(order); }
+}`,
+      },
+      {
+        name: 'Pattern 9 — Decorator + Flyweight',
+        when: 'Decorator: add behaviour at runtime without subclassing. Flyweight: share immutable objects to save memory when many identical copies exist.',
+        whyThisPattern: 'Decorator avoids class explosion (EspressoWithMilkAndSugar subclass). Flyweight avoids object explosion (16 white pawns in chess = one shared object with position passed externally).',
+        examples: 'Notification with logging + retry, Coffee condiments, Chess piece sharing, Game enemy spawning',
+        gaonKiBaat: 'Decorator — chai pe adrak, phir elaichi — ek ke upar ek layer. Flyweight — gaon mein ek hi Ramleela costume, alag alag log pehnte hain.',
+        code: `// DECORATOR
+public interface Notification { void send(String message); }
+
+public class EmailNotification implements Notification {
+    @Override public void send(String message) { System.out.println("Email: " + message); }
+}
+
+public abstract class NotificationDecorator implements Notification {
+    protected Notification wrapped;
+    public NotificationDecorator(Notification w) { this.wrapped = w; }
+}
+
+public class RetryDecorator extends NotificationDecorator {
+    private static final int MAX_COUNT = 5;
+    public RetryDecorator(Notification wrapped) { super(wrapped); }
+
+    @Override public void send(String message) {
+        int cnt = 0;
+        while (cnt < MAX_COUNT) { // MUST be while, not if
+            try { wrapped.send(message); return; }
+            catch (Exception e) { cnt++; }
+        }
+        throw new RuntimeException("Failed after " + MAX_COUNT + " retries");
+    }
+}
+
+// FLYWEIGHT
+public class ChessPiece {
+    private final String colour; // intrinsic — shared, immutable
+    private final String type;   // intrinsic — shared, immutable
+
+    public void render(int x, int y) { // x,y = extrinsic — passed in per call
+        System.out.println(colour + " " + type + " at (" + x + "," + y + ")");
+    }
+}`,
+      },
+      {
+        name: 'Pattern 10 — Strategy + Observer',
+        when: 'Strategy: swap one algorithm at runtime. Observer: notify many subscribers when state changes.',
+        whyThisPattern: 'Strategy = pick ONE algorithm (pricing: distance vs time vs surge). Observer = notify ALL (stock price changes → email, SMS, app all fire simultaneously). Never confuse the two.',
+        examples: 'PricingStrategy (Distance/Time/Surge), StockTradingManager (Email/SMS/App), WeatherMonitor',
+        gaonKiBaat: 'Strategy — ek tarika choose karo. Observer — horn baja, sab ek saath sunta hai.',
+        code: `// STRATEGY
+public interface PricingStrategy {
+    Double calculateFare(double distance, double time); // Double not double
+}
+
+public class SurgePricingStrategy implements PricingStrategy {
+    @Override public Double calculateFare(double distance, double time) {
+        return (distance * 10.0 + time * 2.0) * 1.5;
+    }
+}
+
+public class CabBooking {
+    private PricingStrategy strategy;
+    public CabBooking(PricingStrategy s) { this.strategy = s; }
+    public Double calculateFare(double d, double t) { return strategy.calculateFare(d, t); }
+}
+
+// OBSERVER
+public interface Observer { void onStockPriceChange(String name, double price); }
+
+public abstract class Publisher {
+    protected List<Observer> observers = new ArrayList<>();
+    public void addObserver(Observer o)    { observers.add(o); }
+    public void removeObserver(Observer o) { observers.remove(o); }
+    public void notifyObservers(String name, double price) {
+        for (Observer o : observers) o.onStockPriceChange(name, price);
+    }
+}
+
+public class StockTradingManager extends Publisher {
+    private EmailService emailService = new EmailService();
+    { addObserver(emailService); } // instance initializer — registers without changing constructor
+    public void onStockPriceChange(String name, double price) {
+        if (price > threshold) notifyObservers(name, price);
+    }
+}`,
+      },
+    ],
+    commonMistakes: [
+      'Singleton: missing volatile → partially constructed object visible to other threads',
+      'Singleton: resetInstance() using DCL → unnecessary; single synchronized block is enough',
+      'Builder: setters returning void → method chaining breaks; must return this',
+      'Builder: build() returning Builder instead of the main object',
+      'Simple Factory: editing if-else for every new type → OCP violation; use Registry instead',
+      'Abstract Factory: mixing providers (OpenAI chat + Anthropic vector) → runtime incompatibility',
+      'Registry: circular static initialization → Factory references Registry in static block AND Registry references Factory → StackOverflowError',
+      'Prototype: this.list = other.list → shallow copy; must use new ArrayList<>(other.list)',
+      'Prototype Registry: returning original template instead of clone → caller mutates shared template',
+      'Adapter: extending Adaptee instead of holding it as a field → prefer composition over inheritance',
+      'Facade: adding if-else / validation inside Facade → business logic belongs in services',
+      'Facade: Manager holding services directly instead of only Facade → pattern breaks',
+      'Decorator (RetryDecorator): using if instead of while → retry never actually retries',
+      'Flyweight: storing extrinsic state (position) inside flyweight object → all users see mutation',
+      'Strategy: interface declaring double (primitive) not Double (wrapper) → reflection-based tests fail',
+      'Observer: Publisher extending Publisher in concrete class → instance initializer needed for auto-registration',
+    ],
+    animations: [],
+    problems: [],
+    caseStudies: [],
+  },
 }

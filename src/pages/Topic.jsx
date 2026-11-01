@@ -269,6 +269,35 @@ export default function Topic() {
           </div>
         </section>
 
+        {/* Case Studies */}
+        {content.caseStudies && content.caseStudies.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-stone-800 mb-2">Case Studies</h2>
+            <p className="text-stone-500 mb-6">End-to-end design walkthroughs — from requirements to class diagram.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {content.caseStudies.map((cs, i) => (
+                <Link
+                  key={i}
+                  to={`/dehaaticoder/topic/${slug}/case/${cs.slug}`}
+                  className="bg-white border border-stone-200 hover:border-green-400 hover:shadow-sm rounded-xl px-5 py-5 transition group flex flex-col gap-2"
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cs.type === 'Entity System' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                      {cs.type}
+                    </span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cs.difficulty === 'Beginner' ? 'bg-green-100 text-green-700' : cs.difficulty === 'Intermediate' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                      {cs.difficulty}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-stone-800 group-hover:text-green-600 text-lg">{cs.title}</h3>
+                  <p className="text-stone-500 text-sm leading-relaxed">{cs.description}</p>
+                  <span className="text-green-500 text-sm font-medium group-hover:translate-x-1 transition-transform mt-1">View design →</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Problems */}
         <section>
           <h2 className="text-2xl font-bold text-stone-800 mb-2">Practice Problems</h2>

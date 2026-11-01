@@ -3,6 +3,7 @@ import Home from './pages/Home'
 import Roadmap from './pages/Roadmap'
 import Topic from './pages/Topic'
 import Problem from './pages/Problem'
+import CaseStudy from './pages/CaseStudy'
 import Cheatsheet from './pages/Cheatsheet'
 import Interviews from './pages/Interviews'
 import Practice from './pages/Practice'
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/dehaaticoder/" element={<Home />} />
         <Route path="/dehaaticoder/roadmap" element={<Roadmap />} />
         <Route path="/dehaaticoder/topic/:slug" element={<Topic />} />
+        <Route path="/dehaaticoder/topic/:slug/case/:caseSlug" element={<CaseStudy />} />
         <Route path="/dehaaticoder/problem/:slug" element={<Problem />} />
         <Route path="/dehaaticoder/cheatsheet/:topic" element={<Cheatsheet />} />
         <Route path="/dehaaticoder/interviews" element={<Interviews />} />

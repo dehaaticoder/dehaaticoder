@@ -667,6 +667,61 @@ public class Main {
           'FountainPen → Ink : composition (strong has-a, filled diamond on fountain pen side)',
         ],
         keyInsight: 'Refill is aggregation (weak) because you can remove and swap refills independently. Ink inside Refill is composition (strong) because ink cannot exist without the refill context.',
+        mermaidDiagram: `classDiagram
+  class Pen {
+    <<abstract>>
+    String name
+    String brand
+    double price
+    boolean isCapOpen
+    void open()
+    void close()
+    void write()*
+  }
+  class Refillable {
+    <<interface>>
+    void refillPen(Refill refill)
+  }
+  class GelPen {
+    Refill refill
+    void write()
+    void refillPen(Refill refill)
+  }
+  class BallPen {
+    Refill refill
+    void write()
+    void refillPen(Refill refill)
+  }
+  class FountainPen {
+    Ink ink
+    void write()
+  }
+  class Refill {
+    int length
+    Ink ink
+  }
+  class Ink {
+    String color
+    double density
+    InkType type
+  }
+  class InkType {
+    <<enumeration>>
+    GEL
+    BALL
+    FOUNTAIN
+  }
+
+  Pen <|-- GelPen : extends
+  Pen <|-- BallPen : extends
+  Pen <|-- FountainPen : extends
+  Refillable <|.. GelPen : implements
+  Refillable <|.. BallPen : implements
+  GelPen o-- Refill : aggregation
+  BallPen o-- Refill : aggregation
+  Refill *-- Ink : composition
+  FountainPen *-- Ink : composition
+  Ink --> InkType : uses`,
       },
     ],
 

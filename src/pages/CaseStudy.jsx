@@ -1,7 +1,41 @@
 import { useParams, Link } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
 import { topicContent } from '../data/topicContent'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+
+function MermaidDiagram({ chart }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!chart || !ref.current) return
+
+    const renderDiagram = () => {
+      if (window.mermaid) {
+        window.mermaid.initialize({ startOnLoad: false, theme: 'default' })
+        ref.current.innerHTML = `<pre class="mermaid">${chart}</pre>`
+        window.mermaid.run({ nodes: [ref.current.querySelector('.mermaid')] })
+      }
+    }
+
+    if (window.mermaid) {
+      renderDiagram()
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js'
+    script.onload = renderDiagram
+    document.head.appendChild(script)
+  }, [chart])
+
+  return (
+    <div
+      ref={ref}
+      className="bg-white border border-stone-200 rounded-xl p-6 overflow-x-auto"
+    />
+  )
+}
 
 const difficultyColors = {
   Beginner:     'bg-green-100 text-green-700',
@@ -65,10 +99,18 @@ export default function CaseStudy() {
           </section>
         )}
 
-        {/* Class Diagram */}
-        {caseStudy.classes && caseStudy.classes.length > 0 && (
+        {/* Mermaid Visual Diagram */}
+        {caseStudy.mermaidDiagram && (
           <section>
             <h2 className="text-2xl font-bold text-stone-800 mb-6">Class Diagram</h2>
+            <MermaidDiagram chart={caseStudy.mermaidDiagram} />
+          </section>
+        )}
+
+        {/* Class Details */}
+        {caseStudy.classes && caseStudy.classes.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-stone-800 mb-6">Class Details</h2>
             <div className="space-y-4">
               {caseStudy.classes.map((cls, i) => (
                 <div key={i} className="bg-white border border-stone-200 rounded-xl overflow-hidden">

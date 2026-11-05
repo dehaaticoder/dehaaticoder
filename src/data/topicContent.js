@@ -733,23 +733,23 @@ public class Main {
         gaonKiBaat: 'Gaon mein ek postman hai. Do log ek saath aakar kehte hain "yeh address mere liye reserve karo." Purana tarika: pehle check karo — khaali hai, dono ko haan bolo — dono ke naam pe likh do. Naya tarika: putIfAbsent — jo pehle aaya, uski entry ho gayi. Doosre ko seedha "pehle se le liya gaya" milta hai. Ek hi baar mein check aur book — koi race nahi.',
         mermaidDiagram: `classDiagram
   class ShortUrl {
-    -shortCode String
-    -originalUrl String
-    -customAlias String
-    -createdAt LocalDateTime
-    -expiresAt LocalDateTime
-    -createdBy String
-    -clickCount AtomicInteger
+    -String shortCode
+    -String originalUrl
+    -String customAlias
+    -LocalDateTime createdAt
+    -LocalDateTime expiresAt
+    -String createdBy
+    -AtomicInteger clickCount
     +isExpired() boolean
-    +incrementClicks() void
+    +incrementClicks()
     +getClickCount() int
   }
   class ClickEvent {
-    -id String
-    -shortCode String
-    -clickedBy String
-    -source String
-    -clickedAt LocalDateTime
+    -String id
+    -String shortCode
+    -String clickedBy
+    -String source
+    -LocalDateTime clickedAt
   }
   class CodeGenerationStrategy {
     <<interface>>
@@ -759,41 +759,41 @@ public class Main {
     +generate(input) String
   }
   class CounterBasedStrategy {
-    -counter AtomicInteger
+    -AtomicInteger counter
     +generate(input) String
   }
   class RandomBasedStrategy {
     +generate(input) String
   }
   class ShortUrlRepository {
-    -shortUrlMap ConcurrentHashMap
+    -ConcurrentHashMap shortUrlMap
     +saveIfAbsent(url) boolean
     +findByShortCode(code) Optional
     +findAllExpired() List
-    +delete(code) void
+    +delete(code)
   }
   class ClickEventRepository {
-    -clickEventMap ConcurrentHashMap
-    +save(event) void
+    -ConcurrentHashMap clickEventMap
+    +save(event)
     +findByShortCode(code) List
   }
   class UrlShortenerService {
-    +shorten(longUrl, alias, ttl, createdBy) String
-    +resolve(shortCode, userId, source) String
-    +getStats(shortCode) Object
+    +shorten(longUrl, alias, ttl, by) String
+    +resolve(code, userId, src) String
+    +getStats(code) UrlStats
   }
   class UrlStats {
-    -clickCount int
-    -createdAt LocalDateTime
-    -expiresAt LocalDateTime
-    -recentEvents List
+    -int clickCount
+    -LocalDateTime createdAt
+    -LocalDateTime expiresAt
+    -List recentEvents
     +getRecentEvents() List
   }
   class ExpiryCleanupJob {
-    -scheduler ScheduledExecutorService
-    -cronInterval int
-    +start() void
-    -run() void
+    -ScheduledExecutorService scheduler
+    -int cronInterval
+    +start()
+    -run()
   }
 
   CodeGenerationStrategy <|.. HashBasedStrategy

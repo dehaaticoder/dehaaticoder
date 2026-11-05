@@ -111,12 +111,14 @@ export default function CaseStudy() {
                     {/* Phase header */}
                     <div className="flex items-center justify-between gap-4 px-6 py-4 bg-stone-50 border-b border-stone-100">
                       <h3 className="font-bold text-stone-800 text-lg">{phase.phase}</h3>
-                      {phase.score != null && (
                       <div className="flex flex-col items-end gap-0.5 shrink-0">
+                      {phase.score != null && (
                         <span className={`text-sm font-bold px-3 py-1 rounded-full ${scoreColor}`}>{phase.score}%</span>
-                        {phase.scoreNote && <span className="text-xs text-stone-400 max-w-xs text-right">{phase.scoreNote}</span>}
-                      </div>
-                    )}
+                      )}
+                      {phase.scoreNote && (
+                        <span className={`text-xs max-w-xs text-right ${phase.score != null ? 'text-stone-400' : 'text-red-500 font-semibold'}`}>{phase.scoreNote}</span>
+                      )}
+                    </div>
                     </div>
 
                     {/* Q&A */}

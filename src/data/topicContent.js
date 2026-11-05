@@ -1134,19 +1134,19 @@ System.out.println("Events: " + stats.getRecentEvents().size());
           {
             phase: 'Step 0 — Align',
             score: null,
-            scoreNote: null,
+            scoreNote: 'SKIPPED in actual session — went straight to requirements',
             questions: [
               {
-                q: 'What did you say to align before diving in?',
-                a: 'Two lines confirming understanding: "So we are building a URL shortening service — users give us a long URL, we return a 6-character code, and when someone hits that code we redirect them to the original. I will gather requirements, design entities, and implement the core flows. Should I proceed?"',
+                q: 'What should you have said before starting?',
+                a: '"So we are building a URL shortening service — users give us a long URL, we return a short code, and when someone hits that code we redirect them to the original. I will gather requirements, design entities, and implement the core flows. Should I proceed?" — two lines, always, even for well-known systems.',
               },
               {
-                q: 'Why always do Step 0 even if you know the system?',
-                a: 'It signals structured thinking and gives the interviewer a chance to correct scope before you go deep. Missing this makes you look like you are jumping to code — which is exactly what interviewers penalise.',
+                q: 'Why does skipping Step 0 hurt you?',
+                a: 'It signals that you jump to solving before confirming scope. The interviewer may have a different variant in mind (no analytics, no expiry, etc.). Missing this risks wasting the entire session on the wrong problem.',
               },
             ],
             mistakes: [
-              'Skipping Step 0 entirely — always do two alignment lines before starting, even for well-known systems',
+              'Did not do Step 0 at all — jumped straight into requirements without confirming understanding or asking "Should I proceed?"',
             ],
           },
           {

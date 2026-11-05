@@ -17,6 +17,12 @@ function MermaidDiagram({ chart }) {
         try {
           const { svg } = await window.mermaid.render('mermaid-' + Date.now(), chart)
           ref.current.innerHTML = svg
+          // Make SVG fill container width so diagram isn't cramped
+          const svgEl = ref.current.querySelector('svg')
+          if (svgEl) {
+            svgEl.setAttribute('width', '100%')
+            svgEl.style.minHeight = '420px'
+          }
         } catch (e) {
           ref.current.innerHTML = `<p style="color:#b91c1c;font-size:13px;padding:8px">Class diagram failed to render.</p>`
         }

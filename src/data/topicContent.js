@@ -800,8 +800,7 @@ public class Main {
   UrlShortenerService --> CodeGenerationStrategy
   ExpiryCleanupJob --> ShortUrlRepository
   ShortUrlRepository --> ShortUrl
-  ClickEventRepository --> ClickEvent
-  ClickEvent ..> ShortUrl : shortCode FK`,
+  ClickEventRepository --> ClickEvent`,
         classes: [
           {
             name: 'ShortUrl',

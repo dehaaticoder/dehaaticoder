@@ -800,7 +800,9 @@ public class Main {
   UrlShortenerService --> CodeGenerationStrategy
   ExpiryCleanupJob --> ShortUrlRepository
   ShortUrlRepository --> ShortUrl
-  ClickEventRepository --> ClickEvent`,
+  ClickEventRepository --> ClickEvent
+
+  note for ClickEvent "shortCode links to ShortUrl (1:N domain relation). No direct object ref — connection is through ClickEventRepository keyed by shortCode."`,
         classes: [
           {
             name: 'ShortUrl',

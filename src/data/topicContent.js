@@ -733,67 +733,63 @@ public class Main {
         gaonKiBaat: 'Gaon mein ek postman hai. Do log ek saath aakar kehte hain "yeh address mere liye reserve karo." Purana tarika: pehle check karo — khaali hai, dono ko haan bolo — dono ke naam pe likh do. Naya tarika: putIfAbsent — jo pehle aaya, uski entry ho gayi. Doosre ko seedha "pehle se le liya gaya" milta hai. Ek hi baar mein check aur book — koi race nahi.',
         mermaidDiagram: `classDiagram
   class ShortUrl {
-    -String shortCode
-    -String originalUrl
-    -String customAlias
-    -LocalDateTime createdAt
-    -LocalDateTime expiresAt
-    -String createdBy
-    -AtomicInteger clickCount
-    +isExpired() boolean
-    +incrementClicks()
-    +getClickCount() int
+    String shortCode
+    String originalUrl
+    String customAlias
+    LocalDateTime expiresAt
+    AtomicInteger clickCount
+    boolean isExpired()
+    int getClickCount()
   }
   class ClickEvent {
-    -String id
-    -String shortCode
-    -String clickedBy
-    -String source
-    -LocalDateTime clickedAt
+    String id
+    String shortCode
+    String clickedBy
+    String source
+    LocalDateTime clickedAt
   }
   class CodeGenerationStrategy {
     <<interface>>
-    +generate(input) String
+    String generate(input)
   }
   class HashBasedStrategy {
-    +generate(input) String
+    String generate(input)
   }
   class CounterBasedStrategy {
-    -AtomicInteger counter
-    +generate(input) String
+    AtomicInteger counter
+    String generate(input)
   }
   class RandomBasedStrategy {
-    +generate(input) String
+    String generate(input)
   }
   class ShortUrlRepository {
-    -ConcurrentHashMap shortUrlMap
-    +saveIfAbsent(url) boolean
-    +findByShortCode(code)
-    +findAllExpired()
-    +delete(code)
+    ConcurrentHashMap shortUrlMap
+    boolean saveIfAbsent(url)
+    void findByShortCode(code)
+    void findAllExpired()
+    void delete(code)
   }
   class ClickEventRepository {
-    -ConcurrentHashMap clickEventMap
-    +save(event)
-    +findByShortCode(code)
+    ConcurrentHashMap clickEventMap
+    void save(event)
+    void findByShortCode(code)
   }
   class UrlShortenerService {
-    +shorten(longUrl, alias, ttl, by) String
-    +resolve(code, userId, src) String
-    +getStats(code)
+    String shorten(longUrl, alias, ttl)
+    String resolve(code, userId, src)
+    void getStats(code)
   }
   class UrlStats {
-    -int clickCount
-    -LocalDateTime createdAt
-    -LocalDateTime expiresAt
-    -List recentEvents
-    +getRecentEvents()
+    int clickCount
+    LocalDateTime createdAt
+    LocalDateTime expiresAt
+    List recentEvents
+    void getRecentEvents()
   }
   class ExpiryCleanupJob {
-    -ScheduledExecutorService scheduler
-    -int cronInterval
-    +start()
-    -run()
+    ScheduledExecutorService scheduler
+    int cronInterval
+    void start()
   }
 
   CodeGenerationStrategy <|.. HashBasedStrategy

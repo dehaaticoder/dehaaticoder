@@ -18,7 +18,7 @@ function MermaidDiagram({ chart }) {
           const { svg } = await window.mermaid.render('mermaid-' + Date.now(), chart)
           ref.current.innerHTML = svg
         } catch (e) {
-          ref.current.innerHTML = `<pre style="color:red;font-size:12px;white-space:pre-wrap">MERMAID ERROR:\n${e?.message || e?.str || JSON.stringify(e)}</pre>`
+          ref.current.innerHTML = `<p style="color:#b91c1c;font-size:13px;padding:8px">Class diagram failed to render.</p>`
         }
       }
     }

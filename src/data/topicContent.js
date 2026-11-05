@@ -1132,7 +1132,25 @@ System.out.println("Events: " + stats.getRecentEvents().size());
 // 7. Duplicate alias — throws RuntimeException("Alias already taken")`,
         irisWalkthrough: [
           {
-            phase: 'Phase 1 — Requirements Gathering',
+            phase: 'Step 0 — Align',
+            score: null,
+            scoreNote: null,
+            questions: [
+              {
+                q: 'What did you say to align before diving in?',
+                a: 'Two lines confirming understanding: "So we are building a URL shortening service — users give us a long URL, we return a 6-character code, and when someone hits that code we redirect them to the original. I will gather requirements, design entities, and implement the core flows. Should I proceed?"',
+              },
+              {
+                q: 'Why always do Step 0 even if you know the system?',
+                a: 'It signals structured thinking and gives the interviewer a chance to correct scope before you go deep. Missing this makes you look like you are jumping to code — which is exactly what interviewers penalise.',
+              },
+            ],
+            mistakes: [
+              'Skipping Step 0 entirely — always do two alignment lines before starting, even for well-known systems',
+            ],
+          },
+          {
+            phase: 'Step 1 — Requirements Gathering (70%)',
             score: 70,
             scoreNote: 'Missing quantified throughput NFRs and scalable storage discussion',
             questions: [
@@ -1160,7 +1178,7 @@ System.out.println("Events: " + stats.getRecentEvents().size());
             ],
           },
           {
-            phase: 'Phase 2 — Entity Design',
+            phase: 'Step 2 — Entity Design (Class Diagram)',
             score: 78,
             scoreNote: 'ClickEvent FK and 1:N relationship needed more discussion',
             questions: [
@@ -1188,7 +1206,23 @@ System.out.println("Events: " + stats.getRecentEvents().size());
             ],
           },
           {
-            phase: 'Phase 3 — Implementation (84% → 87%)',
+            phase: 'Step 3 — Schema Design (Skipped — in-memory)',
+            score: null,
+            scoreNote: null,
+            questions: [
+              {
+                q: 'Why was Schema Design skipped here?',
+                a: 'The interviewer confirmed in-memory storage. Schema design is only needed when you persist data to a DB. For in-memory, ConcurrentHashMap is the "storage" — no tables, no FKs needed.',
+              },
+              {
+                q: 'What would the schema look like if we had a real DB?',
+                a: 'Two tables: short_urls (shortCode PK, originalUrl, customAlias, createdAt, expiresAt, createdBy, clickCount) and click_events (id PK, shortCode FK → short_urls ON DELETE SET NULL, clickedBy, source, clickedAt). Index on shortCode in both tables for O(1) lookup.',
+              },
+            ],
+            mistakes: [],
+          },
+          {
+            phase: 'Step 4 — Implementation (84% → 87%)',
             score: 87,
             scoreNote: 'putIfAbsent called out as senior-level thinking. Weak: salt logic, missing stubs, naming typos',
             questions: [

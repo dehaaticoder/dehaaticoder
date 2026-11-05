@@ -160,6 +160,64 @@ export default function CaseStudy() {
           </section>
         )}
 
+        {/* Iris Walkthrough */}
+        {caseStudy.irisWalkthrough && caseStudy.irisWalkthrough.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-stone-800 mb-6">Iris Walkthrough — Interview Replay</h2>
+            <div className="space-y-10">
+              {caseStudy.irisWalkthrough.map((phase, pi) => {
+                const scoreColor = phase.score >= 85 ? 'text-green-700 bg-green-100' : phase.score >= 75 ? 'text-amber-700 bg-amber-100' : 'text-red-700 bg-red-100'
+                return (
+                  <div key={pi} className="border border-stone-200 rounded-2xl overflow-hidden">
+                    {/* Phase header */}
+                    <div className="flex items-center justify-between gap-4 px-6 py-4 bg-stone-50 border-b border-stone-100">
+                      <h3 className="font-bold text-stone-800 text-lg">{phase.phase}</h3>
+                      <div className="flex flex-col items-end gap-0.5 shrink-0">
+                        <span className={`text-sm font-bold px-3 py-1 rounded-full ${scoreColor}`}>{phase.score}%</span>
+                        {phase.scoreNote && <span className="text-xs text-stone-400 max-w-xs text-right">{phase.scoreNote}</span>}
+                      </div>
+                    </div>
+
+                    {/* Q&A */}
+                    {phase.questions && phase.questions.length > 0 && (
+                      <div className="px-6 py-5 space-y-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-3">Q &amp; A Flow</p>
+                        {phase.questions.map((item, qi) => (
+                          <div key={qi} className="rounded-xl border border-stone-100 overflow-hidden">
+                            <div className="flex gap-3 px-4 py-3 bg-blue-50 border-b border-blue-100">
+                              <span className="text-blue-500 font-bold shrink-0 text-sm mt-0.5">Q</span>
+                              <p className="text-blue-800 text-sm font-medium">{item.q}</p>
+                            </div>
+                            <div className="flex gap-3 px-4 py-3 bg-white">
+                              <span className="text-green-500 font-bold shrink-0 text-sm mt-0.5">A</span>
+                              <p className="text-stone-700 text-sm leading-relaxed">{item.a}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Mistakes */}
+                    {phase.mistakes && phase.mistakes.length > 0 && (
+                      <div className="px-6 pb-5">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-red-400 mb-3">Mistakes to Fix Next Time</p>
+                        <div className="space-y-2">
+                          {phase.mistakes.map((m, mi) => (
+                            <div key={mi} className="flex items-start gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                              <span className="text-red-400 font-bold shrink-0 text-sm mt-0.5">✗</span>
+                              <p className="text-red-800 text-sm">{m}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
       </div>
 
       <Footer />

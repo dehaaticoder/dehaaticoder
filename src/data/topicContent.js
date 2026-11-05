@@ -723,6 +723,246 @@ public class Main {
   FountainPen *-- Ink : composition
   Ink --> InkType : uses`,
       },
+      {
+        slug: 'url-shortener',
+        title: 'URL Shortener',
+        type: 'Working Software',
+        difficulty: 'Intermediate',
+        description: 'Full LLD design of a URL shortening service (like bit.ly) — from requirements gathering to thread-safe implementation with expiry, analytics, and cleanup.',
+        keyInsight: 'putIfAbsent is atomic check-and-insert. It eliminates the check-then-act race condition in one line — no synchronized block needed. That is senior-level concurrency thinking.',
+        mermaidDiagram: `classDiagram
+  class ShortUrl {
+    -String shortCode
+    -String originalUrl
+    -String customAlias
+    -LocalDateTime createdAt
+    -LocalDateTime expiresAt
+    -String createdBy
+    -AtomicInteger clickCount
+    +isExpired() boolean
+    +incrementClicks()
+    +getClickCount() int
+  }
+  class ClickEvent {
+    -String id
+    -String shortCode
+    -String clickedBy
+    -String source
+    -LocalDateTime clickedAt
+  }
+  class CodeGenerationStrategy {
+    <<interface>>
+    +generate(String input) String
+  }
+  class HashBasedStrategy {
+    +generate(String input) String
+  }
+  class CounterBasedStrategy {
+    -AtomicInteger counter
+    +generate(String input) String
+  }
+  class ShortUrlRepository {
+    -ConcurrentHashMap shortUrlMap
+    +saveIfAbsent(ShortUrl) boolean
+    +findByShortCode(String) Optional
+    +findAllExpired() List
+    +delete(String)
+  }
+  class ClickEventRepository {
+    -ConcurrentHashMap clickEventMap
+    +save(ClickEvent)
+    +findByShortCode(String) List
+  }
+  class UrlShortenerService {
+    +shorten(longUrl, alias, ttl, createdBy) String
+    +resolve(shortCode, userId, source) String
+    +getStats(shortCode) UrlStats
+  }
+  class UrlStats {
+    -int clickCount
+    -LocalDateTime createdAt
+    -LocalDateTime expiresAt
+    -List recentEvents
+    +getRecentEvents() List
+  }
+  class ExpiryCleanupJob {
+    -ScheduledExecutorService scheduler
+    -int cronInterval
+    +start()
+    -run()
+  }
+
+  CodeGenerationStrategy <|.. HashBasedStrategy
+  CodeGenerationStrategy <|.. CounterBasedStrategy
+  UrlShortenerService --> ShortUrlRepository
+  UrlShortenerService --> ClickEventRepository
+  UrlShortenerService --> CodeGenerationStrategy
+  UrlShortenerService --> UrlStats
+  ExpiryCleanupJob --> ShortUrlRepository
+  ShortUrlRepository --> ShortUrl
+  ClickEventRepository --> ClickEvent`,
+        classes: [
+          {
+            name: 'ShortUrl',
+            fields: ['final String shortCode', 'final String originalUrl', 'final String customAlias', 'final LocalDateTime createdAt', 'final LocalDateTime expiresAt', 'final String createdBy', 'AtomicInteger clickCount'],
+            methods: ['boolean isExpired()', 'void incrementClicks()', 'int getClickCount()', 'all getters'],
+          },
+          {
+            name: 'ClickEvent',
+            fields: ['final String id  (UUID)', 'final String shortCode', 'final String clickedBy', 'final String source', 'final LocalDateTime clickedAt'],
+            methods: ['all getters'],
+          },
+          {
+            name: 'CodeGenerationStrategy (interface)',
+            fields: [],
+            methods: ['String generate(String input)'],
+          },
+          {
+            name: 'HashBasedStrategy implements CodeGenerationStrategy',
+            fields: [],
+            methods: ['generate(longUrl + UUID.randomUUID())  — MD5, substring(0,6)'],
+          },
+          {
+            name: 'CounterBasedStrategy implements CodeGenerationStrategy',
+            fields: ['AtomicInteger counter'],
+            methods: ['generate(input) → String.valueOf(counter.incrementAndGet())'],
+          },
+          {
+            name: 'ShortUrlRepository',
+            fields: ['ConcurrentHashMap<String, ShortUrl> shortUrlMap'],
+            methods: ['boolean saveIfAbsent(ShortUrl)', 'Optional<ShortUrl> findByShortCode(String)', 'List<ShortUrl> findAllExpired()', 'void delete(String)'],
+          },
+          {
+            name: 'ClickEventRepository',
+            fields: ['ConcurrentHashMap<String, CopyOnWriteArrayList<ClickEvent>> clickEventMap'],
+            methods: ['void save(ClickEvent)', 'List<ClickEvent> findByShortCode(String)'],
+          },
+          {
+            name: 'UrlShortenerService',
+            fields: ['ShortUrlRepository shortUrlRepo', 'ClickEventRepository clickEventRepo', 'CodeGenerationStrategy codeGenStrategy'],
+            methods: ['String shorten(longUrl, customAlias, ttlSeconds, createdBy)', 'String resolve(shortCode, userId, source)', 'UrlStats getStats(shortCode)'],
+          },
+          {
+            name: 'UrlStats  (immutable data class)',
+            fields: ['final int clickCount', 'final LocalDateTime createdAt', 'final LocalDateTime expiresAt', 'final List<ClickEvent> recentEvents'],
+            methods: ['List<ClickEvent> getRecentEvents()  — defensive copy: new ArrayList<>(recentEvents)'],
+          },
+          {
+            name: 'ExpiryCleanupJob',
+            fields: ['ShortUrlRepository shortUrlRepo', 'int cronInterval', 'ScheduledExecutorService scheduler'],
+            methods: ['void start()  — scheduleAtFixedRate(this::run, 0, cronInterval, SECONDS)', 'void run()  — delete all expired; keep ClickEvents for analytics'],
+          },
+        ],
+        relationships: [
+          'HashBasedStrategy, CounterBasedStrategy → CodeGenerationStrategy : realization (implements)',
+          'UrlShortenerService → ShortUrlRepository : association (uses)',
+          'UrlShortenerService → ClickEventRepository : association (uses)',
+          'UrlShortenerService → CodeGenerationStrategy : association (DIP — depends on abstraction)',
+          'ExpiryCleanupJob → ShortUrlRepository : association (uses)',
+          'ShortUrlRepository → ShortUrl : composition (owns)',
+          'ClickEventRepository → ClickEvent : composition (owns)',
+          'ShortUrl → ClickEvent : one-to-many (one shortCode → many click events)',
+        ],
+        irisWalkthrough: [
+          {
+            phase: 'Phase 1 — Requirements Gathering',
+            score: 70,
+            scoreNote: 'Missing quantified throughput NFRs and scalable storage discussion',
+            questions: [
+              {
+                q: 'What is a URL shortener?',
+                a: 'A system that takes a long URL and returns a short 6-character code. When you hit the short URL, it redirects you to the original.',
+              },
+              {
+                q: 'What features should we support?',
+                a: 'shorten(longUrl) → shortCode, resolve(shortCode) → longUrl, custom alias support, TTL-based expiry (absolute, not relative), click analytics with metadata.',
+              },
+              {
+                q: 'What is absolute expiry vs relative expiry?',
+                a: 'Absolute: URL expires at a fixed timestamp (expiresAt = createdAt + ttl). Relative would reset on every access. We use absolute — otherwise a heavily-clicked URL never expires.',
+              },
+              {
+                q: 'What are the NFRs?',
+                a: 'High read throughput (resolve >> shorten), eventual consistency for analytics is fine, in-memory storage for this problem. Missing: quantified numbers like 1000 req/sec, 10M URLs — always add these.',
+              },
+            ],
+            mistakes: [
+              'Did not quantify NFRs — "high throughput" is vague; say "1000 reads/sec, 10M total URLs"',
+              'Did not mention storage strategy (in-memory vs Redis vs relational DB) — good to propose and confirm',
+              'Did not propose scalable storage decision upfront — Iris had to prompt this',
+            ],
+          },
+          {
+            phase: 'Phase 2 — Entity Design',
+            score: 78,
+            scoreNote: 'ClickEvent FK and 1:N relationship needed more discussion',
+            questions: [
+              {
+                q: 'What are the main entities?',
+                a: 'ShortUrl (the core entity — holds shortCode, originalUrl, alias, TTL, createdBy, clickCount) and ClickEvent (analytics record per redirect — shortCode FK, clickedBy, source, clickedAt).',
+              },
+              {
+                q: 'Should clickCount be on ShortUrl or computed from ClickEvent?',
+                a: 'Both make sense. We store it on ShortUrl as an AtomicInteger for O(1) reads. ClickEvent holds the full history for time-based analytics.',
+              },
+              {
+                q: 'What is the relationship between ShortUrl and ClickEvent?',
+                a: 'One-to-many. One shortCode → many ClickEvents. FK (shortCode) lives on the ClickEvent side — the many side always holds the FK.',
+              },
+              {
+                q: 'If we delete a ShortUrl, what happens to its ClickEvents?',
+                a: 'In a real DB we use ON DELETE SET NULL — shortCode column on ClickEvent becomes null, record is preserved for analytics. In our in-memory model we simply do not delete ClickEvents when cleaning up expired ShortUrls.',
+              },
+            ],
+            mistakes: [
+              'Initially unsure where FK lives — always: FK is on the many side (ClickEvent.shortCode)',
+              'Did not immediately see that one originalUrl can map to multiple shortCodes (custom alias + generated code)',
+              'Needed prompt to think about ON DELETE SET NULL reasoning',
+            ],
+          },
+          {
+            phase: 'Phase 3 — Implementation (84% → 87%)',
+            score: 87,
+            scoreNote: 'putIfAbsent called out as senior-level thinking. Weak: salt logic, missing stubs, naming typos',
+            questions: [
+              {
+                q: 'How do we prevent collision when two threads shorten the same URL simultaneously?',
+                a: 'Use putIfAbsent on ConcurrentHashMap. It is atomic — it checks AND inserts in one operation. No race condition between check and insert. Returns null if inserted, existing value if key already exists.',
+              },
+              {
+                q: 'What salt should we use in HashBasedStrategy to handle collisions?',
+                a: 'generate(longUrl + UUID.randomUUID()) — not longUrl + retryCnt. If we use retryCnt, same URL always produces same first hash. UUID ensures a fresh random input every attempt.',
+              },
+              {
+                q: 'Why CopyOnWriteArrayList for ClickEvents?',
+                a: 'ClickEvents are read far more than written (every analytics query vs every redirect). CopyOnWriteArrayList gives lock-free reads — the write copies the entire array, but reads are always non-blocking.',
+              },
+              {
+                q: 'Why is ExpiryCleanupJob.start() separate from the constructor?',
+                a: 'Testability. If scheduler starts in the constructor, every test that instantiates the class starts background threads. With a separate start(), tests can create the object without triggering scheduling.',
+              },
+              {
+                q: 'Should getStats() check expiry before returning?',
+                a: 'No. Analytics is historical data. Even if a URL is expired, the click history should still be accessible. Only resolve() throws on expiry.',
+              },
+              {
+                q: 'What return type should getStats() use — Map<String,Object> or UrlStats class?',
+                a: 'UrlStats class. This is self-documenting code — the caller knows exactly what fields exist. Map<String,Object> loses type safety and forces callers to know string keys.',
+              },
+            ],
+            mistakes: [
+              'HashBasedStrategy salt: used longUrl + retryCnt — same URL always produces same first hash; must use UUID',
+              'resolve() passed null for clickedBy and source — should accept optional metadata params',
+              'Missing CounterBasedStrategy and RandomBasedStrategy stubs — if you mention them in design, implement them',
+              'Naming typos: clicketAt → clickedAt, croneInterval → cronInterval',
+              'Left scaffold dead code (URLEntry, CodeGenerator stubs) in submission — remove before submitting',
+              'Used new Executors.newSingleThreadScheduledExecutor() — Executors is a static factory, no new keyword',
+              'Used scheduler.scheduledAtFixedRate — extra d; correct: scheduleAtFixedRate',
+              'Pasted full code without explaining reasoning mid-implementation — engage verbally first',
+            ],
+          },
+        ],
+      },
     ],
 
     animations: [],

@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useEffect, useRef } from 'react'
 import { topicContent } from '../data/topicContent'
+import { topics } from '../data/topics'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 
@@ -52,6 +53,7 @@ export default function CaseStudy() {
   const { slug, caseSlug } = useParams()
   const content = topicContent[slug]
   const caseStudy = content?.caseStudies?.find(c => c.slug === caseSlug)
+  const topicTitle = topics.find(t => t.slug === slug)?.title ?? slug
 
   if (!content || !caseStudy) return (
     <div className="min-h-screen flex flex-col items-center justify-center text-center px-6">
@@ -69,7 +71,7 @@ export default function CaseStudy() {
         <div className="text-sm text-stone-400">
           <Link to="/dehaaticoder/roadmap" className="hover:text-green-600">Roadmap</Link>
           <span className="mx-2">›</span>
-          <Link to={`/dehaaticoder/topic/${slug}`} className="hover:text-green-600">Machine Coding</Link>
+          <Link to={`/dehaaticoder/topic/${slug}`} className="hover:text-green-600">{topicTitle}</Link>
           <span className="mx-2">›</span>
           <span className="text-stone-700 font-medium">{caseStudy.title}</span>
         </div>
@@ -112,13 +114,13 @@ export default function CaseStudy() {
                     <div className="flex items-center justify-between gap-4 px-6 py-4 bg-stone-50 border-b border-stone-100">
                       <h3 className="font-bold text-stone-800 text-lg">{phase.phase}</h3>
                       <div className="flex flex-col items-end gap-0.5 shrink-0">
-                      {phase.score != null && (
-                        <span className={`text-sm font-bold px-3 py-1 rounded-full ${scoreColor}`}>{phase.score}%</span>
-                      )}
-                      {phase.scoreNote && (
-                        <span className={`text-xs max-w-xs text-right ${phase.score != null ? 'text-stone-400' : 'text-red-500 font-semibold'}`}>{phase.scoreNote}</span>
-                      )}
-                    </div>
+                        {phase.score != null && (
+                          <span className={`text-sm font-bold px-3 py-1 rounded-full ${scoreColor}`}>{phase.score}%</span>
+                        )}
+                        {phase.scoreNote && (
+                          <span className={`text-xs max-w-xs text-right ${phase.score != null ? 'text-stone-400' : 'text-red-500 font-semibold'}`}>{phase.scoreNote}</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Q&A */}

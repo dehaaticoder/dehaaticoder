@@ -1150,7 +1150,7 @@ System.out.println("Events: " + stats.getRecentEvents().size());
             ],
           },
           {
-            phase: 'Step 1 — Requirements Gathering (70%)',
+            phase: 'Step 1 — Requirements Gathering',
             score: 70,
             scoreNote: 'Missing quantified throughput NFRs and scalable storage discussion',
             questions: [
@@ -1178,7 +1178,7 @@ System.out.println("Events: " + stats.getRecentEvents().size());
             ],
           },
           {
-            phase: 'Step 2 — Entity Design (Class Diagram)',
+            phase: 'Step 2 — Entity Design',
             score: 78,
             scoreNote: 'ClickEvent FK and 1:N relationship needed more discussion',
             questions: [
@@ -1206,9 +1206,9 @@ System.out.println("Events: " + stats.getRecentEvents().size());
             ],
           },
           {
-            phase: 'Step 3 — Schema Design (Skipped — in-memory)',
+            phase: 'Step 3 — Schema Design',
             score: null,
-            scoreNote: null,
+            scoreNote: 'Skipped — interviewer confirmed in-memory storage',
             questions: [
               {
                 q: 'Why was Schema Design skipped here?',
@@ -1222,7 +1222,7 @@ System.out.println("Events: " + stats.getRecentEvents().size());
             mistakes: [],
           },
           {
-            phase: 'Step 4 — Implementation (84% → 87%)',
+            phase: 'Step 4 — Implementation',
             score: 87,
             scoreNote: 'putIfAbsent called out as senior-level thinking. Weak: salt logic, missing stubs, naming typos',
             questions: [

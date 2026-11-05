@@ -11,11 +11,15 @@ function MermaidDiagram({ chart }) {
   useEffect(() => {
     if (!chart || !ref.current) return
 
-    const renderDiagram = () => {
+    const renderDiagram = async () => {
       if (window.mermaid) {
         window.mermaid.initialize({ startOnLoad: false, theme: 'default' })
-        ref.current.innerHTML = `<pre class="mermaid">${chart}</pre>`
-        window.mermaid.run({ nodes: [ref.current.querySelector('.mermaid')] })
+        try {
+          const { svg } = await window.mermaid.render('mermaid-' + Date.now(), chart)
+          ref.current.innerHTML = svg
+        } catch (e) {
+          ref.current.innerHTML = `<pre style="color:red;font-size:12px;white-space:pre-wrap">MERMAID ERROR:\n${e?.message || e?.str || JSON.stringify(e)}</pre>`
+        }
       }
     }
 

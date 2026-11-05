@@ -768,26 +768,26 @@ public class Main {
   class ShortUrlRepository {
     -ConcurrentHashMap shortUrlMap
     +saveIfAbsent(url) boolean
-    +findByShortCode(code) Optional
-    +findAllExpired() List
+    +findByShortCode(code)
+    +findAllExpired()
     +delete(code)
   }
   class ClickEventRepository {
     -ConcurrentHashMap clickEventMap
     +save(event)
-    +findByShortCode(code) List
+    +findByShortCode(code)
   }
   class UrlShortenerService {
     +shorten(longUrl, alias, ttl, by) String
     +resolve(code, userId, src) String
-    +getStats(code) UrlStats
+    +getStats(code)
   }
   class UrlStats {
     -int clickCount
     -LocalDateTime createdAt
     -LocalDateTime expiresAt
     -List recentEvents
-    +getRecentEvents() List
+    +getRecentEvents()
   }
   class ExpiryCleanupJob {
     -ScheduledExecutorService scheduler

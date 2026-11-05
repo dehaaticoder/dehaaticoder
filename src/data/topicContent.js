@@ -729,75 +729,79 @@ public class Main {
         type: 'Working Software',
         difficulty: 'Intermediate',
         description: 'Full LLD design of a URL shortening service (like bit.ly) — from requirements gathering to thread-safe implementation with expiry, analytics, and cleanup.',
-        keyInsight: 'putIfAbsent is atomic check-and-insert. It eliminates the check-then-act race condition in one line — no synchronized block needed. That is senior-level concurrency thinking.',
+        keyInsight: 'putIfAbsent is atomic check-and-insert. It eliminates the check-then-act race condition in one line — no synchronized block needed. The wrong version: existsByShortCode() + save() = two separate operations. Another thread can insert the same code between them. putIfAbsent collapses both into one atomic step. That is senior-level concurrency thinking.',
+        gaonKiBaat: 'Gaon mein ek postman hai. Do log ek saath aakar kehte hain "yeh address mere liye reserve karo." Purana tarika: pehle check karo — khaali hai, dono ko haan bolo — dono ke naam pe likh do. Naya tarika: putIfAbsent — jo pehle aaya, uski entry ho gayi. Doosre ko seedha "pehle se le liya gaya" milta hai. Ek hi baar mein check aur book — koi race nahi.',
         mermaidDiagram: `classDiagram
   class ShortUrl {
-    -String shortCode
-    -String originalUrl
-    -String customAlias
-    -LocalDateTime createdAt
-    -LocalDateTime expiresAt
-    -String createdBy
-    -AtomicInteger clickCount
+    -shortCode String
+    -originalUrl String
+    -customAlias String
+    -createdAt LocalDateTime
+    -expiresAt LocalDateTime
+    -createdBy String
+    -clickCount AtomicInteger
     +isExpired() boolean
-    +incrementClicks()
+    +incrementClicks() void
     +getClickCount() int
   }
   class ClickEvent {
-    -String id
-    -String shortCode
-    -String clickedBy
-    -String source
-    -LocalDateTime clickedAt
+    -id String
+    -shortCode String
+    -clickedBy String
+    -source String
+    -clickedAt LocalDateTime
   }
   class CodeGenerationStrategy {
     <<interface>>
-    +generate(String input) String
+    +generate(input) String
   }
   class HashBasedStrategy {
-    +generate(String input) String
+    +generate(input) String
   }
   class CounterBasedStrategy {
-    -AtomicInteger counter
-    +generate(String input) String
+    -counter AtomicInteger
+    +generate(input) String
+  }
+  class RandomBasedStrategy {
+    +generate(input) String
   }
   class ShortUrlRepository {
-    -ConcurrentHashMap shortUrlMap
-    +saveIfAbsent(ShortUrl) boolean
-    +findByShortCode(String) Optional
+    -shortUrlMap ConcurrentHashMap
+    +saveIfAbsent(url) boolean
+    +findByShortCode(code) Optional
     +findAllExpired() List
-    +delete(String)
+    +delete(code) void
   }
   class ClickEventRepository {
-    -ConcurrentHashMap clickEventMap
-    +save(ClickEvent)
-    +findByShortCode(String) List
+    -clickEventMap ConcurrentHashMap
+    +save(event) void
+    +findByShortCode(code) List
   }
   class UrlShortenerService {
     +shorten(longUrl, alias, ttl, createdBy) String
     +resolve(shortCode, userId, source) String
-    +getStats(shortCode) UrlStats
+    +getStats(shortCode) Object
   }
   class UrlStats {
-    -int clickCount
-    -LocalDateTime createdAt
-    -LocalDateTime expiresAt
-    -List recentEvents
+    -clickCount int
+    -createdAt LocalDateTime
+    -expiresAt LocalDateTime
+    -recentEvents List
     +getRecentEvents() List
   }
   class ExpiryCleanupJob {
-    -ScheduledExecutorService scheduler
-    -int cronInterval
-    +start()
-    -run()
+    -scheduler ScheduledExecutorService
+    -cronInterval int
+    +start() void
+    -run() void
   }
 
   CodeGenerationStrategy <|.. HashBasedStrategy
   CodeGenerationStrategy <|.. CounterBasedStrategy
+  CodeGenerationStrategy <|.. RandomBasedStrategy
   UrlShortenerService --> ShortUrlRepository
   UrlShortenerService --> ClickEventRepository
   UrlShortenerService --> CodeGenerationStrategy
-  UrlShortenerService --> UrlStats
   ExpiryCleanupJob --> ShortUrlRepository
   ShortUrlRepository --> ShortUrl
   ClickEventRepository --> ClickEvent`,
@@ -820,7 +824,7 @@ public class Main {
           {
             name: 'HashBasedStrategy implements CodeGenerationStrategy',
             fields: [],
-            methods: ['generate(longUrl + UUID.randomUUID())  — MD5, substring(0,6)'],
+            methods: ['String generate(String input)  — MD5 of input, return substring(0,6). Call site adds UUID salt: generate(longUrl + UUID.randomUUID())'],
           },
           {
             name: 'CounterBasedStrategy implements CodeGenerationStrategy',
@@ -843,7 +847,7 @@ public class Main {
             methods: ['String shorten(longUrl, customAlias, ttlSeconds, createdBy)', 'String resolve(shortCode, userId, source)', 'UrlStats getStats(shortCode)'],
           },
           {
-            name: 'UrlStats  (immutable data class)',
+            name: 'UrlStats (immutable data class)',
             fields: ['final int clickCount', 'final LocalDateTime createdAt', 'final LocalDateTime expiresAt', 'final List<ClickEvent> recentEvents'],
             methods: ['List<ClickEvent> getRecentEvents()  — defensive copy: new ArrayList<>(recentEvents)'],
           },
@@ -861,9 +865,28 @@ public class Main {
           'ExpiryCleanupJob → ShortUrlRepository : association (uses)',
           'ShortUrlRepository → ShortUrl : composition (owns)',
           'ClickEventRepository → ClickEvent : composition (owns)',
-          'ShortUrl → ClickEvent : one-to-many (one shortCode → many click events)',
+          'ShortUrl ← ClickEvent : one-to-many via FK (ClickEvent.shortCode references ShortUrl — the many side always holds the FK; ShortUrl has no direct reference to ClickEvent)',
         ],
         fullCode: `// ════════════════════════════════════════════════════════
+// IMPORTS
+// ════════════════════════════════════════════════════════
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+// ════════════════════════════════════════════════════════
 // ENTITIES
 // ════════════════════════════════════════════════════════
 
@@ -886,11 +909,11 @@ class ShortUrl {
         this.shortCode   = shortCode;
     }
 
-    boolean isExpired() {
+    public boolean isExpired() {
         return expiresAt != null && LocalDateTime.now().isAfter(expiresAt);
     }
 
-    void incrementClicks()            { clickCount.incrementAndGet(); }
+    public void incrementClicks()     { clickCount.incrementAndGet(); }
     public int getClickCount()        { return clickCount.get(); }
     public String getShortCode()      { return shortCode; }
     public String getOriginalUrl()    { return originalUrl; }
@@ -1127,9 +1150,26 @@ UrlStats stats = service.getStats(shortCode);
 System.out.println("Clicks: " + stats.getClickCount());
 System.out.println("Events: " + stats.getRecentEvents().size());
 
-// 5. Resolve expired URL — throws RuntimeException("URL has expired")
-// 6. Resolve unknown code — throws RuntimeException("URL not found")
-// 7. Duplicate alias — throws RuntimeException("Alias already taken")`,
+// 5. Resolve expired URL
+try {
+    service.resolve("expired-code", "charlie", "web");
+} catch (RuntimeException e) {
+    System.out.println(e.getMessage()); // "URL has expired"
+}
+
+// 6. Resolve unknown short code
+try {
+    service.resolve("unknown", "dave", "api");
+} catch (RuntimeException e) {
+    System.out.println(e.getMessage()); // "URL not found"
+}
+
+// 7. Duplicate custom alias
+try {
+    service.shorten("https://github.com/someone", "dhiraj", 3600, "eve");
+} catch (RuntimeException e) {
+    System.out.println(e.getMessage()); // "Alias already taken"
+}`,
         irisWalkthrough: [
           {
             phase: 'Step 0 — Align',
@@ -1154,10 +1194,6 @@ System.out.println("Events: " + stats.getRecentEvents().size());
             score: 70,
             scoreNote: 'Missing quantified throughput NFRs and scalable storage discussion',
             questions: [
-              {
-                q: 'What is a URL shortener?',
-                a: 'A system that takes a long URL and returns a short 6-character code. When you hit the short URL, it redirects you to the original.',
-              },
               {
                 q: 'What features should we support?',
                 a: 'shorten(longUrl) → shortCode, resolve(shortCode) → longUrl, custom alias support, TTL-based expiry (absolute, not relative), click analytics with metadata.',
@@ -1195,6 +1231,10 @@ System.out.println("Events: " + stats.getRecentEvents().size());
                 a: 'One-to-many. One shortCode → many ClickEvents. FK (shortCode) lives on the ClickEvent side — the many side always holds the FK.',
               },
               {
+                q: 'Can one originalUrl map to multiple shortCodes?',
+                a: 'Yes — and this tripped me up. If Alice shortens https://google.com with auto-code and Bob shortens the same URL with custom alias "goo", they get two different shortCodes pointing to the same originalUrl. We do NOT deduplicate by originalUrl — each shorten() call always produces a new entry.',
+              },
+              {
                 q: 'If we delete a ShortUrl, what happens to its ClickEvents?',
                 a: 'In a real DB we use ON DELETE SET NULL — shortCode column on ClickEvent becomes null, record is preserved for analytics. In our in-memory model we simply do not delete ClickEvents when cleaning up expired ShortUrls.',
               },
@@ -1224,7 +1264,7 @@ System.out.println("Events: " + stats.getRecentEvents().size());
           {
             phase: 'Step 4 — Implementation',
             score: 87,
-            scoreNote: 'putIfAbsent called out as senior-level thinking. Weak: salt logic, missing stubs, naming typos',
+            scoreNote: 'First attempt: 84%. Revised after session (salt fix + stubs + typo cleanup) → 87%. putIfAbsent called out as senior-level thinking.',
             questions: [
               {
                 q: 'How do we prevent collision when two threads shorten the same URL simultaneously?',
@@ -1249,6 +1289,14 @@ System.out.println("Events: " + stats.getRecentEvents().size());
               {
                 q: 'What return type should getStats() use — Map<String,Object> or UrlStats class?',
                 a: 'UrlStats class. This is self-documenting code — the caller knows exactly what fields exist. Map<String,Object> loses type safety and forces callers to know string keys.',
+              },
+              {
+                q: 'How does ClickEventRepository create the list atomically for the first click on a shortCode?',
+                a: 'computeIfAbsent — if no list exists for the key, it atomically creates a new CopyOnWriteArrayList and inserts it. Without this, two threads could both see null and both create a new list, losing one list entirely.',
+              },
+              {
+                q: 'Why does UrlStats.getRecentEvents() return new ArrayList<>(recentEvents) instead of recentEvents directly?',
+                a: 'Defensive copy. UrlStats is immutable but the underlying List<ClickEvent> is mutable. If we return the reference directly, the caller can add/remove events and silently corrupt the UrlStats object. Defensive copy prevents this.',
               },
             ],
             mistakes: [

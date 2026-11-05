@@ -101,6 +101,14 @@ export default function CaseStudy() {
           </section>
         )}
 
+        {/* Gaon Ki Baat — vernacular analogy */}
+        {caseStudy.gaonKiBaat && (
+          <section className="bg-amber-50 border border-amber-200 rounded-xl px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-amber-600 mb-2">🏡 Gaon Ki Baat</p>
+            <p className="text-amber-900 text-base italic leading-relaxed">{caseStudy.gaonKiBaat}</p>
+          </section>
+        )}
+
         {/* Iris Walkthrough — follows interview order: Requirements → Entity Design → Implementation */}
         {caseStudy.irisWalkthrough && caseStudy.irisWalkthrough.length > 0 && (
           <section>

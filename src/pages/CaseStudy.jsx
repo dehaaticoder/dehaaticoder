@@ -160,6 +160,27 @@ export default function CaseStudy() {
           </section>
         )}
 
+        {/* Full Implementation Code */}
+        {caseStudy.fullCode && (
+          <section>
+            <h2 className="text-2xl font-bold text-stone-800 mb-4">Full Implementation (87%)</h2>
+            <div className="bg-stone-900 rounded-2xl overflow-x-auto">
+              <pre className="text-sm text-stone-200 p-6 leading-relaxed whitespace-pre font-mono">{caseStudy.fullCode}</pre>
+            </div>
+          </section>
+        )}
+
+        {/* Client / Wiring Code */}
+        {caseStudy.clientCode && (
+          <section>
+            <h2 className="text-2xl font-bold text-stone-800 mb-2">Client Code — Wiring &amp; Usage</h2>
+            <p className="text-stone-500 text-sm mb-4">How to wire all classes together and exercise every flow.</p>
+            <div className="bg-stone-900 rounded-2xl overflow-x-auto">
+              <pre className="text-sm text-stone-200 p-6 leading-relaxed whitespace-pre font-mono">{caseStudy.clientCode}</pre>
+            </div>
+          </section>
+        )}
+
         {/* Iris Walkthrough */}
         {caseStudy.irisWalkthrough && caseStudy.irisWalkthrough.length > 0 && (
           <section>

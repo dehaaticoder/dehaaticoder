@@ -863,6 +863,273 @@ public class Main {
           'ClickEventRepository → ClickEvent : composition (owns)',
           'ShortUrl → ClickEvent : one-to-many (one shortCode → many click events)',
         ],
+        fullCode: `// ════════════════════════════════════════════════════════
+// ENTITIES
+// ════════════════════════════════════════════════════════
+
+class ShortUrl {
+    private final String shortCode;
+    private final String originalUrl;
+    private final String customAlias;    // null if not provided
+    private final LocalDateTime createdAt;
+    private final LocalDateTime expiresAt; // absolute timestamp
+    private final String createdBy;
+    private final AtomicInteger clickCount = new AtomicInteger(0);
+
+    public ShortUrl(String originalUrl, String customAlias, LocalDateTime createdAt,
+                    LocalDateTime expiresAt, String createdBy, String shortCode) {
+        this.originalUrl = originalUrl;
+        this.customAlias = (customAlias == null || customAlias.isEmpty()) ? null : customAlias;
+        this.createdAt   = createdAt;
+        this.expiresAt   = expiresAt;
+        this.createdBy   = createdBy;
+        this.shortCode   = shortCode;
+    }
+
+    boolean isExpired() {
+        return expiresAt != null && LocalDateTime.now().isAfter(expiresAt);
+    }
+
+    void incrementClicks()            { clickCount.incrementAndGet(); }
+    public int getClickCount()        { return clickCount.get(); }
+    public String getShortCode()      { return shortCode; }
+    public String getOriginalUrl()    { return originalUrl; }
+    public String getCustomAlias()    { return customAlias; }
+    public String getCreatedBy()      { return createdBy; }
+    public LocalDateTime getCreatedAt()  { return createdAt; }
+    public LocalDateTime getExpiresAt()  { return expiresAt; }
+}
+
+class ClickEvent {
+    private final String id;           // UUID — globally unique
+    private final String shortCode;    // FK to ShortUrl
+    private final String clickedBy;    // nullable
+    private final String source;       // nullable — mobile/web/api
+    private final LocalDateTime clickedAt;
+
+    public ClickEvent(String shortCode, String clickedBy, String source, LocalDateTime clickedAt) {
+        this.id        = UUID.randomUUID().toString();
+        this.shortCode = shortCode;
+        this.clickedBy = clickedBy;
+        this.source    = source;
+        this.clickedAt = clickedAt;
+    }
+    public String getId()               { return id; }
+    public String getShortCode()        { return shortCode; }
+    public String getClickedBy()        { return clickedBy; }
+    public String getSource()           { return source; }
+    public LocalDateTime getClickedAt() { return clickedAt; }
+}
+
+class UrlStats {
+    private final int clickCount;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime expiresAt;
+    private final List<ClickEvent> recentEvents;
+
+    public UrlStats(int clickCount, LocalDateTime createdAt,
+                    LocalDateTime expiresAt, List<ClickEvent> recentEvents) {
+        this.clickCount   = clickCount;
+        this.createdAt    = createdAt;
+        this.expiresAt    = expiresAt;
+        this.recentEvents = recentEvents;
+    }
+    public int getClickCount()              { return clickCount; }
+    public LocalDateTime getCreatedAt()     { return createdAt; }
+    public LocalDateTime getExpiresAt()     { return expiresAt; }
+    public List<ClickEvent> getRecentEvents() {
+        return new ArrayList<>(recentEvents); // defensive copy
+    }
+}
+
+// ════════════════════════════════════════════════════════
+// STRATEGY PATTERN — Code Generation
+// ════════════════════════════════════════════════════════
+
+interface CodeGenerationStrategy {
+    String generate(String input);
+}
+
+class HashBasedStrategy implements CodeGenerationStrategy {
+    public String generate(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] hash = md.digest(input.getBytes());
+            return HexFormat.of().formatHex(hash).substring(0, 6);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("MD5 not available", e);
+        }
+    }
+}
+
+class CounterBasedStrategy implements CodeGenerationStrategy {
+    private final AtomicInteger counter = new AtomicInteger(0);
+    public String generate(String input) {
+        return String.valueOf(counter.incrementAndGet());
+    }
+}
+
+class RandomBasedStrategy implements CodeGenerationStrategy {
+    public String generate(String input) {
+        return UUID.randomUUID().toString().substring(0, 6);
+    }
+}
+
+// ════════════════════════════════════════════════════════
+// REPOSITORIES
+// ════════════════════════════════════════════════════════
+
+class ShortUrlRepository {
+    private final ConcurrentHashMap<String, ShortUrl> shortUrlMap = new ConcurrentHashMap<>();
+
+    public boolean saveIfAbsent(ShortUrl shortUrl) {
+        // atomic check-and-insert — no race condition
+        return shortUrlMap.putIfAbsent(shortUrl.getShortCode(), shortUrl) == null;
+    }
+    public Optional<ShortUrl> findByShortCode(String shortCode) {
+        return Optional.ofNullable(shortUrlMap.get(shortCode));
+    }
+    public List<ShortUrl> findAllExpired() {
+        return shortUrlMap.values().stream()
+            .filter(ShortUrl::isExpired)
+            .collect(Collectors.toList());
+    }
+    public void delete(String shortCode) { shortUrlMap.remove(shortCode); }
+}
+
+class ClickEventRepository {
+    // CopyOnWriteArrayList — read-heavy, lock-free reads
+    private final ConcurrentHashMap<String, CopyOnWriteArrayList<ClickEvent>> clickEventMap
+        = new ConcurrentHashMap<>();
+
+    public void save(ClickEvent clickEvent) {
+        // computeIfAbsent — atomic list creation on first click
+        clickEventMap.computeIfAbsent(clickEvent.getShortCode(),
+            k -> new CopyOnWriteArrayList<>()).add(clickEvent);
+    }
+    public List<ClickEvent> findByShortCode(String shortCode) {
+        return clickEventMap.getOrDefault(shortCode, new CopyOnWriteArrayList<>());
+    }
+}
+
+// ════════════════════════════════════════════════════════
+// SERVICE
+// ════════════════════════════════════════════════════════
+
+class UrlShortenerService {
+    private final ShortUrlRepository shortUrlRepo;
+    private final ClickEventRepository clickEventRepo;
+    private final CodeGenerationStrategy codeGenStrategy; // DIP
+
+    public UrlShortenerService(ShortUrlRepository shortUrlRepo,
+                                ClickEventRepository clickEventRepo,
+                                CodeGenerationStrategy codeGenStrategy) {
+        this.shortUrlRepo    = shortUrlRepo;
+        this.clickEventRepo  = clickEventRepo;
+        this.codeGenStrategy = codeGenStrategy;
+    }
+
+    public String shorten(String longUrl, String customAlias, Integer ttlSeconds, String createdBy) {
+        LocalDateTime expiresAt = (ttlSeconds != null)
+            ? LocalDateTime.now().plusSeconds(ttlSeconds) : null;
+
+        if (customAlias != null && !customAlias.isEmpty()) {
+            ShortUrl shortUrl = new ShortUrl(longUrl, customAlias, LocalDateTime.now(),
+                                             expiresAt, createdBy, customAlias);
+            if (shortUrlRepo.saveIfAbsent(shortUrl)) return customAlias;
+            else throw new RuntimeException("Alias already taken");
+        }
+
+        // UUID salt — fresh random input every retry → genuine collision busting
+        int retryCnt = 0;
+        while (retryCnt < 3) {
+            retryCnt++;
+            String hashShortCode = codeGenStrategy.generate(longUrl + UUID.randomUUID());
+            ShortUrl shortUrl = new ShortUrl(longUrl, customAlias, LocalDateTime.now(),
+                                             expiresAt, createdBy, hashShortCode);
+            if (shortUrlRepo.saveIfAbsent(shortUrl)) return hashShortCode;
+        }
+        throw new RuntimeException("Error while generating short url");
+    }
+
+    public String resolve(String shortCode, String userId, String source) {
+        Optional<ShortUrl> shortUrl = shortUrlRepo.findByShortCode(shortCode);
+        if (!shortUrl.isPresent()) throw new RuntimeException("URL not found");
+        ShortUrl url = shortUrl.get();
+        if (url.isExpired()) throw new RuntimeException("URL has expired");
+        url.incrementClicks();
+        clickEventRepo.save(new ClickEvent(shortCode, userId, source, LocalDateTime.now()));
+        return url.getOriginalUrl();
+    }
+
+    public UrlStats getStats(String shortCode) {
+        Optional<ShortUrl> shortUrl = shortUrlRepo.findByShortCode(shortCode);
+        if (!shortUrl.isPresent()) throw new RuntimeException("URL not found");
+        ShortUrl url = shortUrl.get();
+        // No expiry check — analytics are historical
+        List<ClickEvent> events = clickEventRepo.findByShortCode(shortCode);
+        return new UrlStats(url.getClickCount(), url.getCreatedAt(), url.getExpiresAt(), events);
+    }
+}
+
+// ════════════════════════════════════════════════════════
+// BACKGROUND JOB
+// ════════════════════════════════════════════════════════
+
+class ExpiryCleanupJob {
+    private final ShortUrlRepository shortUrlRepo;
+    private final int cronInterval;
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+    public ExpiryCleanupJob(ShortUrlRepository shortUrlRepo, int cronInterval) {
+        this.shortUrlRepo = shortUrlRepo;
+        this.cronInterval = cronInterval;
+    }
+
+    // Separate start() — not in constructor — unit tests can create without triggering scheduler
+    public void start() {
+        scheduler.scheduleAtFixedRate(this::run, 0, cronInterval, TimeUnit.SECONDS);
+    }
+
+    private void run() {
+        List<ShortUrl> expired = shortUrlRepo.findAllExpired();
+        for (ShortUrl url : expired) {
+            shortUrlRepo.delete(url.getShortCode());
+        }
+        // ClickEvents NOT deleted — analytics are historical (ON DELETE SET NULL in real DB)
+    }
+}`,
+        clientCode: `// ════════════════════════════════════════════════════════
+// WIRING + CLIENT USAGE
+// ════════════════════════════════════════════════════════
+
+ShortUrlRepository   shortUrlRepo   = new ShortUrlRepository();
+ClickEventRepository clickEventRepo = new ClickEventRepository();
+CodeGenerationStrategy strategy     = new HashBasedStrategy(); // swap to Counter/Random — no service change
+UrlShortenerService  service        = new UrlShortenerService(shortUrlRepo, clickEventRepo, strategy);
+ExpiryCleanupJob     cleanupJob     = new ExpiryCleanupJob(shortUrlRepo, 60); // cleanup every 60 sec
+cleanupJob.start();
+
+// 1. Shorten with auto-generated code (TTL = 1 hour)
+String shortCode = service.shorten("https://google.com/very/long/path", null, 3600, "alice");
+System.out.println("Short code: " + shortCode); // e.g. "a3f9c1"
+
+// 2. Shorten with custom alias
+String alias = service.shorten("https://github.com/dhirajkumar", "dhiraj", 86400, "alice");
+System.out.println("Alias: " + alias); // "dhiraj"
+
+// 3. Resolve (redirect)
+String original = service.resolve(shortCode, "bob", "mobile");
+System.out.println("Original: " + original); // https://google.com/very/long/path
+
+// 4. Analytics
+UrlStats stats = service.getStats(shortCode);
+System.out.println("Clicks: " + stats.getClickCount());
+System.out.println("Events: " + stats.getRecentEvents().size());
+
+// 5. Resolve expired URL — throws RuntimeException("URL has expired")
+// 6. Resolve unknown code — throws RuntimeException("URL not found")
+// 7. Duplicate alias — throws RuntimeException("Alias already taken")`,
         irisWalkthrough: [
           {
             phase: 'Phase 1 — Requirements Gathering',

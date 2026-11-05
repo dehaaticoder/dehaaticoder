@@ -121,6 +121,20 @@ export default function Cheatsheet() {
                         <p className="text-xs text-amber-800 italic">{p.gaonKiBaat}</p>
                       </div>
                     )}
+                    {p.scorecard && (
+                      <div className="px-6 py-3 border-b border-stone-100 bg-stone-50">
+                        <p className="text-xs font-bold text-stone-500 uppercase tracking-wide mb-2">Iris Scorecard</p>
+                        <div className="flex flex-wrap gap-2">
+                          {p.scorecard.map(s => (
+                            <div key={s.round} className="bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-xs">
+                              <span className="font-semibold text-stone-700">{s.round}:</span>{' '}
+                              <span className={`font-bold ${parseInt(s.score) >= 85 ? 'text-green-600' : parseInt(s.score) >= 75 ? 'text-amber-600' : 'text-red-500'}`}>{s.score}</span>
+                              {s.note && <span className="text-stone-400 ml-1">— {s.note}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="px-6 py-3 border-b border-stone-100 flex flex-wrap gap-2">
                       {p.problems.map(prob => (
                         <span key={prob} className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full">{prob}</span>

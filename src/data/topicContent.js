@@ -1930,7 +1930,20 @@ CREATE TABLE students (
 -- │ SET NULL    │ Child FK column set to NULL (child row survives)   │
 -- │ NO ACTION   │ Operation BLOCKED — parent cannot be deleted       │
 -- │ SET DEFAULT │ Child FK set to column default (InnoDB only)       │
--- └─────────────┴────────────────────────────────────────────────────┘`,
+-- └─────────────┴────────────────────────────────────────────────────┘
+
+-- ⚠️  KEY INSIGHT — FK constraint is ONE-WAY (parent → child)
+-- You can ALWAYS delete a CHILD row freely — no constraint violated.
+-- You CANNOT delete a PARENT row while any child still references it.
+--
+--   DELETE FROM books  WHERE author_id = 1;  -- ✓ child gone, always OK
+--   DELETE FROM authors WHERE id = 1;         -- ✗ BLOCKED if books reference it
+--
+-- To delete a parent safely (without CASCADE):
+--   Step 1: DELETE child rows first  (remove all books by that author)
+--   Step 2: DELETE parent row        (now author can be deleted)
+--
+-- ON DELETE CASCADE automates Step 1 — DB deletes children for you.`,
       },
       {
         name: 'JOINs',
@@ -2255,6 +2268,7 @@ ROLLBACK;  -- undoes all changes since START TRANSACTION
       'Covering index with wrong column order — leading column must match the WHERE filter',
       'Comparing NULL with = operator — NULL = NULL is not TRUE; always use IS NULL / IS NOT NULL',
       'Using TRUNCATE when you need rollback — TRUNCATE cannot be rolled back; use DELETE inside a transaction instead',
+      'Trying to delete a parent row while child rows still reference it — FK blocks the operation (NO ACTION default); delete children first, then the parent, or use ON DELETE CASCADE',
       'Choosing phone number or email as Primary Key — both can change; use a surrogate INT id instead',
       'UPDATE without WHERE — updates every row in the table; always specify WHERE in UPDATE and DELETE',
       'OFFSET without ORDER BY — results are non-deterministic; always pair OFFSET with ORDER BY',

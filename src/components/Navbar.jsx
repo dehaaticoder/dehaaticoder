@@ -42,6 +42,12 @@ export default function Navbar() {
             Machine Coding
           </Link>
           <Link
+            to="/dehaaticoder/topic/sql"
+            className={`transition ${pathname.startsWith('/dehaaticoder/topic/sql') ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
+          >
+            SQL
+          </Link>
+          <Link
             to="/dehaaticoder/cheatsheet/concurrency"
             className={`transition ${pathname === '/dehaaticoder/cheatsheet/concurrency' ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
           >

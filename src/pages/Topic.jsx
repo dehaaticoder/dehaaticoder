@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
+import { useState } from 'react'
 import { topics } from '../data/topics'
 import { topicContent } from '../data/topicContent'
 import { problemCountByTopic } from '../data/problems'
@@ -298,34 +299,156 @@ export default function Topic() {
           </section>
         )}
 
+        {/* Quiz */}
+        {content.quiz && content.quiz.length > 0 && (
+          <QuizSection quiz={content.quiz} />
+        )}
+
         {/* Problems */}
-        <section>
-          <h2 className="text-2xl font-bold text-stone-800 mb-2">Practice Problems</h2>
-          <p className="text-stone-500 mb-6">Solve in this order — each one builds on the previous.</p>
-          <div className="space-y-3">
-            {content.problems.map((p, i) => (
-              <Link
-                key={p.slug}
-                to={`/dehaaticoder/problem/${p.slug}`}
-                className="flex items-center justify-between bg-white border border-stone-200 hover:border-green-400 hover:shadow-sm rounded-xl px-5 py-4 transition group"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="text-stone-300 font-mono text-sm w-6">{i + 1}.</span>
-                  <span className="font-semibold text-stone-700 group-hover:text-green-600">{p.title}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${difficultyColors[p.difficulty]}`}>{p.difficulty}</span>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-stone-400">
-                  <span>LC #{p.lcNum}</span>
-                  <span className="text-green-500 group-hover:translate-x-1 transition-transform">→</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+        {content.problems && content.problems.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-stone-800 mb-2">Practice Problems</h2>
+            <p className="text-stone-500 mb-6">Solve in this order — each one builds on the previous.</p>
+            <div className="space-y-3">
+              {content.problems.map((p, i) => (
+                <Link
+                  key={p.slug}
+                  to={`/dehaaticoder/problem/${p.slug}`}
+                  className="flex items-center justify-between bg-white border border-stone-200 hover:border-green-400 hover:shadow-sm rounded-xl px-5 py-4 transition group"
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="text-stone-300 font-mono text-sm w-6">{i + 1}.</span>
+                    <span className="font-semibold text-stone-700 group-hover:text-green-600">{p.title}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${difficultyColors[p.difficulty]}`}>{p.difficulty}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-stone-400">
+                    <span>LC #{p.lcNum}</span>
+                    <span className="text-green-500 group-hover:translate-x-1 transition-transform">→</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
       </div>
 
       <Footer />
     </div>
+  )
+}
+
+function QuizSection({ quiz }) {
+  const [selected, setSelected]   = useState({})
+  const [revealed, setRevealed]   = useState({})
+  const [submitted, setSubmitted] = useState(false)
+
+  const score = quiz.filter((q, i) => selected[i] === q.answer).length
+
+  function handleSelect(qi, oi) {
+    if (submitted) return
+    setSelected(s => ({ ...s, [qi]: oi }))
+  }
+
+  function toggleExplanation(qi) {
+    setRevealed(r => ({ ...r, [qi]: !r[qi] }))
+  }
+
+  function handleSubmit() {
+    if (Object.keys(selected).length < quiz.length) return
+    setSubmitted(true)
+    setRevealed(Object.fromEntries(quiz.map((_, i) => [i, true])))
+  }
+
+  function handleReset() {
+    setSelected({})
+    setRevealed({})
+    setSubmitted(false)
+  }
+
+  return (
+    <section>
+      <h2 className="text-2xl font-bold text-stone-800 mb-1">🧠 MCQ Quiz</h2>
+      <p className="text-stone-500 mb-6 text-sm">Test yourself — click an option, then reveal the explanation.</p>
+
+      {submitted && (
+        <div className={`mb-6 px-5 py-4 rounded-xl border font-semibold text-center ${
+          score === quiz.length ? 'bg-green-50 border-green-300 text-green-800' :
+          score >= quiz.length * 0.7 ? 'bg-amber-50 border-amber-300 text-amber-800' :
+          'bg-red-50 border-red-300 text-red-800'
+        }`}>
+          {score}/{quiz.length} correct
+          {score === quiz.length && ' 🎉 Perfect!'}
+          {score >= quiz.length * 0.7 && score < quiz.length && ' 👍 Good job!'}
+          {score < quiz.length * 0.7 && ' 📖 Review the patterns above!'}
+        </div>
+      )}
+
+      <div className="space-y-6">
+        {quiz.map((q, qi) => {
+          const picked   = selected[qi]
+          const isRight  = submitted && picked === q.answer
+          const isWrong  = submitted && picked !== undefined && picked !== q.answer
+
+          return (
+            <div key={qi} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-stone-100">
+                <span className="text-xs font-semibold text-stone-400 uppercase tracking-widest mr-2">Q{qi + 1}</span>
+                <span className="text-stone-800 font-medium">{q.q}</span>
+              </div>
+              <div className="px-5 py-3 space-y-2">
+                {q.options.map((opt, oi) => {
+                  const isPicked  = picked === oi
+                  const isCorrect = submitted && oi === q.answer
+                  const isWrongPick = submitted && isPicked && oi !== q.answer
+
+                  let cls = 'border rounded-lg px-4 py-2 text-sm cursor-pointer transition flex items-center gap-2 '
+                  if (isCorrect)       cls += 'bg-green-50 border-green-400 text-green-800 font-medium'
+                  else if (isWrongPick) cls += 'bg-red-50 border-red-400 text-red-700'
+                  else if (isPicked)   cls += 'bg-blue-50 border-blue-400 text-blue-800'
+                  else                 cls += 'border-stone-200 text-stone-600 hover:border-green-400 hover:bg-green-50'
+
+                  return (
+                    <div key={oi} className={cls} onClick={() => handleSelect(qi, oi)}>
+                      <span className="font-mono text-xs text-stone-400 w-5 shrink-0">{String.fromCharCode(65 + oi)}.</span>
+                      <span>{opt}</span>
+                      {isCorrect   && <span className="ml-auto">✓</span>}
+                      {isWrongPick && <span className="ml-auto">✗</span>}
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="px-5 py-3 border-t border-stone-100">
+                <button
+                  onClick={() => toggleExplanation(qi)}
+                  className="text-xs font-semibold text-green-600 hover:text-green-700"
+                >
+                  {revealed[qi] ? '▲ Hide explanation' : '▼ Show explanation'}
+                </button>
+                {revealed[qi] && (
+                  <p className="mt-2 text-sm text-stone-600 leading-relaxed bg-stone-50 rounded-lg px-4 py-3">{q.explanation}</p>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-6 flex gap-3">
+        {!submitted ? (
+          <button
+            onClick={handleSubmit}
+            disabled={Object.keys(selected).length < quiz.length}
+            className="bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-semibold text-sm transition"
+          >
+            Submit ({Object.keys(selected).length}/{quiz.length} answered)
+          </button>
+        ) : (
+          <button onClick={handleReset} className="bg-stone-700 hover:bg-stone-800 text-white px-6 py-2 rounded-lg font-semibold text-sm transition">
+            Try Again
+          </button>
+        )}
+      </div>
+    </section>
   )
 }

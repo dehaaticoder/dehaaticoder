@@ -179,6 +179,18 @@ export const topics = [
     tags: ['class-diagram', 'inheritance', 'composition', 'interfaces'],
     status: 'available',
   },
+  {
+    slug: 'sql',
+    title: 'SQL',
+    icon: '🗄️',
+    difficulty: 'Intermediate',
+    estimatedTime: '4–5 hrs',
+    problemCount: 12,
+    description: 'Query language of data. Master JOINs, indexes, window functions, and query optimisation.',
+    gaonKiBaat: 'SQL is like asking questions to a giant register. You describe WHAT you want — the register figures out HOW to find it. Your job is to ask the right question.',
+    tags: ['joins', 'indexes', 'window-functions', 'query-optimisation'],
+    status: 'available',
+  },
 ]
 
 export const difficultyOrder = ['Beginner', 'Intermediate', 'Advanced']

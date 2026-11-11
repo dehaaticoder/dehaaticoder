@@ -1678,4 +1678,568 @@ public class StockTradingManager extends Publisher {
     problems: [],
     caseStudies: [],
   },
+
+  sql: {
+    intro: `SQL is the language of data. Every query you write is a question you ask the database. Master the building blocks — SELECT, JOIN, WHERE, GROUP BY — and then layer on subqueries, aggregations, and window functions.`,
+    whyItWorks: `SQL is declarative — you describe WHAT you want, not HOW to get it. The database engine figures out the most efficient execution plan. Your job is to express the question correctly.`,
+    keyInsight: 'SQL clause order matters: SELECT → FROM → JOIN → WHERE → GROUP BY → HAVING → ORDER BY → LIMIT. You must write them in this order. If you put WHERE after GROUP BY, it is a syntax error.',
+    teachingFlow: [
+      { step: 'DBMS + Keys', note: 'Why databases exist — PK, FK, Candidate Key, Composite Key' },
+      { step: 'CRUD', note: 'CREATE, INSERT, SELECT, UPDATE, DELETE — the 4 operations' },
+      { step: 'SELECT + WHERE', note: 'Filter rows — DISTINCT, ORDER BY, LIMIT, LIKE, NULL' },
+      { step: 'JOINs', note: 'Combine tables — INNER, LEFT, RIGHT, Self JOIN' },
+      { step: 'GROUP BY + Aggregates', note: 'Summarise rows — COUNT, SUM, AVG, MIN, MAX' },
+      { step: 'HAVING', note: 'Filter groups after aggregation — not rows' },
+      { step: 'Transactions + ACID', note: 'All-or-nothing execution. Atomicity, Consistency, Isolation, Durability' },
+      { step: 'Subqueries + CTEs', note: 'Compose complex queries in readable steps' },
+      { step: 'Window Functions', note: 'ROW_NUMBER, RANK, DENSE_RANK, PARTITION BY' },
+      { step: 'Indexes + Execution Plan', note: 'How B+Tree makes queries fast — HashMap vs TreeMap vs B+Tree' },
+    ],
+    patternsTitle: 'Key SQL Patterns',
+    patterns: [
+      {
+        name: 'DBMS Basics + Keys',
+        description: 'Why databases exist. DBMS solves 4 file-system problems. 7 RDBMS properties. Keys hierarchy: Super → Candidate → Composite.',
+        code: `-- ══════════════════════════════════════════════════════
+--  WHY DO WE NEED A DATABASE?
+--  Problem: storing data in files (CSV / Excel / JSON)
+-- ══════════════════════════════════════════════════════
+
+-- ┌─────────────────────┬────────────────────────────────────────────┐
+-- │ Problem             │ Example                                    │
+-- ├─────────────────────┼────────────────────────────────────────────┤
+-- │ 1. Inefficiency     │ read full file just to get SUM(psp) → O(N)│
+-- │ 2. Data Integrity   │ two editors write "2189" and "2.189" in    │
+-- │                     │ same PSP cell — no type enforcement         │
+-- │ 3. Concurrency      │ two people update same row → last write     │
+-- │                     │ wins, earlier change lost                   │
+-- │ 4. Security         │ file = all-or-nothing access; can't restrict │
+-- │                     │ to specific rows or columns                 │
+-- └─────────────────────┴────────────────────────────────────────────┘
+
+-- Solution → Database + DBMS
+-- Database = collection of related data (stored in tables)
+-- DBMS     = software that manages it (MySQL, Postgres, MSSQL)
+--            → performs CRUD, solves all 4 problems above
+
+-- ┌───────────────────┬──────────────────────────────────────────┐
+-- │ Type              │ Examples                                 │
+-- ├───────────────────┼──────────────────────────────────────────┤
+-- │ Relational (SQL)  │ MySQL, PostgreSQL, MSSQL                 │
+-- │ Document (NoSQL)  │ MongoDB (JSON documents)                 │
+-- │ Graph             │ Neo4j                                    │
+-- │ Vector            │ Pinecone, Weaviate                       │
+-- └───────────────────┴──────────────────────────────────────────┘
+
+-- ══════════════════════════════════════════════════════
+--  7 PROPERTIES OF AN RDBMS  (exam-tested)
+-- ══════════════════════════════════════════════════════
+
+-- 1. Data stored in TABLES; tables can be RELATED to each other
+--    students(id, name, age)  ←FK→  batches(id, name)
+--    Two separate tables linked via batch_id foreign key
+
+-- 2. Every ROW is unique
+--    No two rows can be exactly identical across ALL columns
+--    (enforced by Primary Key — at least one column differs per row)
+
+-- 3. All values in a column must have the SAME DATA TYPE
+--    psp column = INT always; can't store "good" in a row where others have 94, 88
+--    DB enforces this at schema level (unlike Excel/CSV)
+
+-- 4. Values must be ATOMIC — one cell = one value (no lists inside a cell)
+--    ✗ WRONG:  id=1, name='Virat', phone_no='[91111, 92222]'  ← list in one cell
+--    ✓ RIGHT:  separate phone_numbers table with FK back to students
+--    Atomic = cannot be divided further; a list is NOT atomic
+
+-- 5. COLUMN sequence is NOT guaranteed
+--    CREATE TABLE t (id INT, name VARCHAR, age INT)
+--    SELECT * FROM t  → might return columns as (name | age | id) — order not promised
+--    Always use SELECT col1, col2 (explicit names), never rely on SELECT * column order
+
+-- 6. ROW sequence is NOT guaranteed  ← "indexing" is a SEPARATE extra property
+--    SELECT * FROM students  → might return rows as id=1, id=10, id=2, id=25 (not sorted)
+--    To guarantee order: use ORDER BY id
+--    Sorted access requires an INDEX (extra mechanism, not a default property)
+
+-- 7. Name of every column is UNIQUE within a table
+--    ✗ WRONG:  CREATE TABLE t (id INT, age INT, age VARCHAR)  ← duplicate column name
+--    ✓ RIGHT:  each column has a distinct name within that table
+--    (Two different tables CAN have a column named "age" — uniqueness is per-table)
+
+-- ══════════════════════════════════════════════════════
+--  KEYS — uniquely identify a record in a table
+-- ══════════════════════════════════════════════════════
+-- Table: students(name, psp, email, batch, phone_number)
+-- Data:
+--   Naman | 94 | naman@gmail.com | 100 | 11111 22222
+--   Amit  | 88 | amit@gmail.com  |  70 | 22222 33333
+--   Aditya| 87 | aditya@gmail.com| 100 | 33333 44444
+
+-- Super Key = ANY set of columns that uniquely identifies a row
+--   {phone_number}       ← unique → Super Key ✓
+--   {email}              ← unique → Super Key ✓
+--   {name, email}        ← unique → Super Key ✓  but not minimal
+--   {email, batch}       ← unique → Super Key ✓  but not minimal
+--   {email, phone_number}← unique → Super Key ✓  but not minimal
+
+-- Candidate Key = MINIMAL super key (remove any column → no longer unique)
+--   {email}        ← Candidate Key ✓  (can't shrink further)
+--   {phone_number} ← Candidate Key ✓  (can't shrink further)
+--   {name, email}  ← NOT a CK (email alone is enough)
+
+-- ┌──────────────────────┬────────┬────────┐
+-- │ Key set              │ SK?    │ CK?    │
+-- ├──────────────────────┼────────┼────────┤
+-- │ {email}              │  ✓     │  ✓     │
+-- │ {phone_number}       │  ✓     │  ✓     │
+-- │ {name, email}        │  ✓     │  ✗     │  ← email alone is enough
+-- │ {email, batch}       │  ✓     │  ✗     │  ← email alone is enough
+-- │ {email, phone_number}│  ✓     │  ✗     │  ← either alone is enough
+-- └──────────────────────┴────────┴────────┘
+
+-- Composite Key = any key with more than 1 column (can be SK or CK)
+
+-- ┌────────────────────────────────────────┐
+-- │  Super Key ⊃ Candidate Keys            │
+-- │  Composite Key = any key with size > 1 │
+-- └────────────────────────────────────────┘`,
+      },
+      {
+        name: 'JOINs',
+        description: 'Combine rows from two or more tables. Cross join = Cartesian product. Inner join = only matching rows. Left join = all from left, NULL if no match on right.',
+        code: `-- Tables used throughout all examples:
+-- students (id, name, batch_id, psp)
+-- batches  (id, name)
+
+-- CROSS JOIN = Cartesian product (n × m rows) — all combinations
+SELECT * FROM students JOIN batches;
+-- implicit join syntax (same as CROSS JOIN)
+SELECT * FROM students s, batches b;
+
+-- INNER JOIN (default join) — only rows where batch_id matches
+SELECT s.name, b.name AS batch_name
+FROM students s
+INNER JOIN batches b ON s.batch_id = b.id;
+-- Time complexity: O(n × m) without index
+
+-- LEFT JOIN — all students, NULL for batch if no match
+SELECT s.name, b.name AS batch_name
+FROM students s
+LEFT JOIN batches b ON s.batch_id = b.id;
+-- Jack (batch_id=3, no batch row) → batch_name = NULL
+
+-- RIGHT JOIN = mirror of LEFT JOIN (prefer LEFT for readability)
+-- Note: filter in WHERE vs ON matters for OUTER joins only
+-- ON filter → applied before join (keeps all left rows)
+-- WHERE filter on right table → converts LEFT JOIN to INNER JOIN
+
+-- Self JOIN — employee → manager in same table
+SELECT e.name AS employee, m.name AS manager
+FROM employees e
+LEFT JOIN employees m ON e.manager_id = m.id;`,
+      },
+      {
+        name: 'Aggregations + GROUP BY + HAVING',
+        description: 'Aggregate functions take many rows → one value. GROUP BY splits rows into buckets. HAVING filters those buckets.',
+        code: `-- students (id, name, batch_id, psp)
+
+-- Aggregate functions ignore NULL values
+SELECT SUM(psp), AVG(psp), MIN(psp), MAX(psp), COUNT(*) FROM students;
+
+-- GROUP BY — one row per unique batch_id
+-- Rule: SELECT can only use GROUP BY columns + aggregate functions
+SELECT batch_id, COUNT(*) AS student_count, AVG(psp) AS avg_psp
+FROM students
+GROUP BY batch_id;
+
+-- HAVING — filter AFTER grouping (like WHERE but for groups)
+-- Q: Find all batches with more than 2 students
+SELECT batch_id, COUNT(*) AS cnt
+FROM students
+GROUP BY batch_id
+HAVING COUNT(*) > 2;
+
+-- WHERE vs HAVING timing:
+-- WHERE  → filters ROWS before aggregation  (faster)
+-- HAVING → filters GROUPS after aggregation
+
+-- Wrong: WHERE COUNT(*) > 2  ← syntax error (can't use agg in WHERE)
+-- Right: HAVING COUNT(*) > 2  ← correct`,
+      },
+      {
+        name: 'Window Functions',
+        description: 'Like GROUP BY but rows are NOT collapsed. Each row keeps its identity and gets an extra computed column.',
+        code: `-- students (id, name, batch_id, psp)
+
+-- ROW_NUMBER → 1,2,3,4      (no ties, always unique)
+-- RANK        → 1,2,2,4      (ties share rank, gap after)
+-- DENSE_RANK  → 1,2,2,3      (ties share rank, NO gap)
+
+-- PARTITION BY = reset numbering per group (like GROUP BY)
+-- ORDER BY     = how to rank within each partition
+
+-- Rank students within each batch by psp (highest first)
+SELECT
+  id, name, batch_id, psp,
+  ROW_NUMBER() OVER (PARTITION BY batch_id ORDER BY psp DESC) AS rn,
+  RANK()       OVER (PARTITION BY batch_id ORDER BY psp DESC) AS rnk,
+  DENSE_RANK() OVER (PARTITION BY batch_id ORDER BY psp DESC) AS dense_rnk
+FROM students;
+
+-- Top-N per group pattern (top 1 student per batch)
+WITH ranked AS (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY batch_id ORDER BY psp DESC) AS rn
+  FROM students
+)
+SELECT * FROM ranked WHERE rn = 1;`,
+      },
+      {
+        name: 'CTE — Common Table Expression',
+        description: 'WITH clause creates a named temporary result. Makes multi-step queries readable. No performance benefit over subquery — it is syntax sugar.',
+        code: `-- students (id, name, batch_id, psp)
+
+-- Basic CTE — find batches with avg psp > 80
+WITH batch_avg AS (
+  SELECT batch_id, AVG(psp) AS avg_psp
+  FROM students
+  GROUP BY batch_id
+)
+SELECT b.name, ba.avg_psp
+FROM batch_avg ba
+JOIN batches b ON ba.batch_id = b.id
+WHERE ba.avg_psp > 80;
+
+-- Multiple CTEs
+WITH
+  toppers AS (SELECT * FROM students WHERE psp >= 90),
+  batch_counts AS (SELECT batch_id, COUNT(*) AS cnt FROM students GROUP BY batch_id)
+SELECT t.name, bc.cnt
+FROM toppers t
+JOIN batch_counts bc ON t.batch_id = bc.batch_id;
+
+-- CTE vs Subquery: identical execution plan in MySQL
+-- Use CTE when subquery is reused or deeply nested`,
+      },
+      {
+        name: 'Indexes',
+        description: 'Without index → full table scan O(n). With index → B+Tree lookup O(log n). Index = extra data structure MySQL maintains on write to speed up reads.',
+        code: `-- students (id, name, batch_id, psp)
+
+-- Without index: SELECT * FROM students WHERE id = 100
+-- → scans every row  O(n) — full table scan
+
+-- HashMap as index → O(1) lookup BUT:
+-- ✗ range queries (WHERE id BETWEEN 90 AND 100)
+-- ✗ ordering (ORDER BY name)
+-- ✗ duplicate keys
+
+-- B+Tree (MySQL InnoDB default) → sorted keys O(log n)
+-- ✓ point search   ✓ range queries   ✓ ordering
+
+-- B+ Tree: internal nodes = keys only (navigation)
+--          leaf nodes = actual data rows (linked list)
+
+-- Create an index
+CREATE INDEX idx_students_psp ON students(psp);
+-- Now: SELECT * FROM students WHERE psp > 80  → index range scan
+
+-- Multi-column index — column ORDER matters
+-- Leading column must match the WHERE filter
+CREATE INDEX idx_batch_psp ON students(batch_id, psp);
+-- ✓ WHERE batch_id = 1 AND psp > 80
+-- ✗ WHERE psp > 80  (skips leading column — full scan)
+
+-- Cons of indexes:
+-- • extra storage space
+-- • INSERT/UPDATE/DELETE becomes slower (index must be updated)
+-- • sweet spot: index ~20% of columns, not every column
+
+-- EXPLAIN SELECT * FROM students WHERE psp > 80;
+-- → shows whether index is used (type: ref/range = good, ALL = full scan)`,
+      },
+      {
+        name: 'Subqueries',
+        description: 'A query inside a query. Can appear in SELECT, FROM, WHERE. Prefer CTE for readability, prefer EXISTS over IN for large datasets.',
+        code: `-- students (id, name, batch_id, psp)
+
+-- IN subquery — find students in batches named 'SQL'
+SELECT name FROM students
+WHERE batch_id IN (SELECT id FROM batches WHERE name = 'SQL');
+
+-- NOT IN with NULLs — DANGER
+-- If subquery returns any NULL, NOT IN returns empty result
+-- Use NOT EXISTS instead:
+SELECT name FROM students s
+WHERE NOT EXISTS (SELECT 1 FROM batches b WHERE b.id = s.batch_id);
+
+-- Correlated subquery — runs once per row (slow on large tables)
+SELECT name FROM students s
+WHERE psp > (SELECT AVG(psp) FROM students WHERE batch_id = s.batch_id);
+-- finds students with psp above their own batch average
+
+-- Scalar subquery in SELECT
+SELECT name, psp,
+  (SELECT AVG(psp) FROM students) AS overall_avg
+FROM students;`,
+      },
+      {
+        name: 'CRUD — Create, Read, Update, Delete',
+        description: 'The 4 fundamental operations on a database. CHAR vs VARCHAR, DELETE vs TRUNCATE vs DROP.',
+        code: `-- CREATE DATABASE + TABLE
+CREATE DATABASE school;
+CREATE TABLE students (
+  id    INT PRIMARY KEY AUTO_INCREMENT,
+  name  VARCHAR(100) NOT NULL,
+  psp   DECIMAL(5,2),
+  city  CHAR(50)         -- CHAR = fixed width, VARCHAR = variable width
+);
+
+-- INSERT
+INSERT INTO students (name, psp, city) VALUES ('Alice', 95.5, 'Delhi');
+
+-- SELECT with filtering
+SELECT DISTINCT city FROM students WHERE psp > 80 ORDER BY psp DESC LIMIT 5;
+
+-- UPDATE (always use WHERE — safe update mode)
+UPDATE students SET psp = 90 WHERE id = 1;
+
+-- DELETE vs TRUNCATE vs DROP
+-- DELETE  = remove specific rows, rollback-able, keeps table structure
+-- TRUNCATE = remove ALL rows, faster, resets AUTO_INCREMENT, NOT rollback-able
+-- DROP    = remove entire table (structure + data), nothing left
+
+-- NULL handling — use IS NULL / IS NOT NULL, not = NULL
+SELECT * FROM students WHERE city IS NULL;
+
+-- LIKE pattern matching
+-- %  = zero or more characters    name LIKE 'A%'   → starts with A
+-- _  = exactly one character      name LIKE '_at'  → 3-char ending in at`,
+      },
+      {
+        name: 'Transactions + ACID',
+        description: 'A transaction is a group of SQL statements that execute as one unit. ACID guarantees data safety.',
+        code: `-- ACID Properties
+-- A = Atomicity   → all or nothing (bank transfer: debit AND credit, or neither)
+-- C = Consistency → DB moves from one valid state to another valid state
+-- I = Isolation   → concurrent transactions do not interfere with each other
+-- D = Durability  → committed data survives crashes (written to disk)
+
+-- Transaction syntax
+START TRANSACTION;
+
+UPDATE accounts SET balance = balance - 500 WHERE id = 1;  -- debit Alice
+UPDATE accounts SET balance = balance + 500 WHERE id = 2;  -- credit Bob
+
+-- If both succeed:
+COMMIT;
+
+-- If anything fails:
+ROLLBACK;  -- undoes all changes since START TRANSACTION
+
+-- Isolation levels (from least to most strict)
+-- READ UNCOMMITTED → sees dirty reads (uncommitted data)
+-- READ COMMITTED   → no dirty reads (default in most DBs)
+-- REPEATABLE READ  → no phantom reads (default in MySQL)
+-- SERIALIZABLE     → full isolation, slowest
+
+-- Deadlock: T1 locks row A, wants row B; T2 locks row B, wants row A → stuck
+-- MySQL auto-detects and kills one transaction (ROLLBACK)`,
+      },
+    ],
+    animations: [],
+    problems: [
+      {
+        slug: 'second-highest-salary',
+        title: 'Second Highest Salary',
+        difficulty: 'Easy',
+        lcNum: 176,
+      },
+      {
+        slug: 'department-highest-salary',
+        title: 'Department Highest Salary',
+        difficulty: 'Medium',
+        lcNum: 184,
+      },
+      {
+        slug: 'rank-scores',
+        title: 'Rank Scores',
+        difficulty: 'Medium',
+        lcNum: 178,
+      },
+      {
+        slug: 'consecutive-numbers',
+        title: 'Consecutive Numbers',
+        difficulty: 'Medium',
+        lcNum: 180,
+      },
+      {
+        slug: 'employees-earning-more-than-managers',
+        title: 'Employees Earning More Than Managers',
+        difficulty: 'Easy',
+        lcNum: 181,
+      },
+    ],
+    commonMistakes: [
+      'Using HAVING instead of WHERE when condition does not use an aggregate — HAVING runs after aggregation, WHERE is faster',
+      'SELECT * in production queries — always select only needed columns',
+      'Missing index on JOIN columns — full table scan on every join',
+      'N+1 query problem — running a query inside a loop instead of one JOIN',
+      'Using NOT IN with NULLs — if subquery returns any NULL, NOT IN returns no rows; use NOT EXISTS instead',
+      'Forgetting GROUP BY columns — every non-aggregate in SELECT must be in GROUP BY',
+      'Covering index with wrong column order — leading column must match the WHERE filter',
+      'Comparing NULL with = operator — NULL = NULL is not TRUE; always use IS NULL / IS NOT NULL',
+      'Using TRUNCATE when you need rollback — TRUNCATE cannot be rolled back; use DELETE inside a transaction instead',
+      'Choosing phone number or email as Primary Key — both can change; use a surrogate INT id instead',
+      'UPDATE without WHERE — updates every row in the table; always specify WHERE in UPDATE and DELETE',
+      'OFFSET without ORDER BY — results are non-deterministic; always pair OFFSET with ORDER BY',
+    ],
+    caseStudies: [],
+    quiz: [
+      {
+        q: 'Voters table (Voter_ID, First_Name, Last_Name, Address, Voter_Registration_Number). Which of the following IS a super key?',
+        options: ['{First_Name, Last_Name}', '{Voter_ID, Voter_Registration_Number}', '{Address}', '{Address, Last_Name}'],
+        answer: 1,
+        explanation: '{Voter_ID, Voter_Registration_Number} — Voter_ID alone is unique, so any set containing it is a Super Key ✓. It is not minimal (not a CK) since Voter_ID alone suffices — but the question asks for a Super Key, not a CK. {First_Name, Last_Name} — names can repeat. {Address} and {Address, Last_Name} — not unique.',
+      },
+      {
+        q: 'Which of the following is a minimal super key for a Voters table (Voter_ID, First_Name, Last_Name, Address, Voter_Registration_Number)?',
+        options: ['{Voter_ID}', '{First_Name, Last_Name}', '{Voter_ID, Voter_Registration_Number}', '{Address, Voter_Registration_Number}'],
+        answer: 0,
+        explanation: 'Minimal super key = Candidate Key. {Voter_ID} uniquely identifies a row and cannot be reduced further. {First_Name, Last_Name} is not unique (two people same name). The other options contain extra columns making them non-minimal.',
+      },
+      {
+        q: 'A Courses table has columns: Course_ID, Course_Name, Department, Instructor_ID. Multiple instructors can teach each course. What is the minimal super key?',
+        options: ['{Course_ID}', '{Instructor_ID}', '{Course_ID, Instructor_ID}', '{Course_ID, Course_Name, Instructor_ID}'],
+        answer: 2,
+        explanation: 'Multiple instructors per course means Course_ID alone is not unique. Instructor_ID alone is not unique (one instructor teaches many courses). {Course_ID, Instructor_ID} together uniquely identify a row and cannot be reduced — making it both a Super Key and a Candidate Key (Composite CK).',
+      },
+      {
+        q: 'Which set is NOT a super key for a Students table (Student_ID, Student_Name, Course_ID, Course_Name, Grade)?',
+        options: ['{Student_ID, Course_ID}', '{Student_Name, Grade}', '{Student_ID, Course_Name}', '{Course_ID, Student_ID, Grade}'],
+        answer: 1,
+        explanation: '{Student_Name, Grade} — multiple students can have the same name and same grade. Names are never reliable for uniqueness. All other options either contain {Student_ID, Course_ID} (the unique combination) or a superset of it.',
+      },
+      {
+        q: 'An Employees table: Employee_ID, Employee_Name, Project_Name, Project_ID, Manager_ID. Multiple projects per employee; each project has a unique Manager. Which is NOT a super key?',
+        options: ['{Employee_ID, Project_ID, Employee_Name}', '{Project_ID, Employee_Name}', '{Project_ID, Manager_ID, Employee_ID}', '{Project_ID, Employee_ID}'],
+        answer: 1,
+        explanation: '{Project_ID, Employee_Name} — Employee_Name is not guaranteed unique. Two employees can share the same name, so this combination cannot uniquely identify a row. All other options contain {Employee_ID, Project_ID} which is the minimal unique pair.',
+      },
+      {
+        q: 'Cars table: VIN, Manufacturer, Model, Year, Color. Which is NOT a super key?',
+        options: ['{VIN}', '{VIN, Manufacturer}', '{VIN, Model, Year}', '{Manufacturer, Model, Year}'],
+        answer: 3,
+        explanation: '{Manufacturer, Model, Year} — the same manufacturer makes thousands of the same model in the same year. Not unique. VIN (Vehicle Identification Number) is globally unique per car, so any set containing VIN is automatically a super key.',
+      },
+      {
+        q: 'Sales table: Order_ID, Product_ID, Customer_ID, Quantity_Sold, Sale_Date. Which of the following is NOT a super key?',
+        options: ['{Customer_ID, Product_ID, Sale_Date}', '{Customer_ID, Quantity_Sold, Sale_Date}', '{Product_ID, Customer_ID}', 'All of the above'],
+        answer: 3,
+        explanation: 'All three fail: (1) same customer can order same product twice on same day; (2) same customer can buy same quantity on same day; (3) same customer can buy same product multiple times. Order_ID is the only reliable unique column — any set without it cannot be guaranteed unique.',
+      },
+      {
+        q: 'Trick question: A set that CONTAINS a Candidate Key is always a ___.',
+        options: ['Candidate Key', 'Super Key', 'Composite Key', 'Primary Key'],
+        answer: 1,
+        explanation: 'Any set containing a unique column (or CK) is automatically a Super Key — adding more columns to something unique keeps it unique. It is NOT a CK because it is not minimal. Example: {email} is a CK; {email, name} is a SK but not a CK.',
+      },
+      {
+        q: 'Which property of RDBMS states that you cannot store a list in a single cell?',
+        options: ['Every row is unique', 'Column sequence is not guaranteed', 'Values must be atomic', 'Column names are unique'],
+        answer: 2,
+        explanation: 'Atomic = cannot be divided further. One cell = one value. Storing [91111, 92222] in a phone_number cell violates atomicity. The fix is a separate phone_numbers table with a FK back to students.',
+      },
+      {
+        q: 'SELECT * FROM students — what does the RDBMS NOT guarantee?',
+        options: ['Returning all rows', 'Returning all columns', 'The order of rows returned', 'That the table exists'],
+        answer: 2,
+        explanation: 'Row sequence is NOT guaranteed (Property 6). Without ORDER BY, rows can come back as id=1, id=10, id=2, id=25 — any order. Always use ORDER BY when you need a specific sequence. This is why indexing is a separate extra mechanism.',
+      },
+      {
+        q: 'What is a Composite Key?',
+        options: ['A key with exactly 2 columns', 'Any key with more than 1 column', 'A key that cannot uniquely identify a row', 'The Primary Key of a table'],
+        answer: 1,
+        explanation: 'Composite Key = any key (Super Key or Candidate Key) with size > 1 column. {Course_ID, Instructor_ID} is a Composite Candidate Key. {email, name} is a Composite Super Key (but not CK since email alone suffices). Size = 2, 3, 4... — anything more than 1.',
+      },
+      {
+        q: 'Courses table (Course_ID, Course_Name, Department, Instructor_ID). Multiple instructors per course. Which is a super key?',
+        options: ['{Course_ID, Department}', '{Course_Name, Instructor_ID}', '{Department, Instructor_ID}', '{Course_ID, Instructor_ID, Department}'],
+        answer: 3,
+        explanation: '{Course_ID, Instructor_ID} is the minimal unique pair. Any set containing it is a Super Key. {Course_ID, Instructor_ID, Department} contains the minimal pair → SK ✓. The others fail: {Course_ID, Department} — same course, multiple instructors; {Course_Name, Instructor_ID} — course name can repeat across departments; {Department, Instructor_ID} — not unique per row.',
+      },
+      {
+        q: 'Students table (Student_ID, First_Name, Last_Name, Date_of_Birth, Major). Which is a super key?',
+        options: ['{First_Name, Last_Name, Date_of_Birth}', '{Student_ID, Major}', '{Date_of_Birth, Major}', '{First_Name, Last_Name}'],
+        answer: 1,
+        explanation: 'Student_ID is unique → any set containing it is a Super Key. {Student_ID, Major} ✓. {First_Name, Last_Name, Date_of_Birth} fails because twins can share the same name and DOB. {Date_of_Birth, Major} — many students share both. {First_Name, Last_Name} — names repeat.',
+      },
+      {
+        q: 'Employees table (Employee_ID, Employee_Name, Project_Name, Project_ID, Manager_ID). Multiple projects per employee; each project has a unique Manager. Which is NOT a super key?',
+        options: ['{Employee_ID, Project_ID, Employee_Name}', '{Project_ID, Employee_Name}', '{Project_ID, Manager_ID, Employee_ID}', '{Project_ID, Employee_ID}'],
+        answer: 1,
+        explanation: '{Project_ID, Employee_Name} — Employee_Name is not guaranteed unique (two employees can share the same name). Without a unique identifier like Employee_ID, this cannot reliably identify a row. All other options contain {Employee_ID, Project_ID} which is the minimal unique combination.',
+      },
+      {
+        q: 'Sales table (Order_ID, Product_ID, Customer_ID, Quantity_Sold, Sale_Date). Which is a super key?',
+        options: ['{Customer_ID, Product_ID}', '{Product_ID, Quantity_Sold}', '{Customer_ID, Sale_Date}', '{Order_ID, Customer_ID, Product_ID}'],
+        answer: 3,
+        explanation: 'Order_ID uniquely identifies each sale → any set containing it is a Super Key. {Order_ID, Customer_ID, Product_ID} ✓. The others fail: {Customer_ID, Product_ID} — repeat purchases; {Product_ID, Quantity_Sold} — same product same quantity many times; {Customer_ID, Sale_Date} — customer can place multiple orders same day.',
+      },
+      {
+        q: 'Sales table (Order_ID, Product_ID, Customer_ID, Quantity_Sold, Sale_Date). Which of these is NOT a super key?',
+        options: ['{Customer_ID, Product_ID, Sale_Date}', '{Customer_ID, Quantity_Sold, Sale_Date}', '{Product_ID, Customer_ID}', 'All of the above'],
+        answer: 3,
+        explanation: 'All three fail without Order_ID: (1) same customer can order same product twice on same day; (2) same customer can buy same quantity on same day; (3) same customer can buy same product multiple times. Order_ID is the only reliable unique column in this table.',
+      },
+      {
+        q: 'Sales table. From the options, select the super key.',
+        options: ['{Order_ID, Product_ID, Quantity_Sold}', '{Product_ID, Customer_ID}', '{Product_ID, Customer_ID, Sale_Date}', 'None of the above'],
+        answer: 0,
+        explanation: '{Order_ID, Product_ID, Quantity_Sold} contains Order_ID which is unique → automatically a Super Key ✓. The other two have no unique column: {Product_ID, Customer_ID} and {Product_ID, Customer_ID, Sale_Date} both fail for repeat purchases.',
+      },
+      {
+        q: 'Students table (id, first_name, last_name, email_id, phone_number). Which is NOT a super key?',
+        options: ['{email_id}', '{phone_number}', '{first_name, email_id}', '{first_name, last_name}'],
+        answer: 3,
+        explanation: '{first_name, last_name} — two people can share the same full name, so this combination is not guaranteed unique. email_id and phone_number are unique per person. {first_name, email_id} contains email_id (unique) → SK ✓.',
+      },
+      {
+        q: 'Inventory table (Product_ID, Quantity, Warehouse_ID, Expiry_Date, Batch_Number). Batch_Number uniquely identifies a batch. Which is a super key?',
+        options: ['{Product_ID, Warehouse_ID}', '{Warehouse_ID, Quantity}', '{Batch_Number, Expiry_Date}', '{Product_ID, Warehouse_ID, Batch_Number}'],
+        answer: 3,
+        explanation: 'Batch_Number is unique → any set containing it is a Super Key. Both C and D qualify, but D is the safest answer. {Product_ID, Warehouse_ID} fails — same product in same warehouse can have multiple batches. {Warehouse_ID, Quantity} — quantity repeats constantly.',
+      },
+      {
+        q: 'Orders table (Order_ID, Product_ID, Customer_ID, Quantity, Order_Date). Any pair from {Order_ID, Product_ID, Customer_ID} is unique. Which is a super key?',
+        options: ['{Order_ID, Quantity}', '{Order_ID, Quantity, Order_Date}', '{Product_ID, Quantity}', '{Order_ID, Product_ID, Order_Date}'],
+        answer: 3,
+        explanation: 'Any pair from {Order_ID, Product_ID, Customer_ID} is unique, so {Order_ID, Product_ID} alone is unique. Any set containing it is a SK. {Order_ID, Product_ID, Order_Date} contains {Order_ID, Product_ID} → SK ✓. {Order_ID, Quantity} and {Product_ID, Quantity} do not form a guaranteed unique pair. {Order_ID, Quantity, Order_Date} — no guaranteed unique pair either.',
+      },
+      {
+        q: 'Voters table (Voter_ID, First_Name, Last_Name, Address, Voter_Registration_Number). Which of the following is NOT a super key?',
+        options: ['{Voter_ID}', '{Voter_ID, First_Name}', '{Voter_Registration_Number}', '{Last_Name, Address}'],
+        answer: 3,
+        explanation: '{Last_Name, Address} — multiple voters can share the same last name and address (e.g., family members). This does NOT guarantee uniqueness → NOT a super key. Voter_ID and Voter_Registration_Number are both unique identifiers → they (and any set containing them) are super keys.',
+      },
+      {
+        q: 'Customers table (CustomerID, CustomerName, Email, Phone, Address). Which of the following could be a super key?',
+        options: ['CustomerID', '{CustomerName, Address}', '{Phone, Address}', '{CustomerName, Phone}'],
+        answer: 0,
+        explanation: 'CustomerID uniquely identifies each customer → it is a super key. CustomerName + Address, Phone + Address, CustomerName + Phone — none of these combinations are guaranteed to be unique across all customers. CustomerID alone is sufficient.',
+      },
+      {
+        q: 'Students table (Student_ID, Student_Name, Course_ID, Course_Name, Grade). Which of the following is a super key?',
+        options: ['{Student_Name, Course_Name}', '{Student_ID, Course_ID}', '{Course_Name, Grade}', '{Student_Name, Grade}'],
+        answer: 1,
+        explanation: '{Student_ID, Course_ID} — Student_ID uniquely identifies a student, so any set containing it is a super key. {Student_ID, Course_ID} contains Student_ID → SK ✓. {Student_Name, Course_Name} and {Student_Name, Grade} — name can repeat. {Course_Name, Grade} — many students share same course and grade.',
+      },
+      {
+        q: 'Customers table (CustomerID, CustomerName, Email, Phone, Address). What is the minimal super key?',
+        options: ['{CustomerID, CustomerName}', '{CustomerID, Email}', 'CustomerID', '{CustomerName, Email}'],
+        answer: 2,
+        explanation: 'CustomerID alone uniquely identifies each customer. It is the minimal super key (candidate key). {CustomerID, CustomerName} and {CustomerID, Email} are super keys but NOT minimal — you can remove CustomerName/Email and still have uniqueness. {CustomerName, Email} — name can repeat across customers.',
+      },
+    ],
+  },
 }

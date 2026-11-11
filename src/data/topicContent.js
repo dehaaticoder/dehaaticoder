@@ -2405,6 +2405,42 @@ ROLLBACK;  -- undoes all changes since START TRANSACTION
         answer: 2,
         explanation: 'CustomerID alone uniquely identifies each customer. It is the minimal super key (candidate key). {CustomerID, CustomerName} and {CustomerID, Email} are super keys but NOT minimal — you can remove CustomerName/Email and still have uniqueness. {CustomerName, Email} — name can repeat across customers.',
       },
+      {
+        q: 'Students table (id, student_name, branch_id) and Branch table (branch_id, branch_name). FK is set with ON DELETE CASCADE. What happens when branch_id 10 is deleted from Branch?',
+        options: ['All Students with branch_id 10 will have their branch_id set to NULL.', 'All Students with branch_id 10 will be deleted from the Students table.', 'The deletion of the branch with branch_id 10 will not affect the Students table.', 'All Students in the Students table will be updated with branch_id 10.'],
+        answer: 1,
+        explanation: 'ON DELETE CASCADE: when the referenced parent row is deleted, all child rows with that FK value are also deleted. Batch 10 (Computer Science) deleted → all students with branch_id=10 (Jay) are also deleted from Students.',
+      },
+      {
+        q: 'Students table (id, student_name, branch_id) and Branch table (branch_id, branch_name). FK is set with ON UPDATE SET NULL. What happens when branch_id 13 is updated in Branch?',
+        options: ['All Students with branch_id 13 will have their branch_id set to NULL.', 'All Students with branch_id 13 will be updated in the Students table.', 'The update of the branch with branch_id 13 will not affect the Students table.', 'All Students in the Students table will be updated with branch_id 13.'],
+        answer: 0,
+        explanation: 'ON UPDATE SET NULL: when the parent row\'s PK is updated, the child\'s FK column is set to NULL. Branch 13 (Electronics) updated → Deepak\'s branch_id becomes NULL. The student row survives but is no longer linked to any branch.',
+      },
+      {
+        q: 'Students table (id, student_name, branch_id) and Branch table (branch_id, branch_name). No explicit ON DELETE or ON UPDATE is defined. What is the default action in MySQL?',
+        options: ['All students with matching branch_id will be deleted.', 'The update or deletion of the branch will not affect the Students table.', 'All students with matching branch_id will have their branch_id set to NULL.', 'All students with matching branch_id will have their branch_id set to the default value.'],
+        answer: 1,
+        explanation: 'NO ACTION is the default in MySQL. The DB BLOCKS the parent delete/update operation entirely. You cannot delete a branch while students still reference it — MySQL throws "Cannot delete or update a parent row: a foreign key constraint fails". The Students table is unaffected because the operation never executes.',
+      },
+      {
+        q: 'ON DELETE SET DEFAULT option — what happens when the parent row is deleted? Under which circumstances is it only functional?',
+        options: ['When the branch_id of Branch is updated, employees\' branch_id will be set to their default.', 'When the branch_id of Branch is updated, employees\' branch_id will be updated to NULL.', 'When the branch_id of Branch is deleted, employees with matching branch_id will be deleted.', 'When the branch_id of Branch is deleted, employees with matching branch_id will be set to their default branch_id.'],
+        answer: 3,
+        explanation: 'ON DELETE SET DEFAULT: the FK column is set to its DEFAULT value when the parent row is deleted. It is only functional with tables using the InnoDB engine where the FK column is NOT defined as NOT NULL. Rarely used in practice — most schemas use CASCADE or SET NULL instead.',
+      },
+      {
+        q: 'Authors table (AuthorID, FirstName, LastName, DOB). Which attribute is the primary key?',
+        options: ['FirstName', 'LastName', 'DOB', 'AuthorID'],
+        answer: 3,
+        explanation: 'AuthorID is the primary key. FirstName, LastName, and DOB can repeat across multiple authors — none of them guarantee uniqueness. AuthorID is a surrogate key: small (INT), stable (never changes), and unique per author — exactly what a good PK should be.',
+      },
+      {
+        q: 'Authors table (AuthorID, FirstName, LastName, DOB) and Books table (BookID, Title, PublicationDate, AuthorID). What role does AuthorID play in the Books table?',
+        options: ['It serves as the primary key.', 'It serves as the foreign key linking to the Authors table.', 'It serves no particular role.', 'It is a candidate key.'],
+        answer: 1,
+        explanation: 'AuthorID in Books is a Foreign Key — it references AuthorID (the PK) in the Authors table. This creates the relationship: one author can have many books. BookID is the PK in Books. AuthorID in Books is NOT the PK because multiple books can share the same AuthorID (same author wrote multiple books).',
+      },
     ],
   },
 }

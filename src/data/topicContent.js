@@ -1684,8 +1684,10 @@ public class StockTradingManager extends Publisher {
     whyItWorks: `SQL is declarative — you describe WHAT you want, not HOW to get it. The database engine figures out the most efficient execution plan. Your job is to express the question correctly.`,
     keyInsight: 'SQL clause order matters: SELECT → FROM → JOIN → WHERE → GROUP BY → HAVING → ORDER BY → LIMIT. You must write them in this order. If you put WHERE after GROUP BY, it is a syntax error.',
     teachingFlow: [
-      { step: 'DBMS + Keys', note: 'Why databases exist — PK, FK, Candidate Key, Composite Key' },
-      { step: 'CRUD', note: 'CREATE, INSERT, SELECT, UPDATE, DELETE — the 4 operations' },
+      { step: 'DBMS + Keys', note: 'Why databases exist — Candidate Key, Super Key, Composite Key' },
+      { step: 'Primary Key', note: 'One CK chosen as PK. MySQL orders disk by PK. Good PK: int, small, never changes.' },
+      { step: 'Foreign Key', note: 'References another table. Referential Integrity. ON UPDATE / ON DELETE rules.' },
+      { step: 'CRUD', note: 'CREATE, INSERT, SELECT, UPDATE, DELETE — the 4 operations. CHAR vs VARCHAR. OLTP vs OLAP.' },
       { step: 'SELECT + WHERE', note: 'Filter rows — DISTINCT, ORDER BY, LIMIT, LIKE, NULL' },
       { step: 'JOINs', note: 'Combine tables — INNER, LEFT, RIGHT, Self JOIN' },
       { step: 'GROUP BY + Aggregates', note: 'Summarise rows — COUNT, SUM, AVG, MIN, MAX' },
@@ -1804,6 +1806,131 @@ public class StockTradingManager extends Publisher {
 -- │  Super Key ⊃ Candidate Keys            │
 -- │  Composite Key = any key with size > 1 │
 -- └────────────────────────────────────────┘`,
+      },
+      {
+        name: 'Primary Key',
+        description: 'One of the candidate keys chosen to be the PK of a table. MySQL physically orders data on disk by PK — so PK choice directly affects disk layout and query speed.',
+        code: `-- ══════════════════════════════════════════════════════
+--  ROLE OF A KEY
+-- ══════════════════════════════════════════════════════
+-- MySQL orders the data on disk BY the key
+-- By default answers are returned based on key order
+-- A default index is created on a particular key (the PK)
+--
+-- Example: students(id, name, email, ph_no)
+-- Candidate keys: {id}, {email}, {ph_no}
+-- MySQL creates a B+Tree on whichever one becomes the PK
+-- → rows are stored in sorted key order on disk
+
+-- ══════════════════════════════════════════════════════
+--  HOW TO CHOOSE A GOOD PRIMARY KEY
+-- ══════════════════════════════════════════════════════
+-- A good primary key should:
+--
+-- 1. Be fast to sort on → prefer INT over VARCHAR/email/phone
+--    INT  : fixed 4 bytes, compare is a single CPU op
+--    email: variable length, string comparison (char by char)
+--
+-- 2. Have smaller size → reduces index (B+Tree) size on disk
+--    INT   = 4 bytes
+--    email = up to 255 bytes  ← 60× bigger index
+--
+-- 3. Never get changed → index pointers must stay valid
+--    Phone number changed example:
+--      Old ph_no = 141****  → all index pointers pointed here
+--      New ph_no = 222****  → all index pointers now BROKEN
+--      DB must update every index entry — expensive
+--
+-- ✗ BAD PK choices: email, phone_no  (can change, large, slow)
+-- ✓ GOOD PK choice: id INT AUTO_INCREMENT  (small, stable, fast)
+
+-- CREATE TABLE with a good PK:
+CREATE TABLE students (
+  id    INT PRIMARY KEY AUTO_INCREMENT,  -- surrogate key: small, stable, fast
+  name  VARCHAR(100) NOT NULL,
+  email VARCHAR(255) UNIQUE,             -- candidate key but NOT the PK
+  ph_no VARCHAR(15)  UNIQUE              -- candidate key but NOT the PK
+);`,
+      },
+      {
+        name: 'Foreign Key + Referential Integrity',
+        description: 'A FK is a column in one table that references a column in another table. FK maintains the relationship between parent and child tables. Referential Integrity = FK must ensure parent-child relationship is always consistent.',
+        code: `-- ══════════════════════════════════════════════════════
+--  FOREIGN KEY — definition
+-- ══════════════════════════════════════════════════════
+-- A Foreign Key is a column in a table
+-- that REFERENCES a column in another table.
+--
+--   students (s_id, name, psp, b_id)
+--                                └──→  batches (b_id, name)
+--                                       b_id is the PK
+--
+-- b_id in students is the FOREIGN KEY
+-- b_id in batches  is the REFERENCED column (must be PK or UNIQUE)
+--
+-- FK maintains the relationship between the two tables.
+-- "Creating a relationship is easy; maintaining it is difficult."
+
+-- CREATE TABLE with FK:
+CREATE TABLE batches (
+  id   INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE students (
+  id       INT PRIMARY KEY AUTO_INCREMENT,
+  name     VARCHAR(100) NOT NULL,
+  psp      DECIMAL(5,2),
+  batch_id INT,
+  FOREIGN KEY (batch_id) REFERENCES batches(id)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL
+);
+
+-- ══════════════════════════════════════════════════════
+--  REFERENTIAL INTEGRITY
+-- ══════════════════════════════════════════════════════
+-- FK must ensure the parent-child relationship is CONSISTENT.
+-- ON UPDATE → what happens when the REFERENCED row's PK changes (consistency)
+-- ON DELETE → what happens when the REFERENCED row is DELETED (orphaned rows)
+--
+-- Example data:
+--   students: John (batch 1), Jane (batch 1), Jim (batch 2), Jack (batch 2)
+--   batches : Batch A (id=1), Batch B (id=2), Batch C (id=3)
+--   If we DELETE Batch B → Jim and Jack become ORPHANED (batch_id=2, no batch)
+
+-- ══════════════════════════════════════════════════════
+--  ON DELETE / ON UPDATE VALUES
+-- ══════════════════════════════════════════════════════
+
+-- CASCADE
+--   Referenced row deleted/updated → all child rows also deleted/updated
+--   DELETE Batch B → Jim and Jack rows also DELETED from students
+--   UPDATE batch id 2 → 20 → Jim and Jack's batch_id also becomes 20
+
+-- SET NULL
+--   Referenced row deleted/updated → FK column in child set to NULL
+--   DELETE Batch B → Jim.batch_id = NULL, Jack.batch_id = NULL
+--   Child rows survive but are no longer linked to any batch
+
+-- NO ACTION  ← DEFAULT in MySQL
+--   Referenced row deleted/updated → MySQL BLOCKS the operation
+--   Cannot delete Batch B while students still reference it
+--   Error: "Cannot delete or update a parent row: FK constraint fails"
+
+-- SET DEFAULT
+--   FK set to its default value
+--   Only works with InnoDB and FK column must NOT be NOT NULL
+--   Rarely used in practice
+
+-- ┌─────────────┬────────────────────────────────────────────────────┐
+-- │ Rule        │ Effect when parent row is deleted/updated          │
+-- ├─────────────┼────────────────────────────────────────────────────┤
+-- │ CASCADE     │ Child rows also deleted/updated automatically       │
+-- │ SET NULL    │ Child FK column set to NULL (child row survives)   │
+-- │ NO ACTION   │ Operation BLOCKED — parent cannot be deleted       │
+-- │ SET DEFAULT │ Child FK set to column default (InnoDB only)       │
+-- └─────────────┴────────────────────────────────────────────────────┘`,
       },
       {
         name: 'JOINs',
@@ -1985,14 +2112,52 @@ FROM students;`,
       },
       {
         name: 'CRUD — Create, Read, Update, Delete',
-        description: 'The 4 fundamental operations on a database. CHAR vs VARCHAR, DELETE vs TRUNCATE vs DROP.',
-        code: `-- CREATE DATABASE + TABLE
+        description: 'SQL = Structured Query Language. CRUD = Create, Read, Update, Delete. CHAR = fixed width; VARCHAR = variable width. OLTP = transactional, OLAP = analytical.',
+        code: `-- SQL = Structured Query Language
+-- CRUD: Create  Read(Select)  Update  Delete
+
+-- ══════════════════════════════════════════════════════
+--  CHAR vs VARCHAR
+-- ══════════════════════════════════════════════════════
+-- CHAR(50)    → always allocates 50 bytes regardless of actual value
+--               ┌──────────────────────────────────────────────────┐
+--               │ 'Hi' stored as 'Hi                              ' │  (padded with spaces)
+--               └──────────────────────────────────────────────────┘
+--               Fast for fixed-length data (e.g. country codes, status flags)
+--
+-- VARCHAR(50) → allocates only what is needed + 1-2 length bytes
+--               ┌──────────┐
+--               │ 'Hi' → 2 │  (no padding, variable)
+--               └──────────┘
+--               Use for variable-length strings (names, emails, addresses)
+--
+-- Rule: use CHAR for fixed-length values, VARCHAR for everything else
+
+-- ══════════════════════════════════════════════════════
+--  OLTP vs OLAP  (know the difference)
+-- ══════════════════════════════════════════════════════
+-- OLTP (Online Transactional Processing)
+--   → Day-to-day operations: INSERT, UPDATE, DELETE
+--   → Examples: booking a ticket, placing an order
+--   → Optimised for WRITE speed, low latency
+--
+-- OLAP (Online Analytical Processing)
+--   → Audit & analytics: complex SELECT, aggregations, reports
+--   → Examples: "total sales per region last quarter"
+--   → Optimised for READ speed, large scans, BI dashboards
+--   → Tools: BigQuery, Redshift, Snowflake (not MySQL for heavy OLAP)
+
+-- ══════════════════════════════════════════════════════
+--  CRUD SYNTAX
+-- ══════════════════════════════════════════════════════
+
+-- CREATE DATABASE + TABLE
 CREATE DATABASE school;
 CREATE TABLE students (
   id    INT PRIMARY KEY AUTO_INCREMENT,
   name  VARCHAR(100) NOT NULL,
   psp   DECIMAL(5,2),
-  city  CHAR(50)         -- CHAR = fixed width, VARCHAR = variable width
+  city  CHAR(50)         -- fixed width; VARCHAR(50) for variable
 );
 
 -- INSERT

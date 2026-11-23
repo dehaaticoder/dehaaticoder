@@ -192,6 +192,25 @@ SIMPLE RULE:
       // Hard
       { slug: 'n-queens',               title: 'N-Queens',                             difficulty: 'Hard',   lcNum: 51   },
     ],
+    gotchas: [
+      {
+        title: 'post-increment (s++) in recursive calls',
+        wrong: `// WRONG — infinite loop / StackOverflowError
+private void reverse(char[] c, int s, int e) {
+    if (s > e) return;
+    char temp = c[s]; c[s] = c[e]; c[e] = temp;
+    reverse(c, s++, e--); // s++ passes OLD value of s — no progress!
+}`,
+        right: `// CORRECT — s+1, e-1 passed before call
+private void reverse(char[] c, int s, int e) {
+    if (s > e) return;
+    char temp = c[s]; c[s] = c[e]; c[e] = temp;
+    reverse(c, s + 1, e - 1); // new values passed correctly
+}`,
+        explanation: 's++ is post-increment: Java reads the current value of s, passes it to the function, and THEN increments s. The recursive call never gets the updated value — so it keeps calling reverse(c, s, e) forever.',
+        dehaatiLine: 's++ ka matlab hai — "pehle bhejo, phir badhaao." Recursive call ko pata hi nahi chalta ki kuch change hua. s+1 likho — seedha naya value bhejo.',
+      },
+    ],
   },
 
   arrays: {

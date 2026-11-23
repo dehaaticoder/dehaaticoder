@@ -304,6 +304,41 @@ export default function Topic() {
           <QuizSection quiz={content.quiz} />
         )}
 
+        {/* Common Gotchas */}
+        {content.gotchas && content.gotchas.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-stone-800 mb-2">⚠ Common Gotchas</h2>
+            <p className="text-stone-500 mb-6">Mistakes that look right but break silently. Read these before the interview.</p>
+            <div className="space-y-6">
+              {content.gotchas.map((g, i) => (
+                <div key={i} className="bg-white border border-red-200 rounded-xl overflow-hidden">
+                  <div className="px-6 py-4 border-b border-red-100 bg-red-50 flex items-center gap-3">
+                    <span className="text-red-500 text-lg">⚡</span>
+                    <h3 className="font-bold text-red-800">{g.title}</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-stone-100">
+                    <div className="px-5 py-4">
+                      <p className="text-xs font-semibold text-red-500 uppercase tracking-widest mb-2">✗ Wrong</p>
+                      <pre className="text-xs bg-red-50 rounded-lg p-3 overflow-x-auto text-stone-700 leading-relaxed">{g.wrong}</pre>
+                    </div>
+                    <div className="px-5 py-4">
+                      <p className="text-xs font-semibold text-green-600 uppercase tracking-widest mb-2">✓ Correct</p>
+                      <pre className="text-xs bg-green-50 rounded-lg p-3 overflow-x-auto text-stone-700 leading-relaxed">{g.right}</pre>
+                    </div>
+                  </div>
+                  <div className="px-6 py-4 border-t border-stone-100">
+                    <p className="text-sm text-stone-600 leading-relaxed mb-3">{g.explanation}</p>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                      <p className="text-xs font-semibold text-amber-600 uppercase tracking-widest mb-1">🌾 Dehaati Line</p>
+                      <p className="text-amber-900 text-sm italic">{g.dehaatiLine}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Problems */}
         {content.problems && content.problems.length > 0 && (
           <section>
